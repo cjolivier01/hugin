@@ -18,6 +18,8 @@ if(POLICY CMP0127)
   cmake_policy(SET CMP0127 NEW)
 endif()
 
+#list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/external/hugin/CMakeModules")
+
 if(APPLE)
   set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9")
   if (MAC_SELF_CONTAINED_BUNDLE)
@@ -28,7 +30,7 @@ if(APPLE)
   set(CMAKE_REQUIRED_INCLUDES ${CMAKE_SOURCE_DIR}/mac/ExternalPrograms/repository/include)
 endif(APPLE)
 
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules )
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules )
 
 ##
 ## Cleaner Debian Packaging (disable by -DDISABLE_DPKG=ON)
@@ -54,7 +56,7 @@ IF(NOT DISABLE_DPKG)
   endif()
 ENDIF()
 
-include(HuginMacros)
+include(${CMAKE_CURRENT_LIST_DIR}/CMakeModules/HuginMacros.cmake)
 include(CheckIncludeFiles)
 
 ##  global setup
@@ -116,10 +118,10 @@ set(HUGIN_LIB_VERSION 0.0)
 # before any system includes
 
 include_directories( ${CMAKE_BINARY_DIR}/src )
-include_directories( ${CMAKE_SOURCE_DIR}/src/hugin_base )
-include_directories( ${CMAKE_SOURCE_DIR}/src/celeste )
-include_directories( ${CMAKE_BINARY_DIR}/src/celeste )
-include_directories( ${CMAKE_SOURCE_DIR}/src )
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src/hugin_base )
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src/celeste )
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src/celeste )
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src )
 
 # this function is not available on some systems, notably FreeBSD and Windows
 include(CheckFunctionExists)
@@ -142,9 +144,9 @@ IF (WIN32)
   ##
   ## The directory that contains the hugin source root is a good
   ## place to look for support packages, so post it in cache.
-  ## 
+  ##
   ## Our FIND_PACKAGE calls modules will search SOURCE_BASE_DIR
-  ## after the local standard places  
+  ## after the local standard places
   ##
   # extract pathname from CMAKE_SOURCE_DIR (note result must be a local var)
   STRING( REGEX REPLACE "(.*)/[^/]+$" "\\1" work "${CMAKE_SOURCE_DIR}" )
@@ -290,7 +292,7 @@ IF(PANO13_FOUND)
   SET(PANO_INCLUDE_DIR ${PANO13_INCLUDE_DIR})
 ELSE(PANO13_FOUND)
   MESSAGE(SEND_ERROR "libpano13 required")
-ENDIF(PANO13_FOUND) 
+ENDIF(PANO13_FOUND)
 INCLUDE_DIRECTORIES(${PANO_INCLUDE_DIR})
 
 # Check CXX11 compiler
@@ -316,7 +318,7 @@ check_cxx_source_compiles(
       #include <filesystem>
     #endif
     #include <string>
-    
+
     #if defined _MSC_VER && _MSC_VER <= 1900
     namespace fs = std::tr2::sys;
     #else
@@ -328,7 +330,7 @@ check_cxx_source_compiles(
       fs::path filepath;
       filepath=fs::absolute(filepath);
       std::string s=filepath.filename().string();
-      return 0;    
+      return 0;
     };
   "
   HAVE_STD_FILESYSTEM
@@ -358,8 +360,8 @@ IF(WIN32)
     SET(Boost_USE_STATIC_LIBS ON)
     SET(Boost_USE_STATIC_RUNTIME ON)
   ENDIF()
-  # If BOOST_ROOT was defined in the environment, use it. 
-  IF(NOT BOOST_ROOT AND NOT $ENV{BOOST_ROOT} STREQUAL "") 
+  # If BOOST_ROOT was defined in the environment, use it.
+  IF(NOT BOOST_ROOT AND NOT $ENV{BOOST_ROOT} STREQUAL "")
     SET(BOOST_ROOT $ENV{BOOST_ROOT})
   ENDIF()
   IF(NOT BOOST_ROOT)
@@ -384,21 +386,21 @@ ENDIF()
 # find enblend-enfuse base path
 IF(WIN32)
   FIND_PATH(ENBLEND_DIR bin/enblend.exe enblend.exe
-    PATHS 
-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.2-win64 
-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.2-win32 
-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.5-win64 
-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.5-win32 
-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.4-win64 
-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.4-win32 
-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.3-win64 
-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.3-win32 
-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.2-win64 
-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.2-win32 
-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.1-win64 
-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.1-win32 
-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.1 
-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1 
+    PATHS
+      ${SOURCE_BASE_DIR}/enblend-enfuse-4.2-win64
+      ${SOURCE_BASE_DIR}/enblend-enfuse-4.2-win32
+      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.5-win64
+      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.5-win32
+      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.4-win64
+      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.4-win32
+      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.3-win64
+      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.3-win32
+      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.2-win64
+      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.2-win32
+      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.1-win64
+      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.1-win32
+      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.1
+      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1
       ${SOURCE_BASE_DIR}/enblend-enfuse-4.0
       ${SOURCE_BASE_DIR}/enblend-3.1
       ${SOURCE_BASE_DIR}/enblend-enfuse-3.2
@@ -453,7 +455,7 @@ IF(OPENMP_FOUND)
     SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_CXX_FLAGS}")
   ENDIF()
 ELSE()
-  MESSAGE(WARNING "Compiler does not support OpenMP. OpenMP is required for multi-threaded processes. So only single threaded execution is compiled now.") 
+  MESSAGE(WARNING "Compiler does not support OpenMP. OpenMP is required for multi-threaded processes. So only single threaded execution is compiled now.")
 ENDIF()
 
 IF(WIN32)
@@ -525,7 +527,7 @@ ENDIF()
 
 #
 # Check build type and set options accordingly
-# 
+#
 IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
       "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
@@ -558,8 +560,8 @@ ELSE(NOT MANDIR AND NOT $ENV{MANDIR} STREQUAL "")
     SET (MANDIR "share/man")
 ENDIF(NOT MANDIR AND NOT $ENV{MANDIR} STREQUAL "")
 
-SET(LOCALEDIR share/locale) 
-SET(ICONDIR share/icons) 
+SET(LOCALEDIR share/locale)
+SET(ICONDIR share/icons)
 SET(LINKDIR share/applications)
 SET(LIBDIR  lib${LIB_SUFFIX})
 SET(INSTALL_XRC_DIR ${CMAKE_INSTALL_PREFIX}/share/hugin/xrc)
@@ -618,7 +620,7 @@ ELSE()
     # install into place in build-dir
     SET( CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/INSTALL/FILES CACHE FILEPATH "install prefix" FORCE)
     INCLUDE (win_bundle)
-	
+
 	#Build HuginSetup
 	OPTION (BUILD_HUGINSETUP "Build HuginSetup (NSIS Installer)" OFF)
     IF(BUILD_HUGINSETUP)
@@ -684,7 +686,7 @@ ENDIF ()
 IF(APPLE)
 
   IF(MAC_SELF_CONTAINED_BUNDLE)
-    SET(CMAKE_MACOSX_RPATH FALSE) 
+    SET(CMAKE_MACOSX_RPATH FALSE)
 
     ADD_CUSTOM_TARGET(Mac ALL)
     SET(APPS Hugin PTBatcherGUI calibrate_lens_gui HuginStitchProject)
@@ -716,14 +718,14 @@ IF(APPLE)
         :enblend :enfuse :hugin_hdrmerge :nona :verdandi)
 
     INSTALL( DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/tools_mac
-             DESTINATION Hugin 
+             DESTINATION Hugin
              COMPONENT "tools_mac"
              FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
              PATTERN .DS_Store EXCLUDE )
 
   ENDIF(MAC_SELF_CONTAINED_BUNDLE)
 
-  
+
   ADD_DEFINITIONS(-D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0)
 
   #This namespace workaround is not needed for CMake >= 2.5.x
@@ -803,7 +805,7 @@ SET(CPACK_SOURCE_IGNORE_FILES
 "/lens_calibrate/calibrate_lens$"
 "/nona_gui/nona_gui$"
 "/stitch_project/hugin_stitch_project$"
-"/deghosting/deghosting_mask$" 
+"/deghosting/deghosting_mask$"
 "/outdated/"
 "/build/"
 "/CVS/"
@@ -822,8 +824,8 @@ SET(CPACK_SOURCE_IGNORE_FILES
 "\\\\.a$"
 "\\\\.lo$"
 "\\\\.so$"
-"\\\\.so\\\\.0$" 
-"\\\\.so\\\\.0\\\\.0$" 
+"\\\\.so\\\\.0$"
+"\\\\.so\\\\.0\\\\.0$"
 "\\\\.la$"
 "Makefile\\\\.in$"
 "/\\\\.hg/"
@@ -841,7 +843,7 @@ IF(NOT DISABLE_DPKG)
   SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
   # when building, don't use the install RPATH already
   # (but later on when installing)
-  SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
+  SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 
   SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib/hugin")
   SET(CPACK_DEBIAN_PACKAGE_DEBUG ON)
@@ -872,13 +874,13 @@ ENDIF()
 
 # ignore some directories when creating rpm
 SET(CPACK_RPM_SPEC_MORE_DEFINE "%define ignore \#")
-SET(CPACK_RPM_USER_FILELIST 
+SET(CPACK_RPM_USER_FILELIST
   "%ignore /usr/local"
-  "%ignore /usr/local/bin" 
-  "%ignore /usr/local/lib" 
-  "%ignore /usr/local/share" 
-  "%ignore /usr/local/share/applications" 
-  "%ignore /usr/local/share/man" 
+  "%ignore /usr/local/bin"
+  "%ignore /usr/local/lib"
+  "%ignore /usr/local/share"
+  "%ignore /usr/local/share/applications"
+  "%ignore /usr/local/share/man"
   "%ignore /usr/local/share/man/man1"
   "%ignore /usr/lib/python2.7"
   "%ignore /usr/lib/python2.7/site-packages"
@@ -930,7 +932,7 @@ SET(CPACK_PACKAGE_VENDOR "Hugin developer team")
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Hugin - Panorama photo stitcher")
 IF(MSVC_VERSION EQUAL 1900)
   IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    SET(CPACK_WIX_EXTRA_SOURCES 
+    SET(CPACK_WIX_EXTRA_SOURCES
       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/redist_vc14_x64.wxs"
       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/filetype.wxs"
     )
@@ -943,7 +945,7 @@ IF(MSVC_VERSION EQUAL 1900)
   SET(CPACK_WIX_PATCH_FILE "${CMAKE_SOURCE_DIR}/platforms/windows/wix/redist.xml")
 ELSEIF(MSVC_VERSION GREATER_EQUAL 1930)
   IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    SET(CPACK_WIX_EXTRA_SOURCES 
+    SET(CPACK_WIX_EXTRA_SOURCES
       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/redist_vc17_x64.wxs"
       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/filetype.wxs"
     )
@@ -956,7 +958,7 @@ ELSEIF(MSVC_VERSION GREATER_EQUAL 1930)
   SET(CPACK_WIX_PATCH_FILE "${CMAKE_SOURCE_DIR}/platforms/windows/wix/redist.xml")
 ELSEIF(MSVC_VERSION GREATER_EQUAL 1920)
   IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    SET(CPACK_WIX_EXTRA_SOURCES 
+    SET(CPACK_WIX_EXTRA_SOURCES
       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/redist_vc16_x64.wxs"
       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/filetype.wxs"
     )
@@ -969,7 +971,7 @@ ELSEIF(MSVC_VERSION GREATER_EQUAL 1920)
   SET(CPACK_WIX_PATCH_FILE "${CMAKE_SOURCE_DIR}/platforms/windows/wix/redist.xml")
 ELSEIF(MSVC_VERSION GREATER_EQUAL 1910)
   IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    SET(CPACK_WIX_EXTRA_SOURCES 
+    SET(CPACK_WIX_EXTRA_SOURCES
       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/redist_vc15_x64.wxs"
       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/filetype.wxs"
     )
@@ -996,6 +998,8 @@ CONFIGURE_FILE(
   "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
   IMMEDIATE @ONLY)
 
+IF(NOT HAS_UNINSTALL_TARGET)
 ADD_CUSTOM_TARGET(uninstall
   "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
+ENDIF()
 

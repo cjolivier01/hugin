@@ -1,21 +1,21 @@
 #    Copyright (C) 2008 by Tim Nugent
 #    timnugent@gmail.com
-# 
+#
 #    This file is part of hugin.
-# 
+#
 #    Hugin is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 2 of the License, or
 #    (at your option) any later version.
-#  
+#
 #    Hugin is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
-#  
+#
 #    You should have received a copy of the GNU General Public License
 #    along with Hugin  If not, see <http://www.gnu.org/licenses/>.
- 
+
 IF(NOT WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 ENDIF(NOT WIN32)
@@ -65,21 +65,21 @@ ELSE (${HUGIN_SHARED_LIBS})
     # messages are quite obtrusive in windows cmakesetup.exe
     IF (NOT WIN32)
     	#message("Using these CMAKE_CXX_FLAGS : ${CMAKE_CXX_FLAGS}")
-	ENDIF (NOT WIN32)	
+	ENDIF (NOT WIN32)
 	ADD_LIBRARY(celeste STATIC ${CELESTE_SRC})
 	TARGET_LINK_LIBRARIES(celeste huginbase ${common_libs})
 	set_target_properties(celeste PROPERTIES VERSION ${HUGIN_LIB_VERSION})
 ENDIF (${HUGIN_SHARED_LIBS})
 
 # standalone
-ADD_EXECUTABLE(celeste_standalone ../hugin_config.h  Main.cpp )
+ADD_EXECUTABLE(celeste_standalone ${CMAKE_BINARY_DIR}/src/hugin_config.h  Main.cpp )
 target_link_libraries( celeste_standalone celeste ${image_libs} ${common_libs})
 
 SET (CELESTE_MODEL
 	data/celeste.model
 )
 
-INSTALL(TARGETS celeste_standalone DESTINATION ${BINDIR}) 
+INSTALL(TARGETS celeste_standalone DESTINATION ${BINDIR})
 INSTALL(FILES ${CELESTE_MODEL} DESTINATION ${HUGINDATADIR}/data)
 
 #add_subdirectory(training)
