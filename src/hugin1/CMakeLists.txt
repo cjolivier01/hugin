@@ -1,5 +1,5 @@
 
-include_directories( ${CMAKE_SOURCE_DIR}/src/hugin1 )
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR} )
 
 INCLUDE(${wxWidgets_USE_FILE})
 
@@ -10,15 +10,15 @@ ENDIF(WIN32)
 
 # populate correct dpi aware manifest from wxWidgets
 IF(WIN32)
-  IF(CMAKE_SIZEOF_VOID_P EQUAL 8) 
+  IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
     # 64 bit build
-    FIND_FILE(WINDOWS_DPI_MANIFEST 
-      NAMES amd64_dpi_aware_pmv2.manifest amd64-dpi-aware-pmv2.manifest wx_dpi_aware_pmv2.manifest 
+    FIND_FILE(WINDOWS_DPI_MANIFEST
+      NAMES amd64_dpi_aware_pmv2.manifest amd64-dpi-aware-pmv2.manifest wx_dpi_aware_pmv2.manifest
       PATHS "${wxWidgets_ROOT_DIR}/include/wx/msw/"
     )
   ELSE()
     # 32 bit build
-    FIND_FILE(WINDOWS_DPI_MANIFEST 
+    FIND_FILE(WINDOWS_DPI_MANIFEST
       NAMES wx_dpi_aware_pmv2.manifest wx-dpi-aware-pmv2.manifest
       PATHS "${wxWidgets_ROOT_DIR}/include/wx/msw/"
     )
