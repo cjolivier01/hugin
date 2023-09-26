@@ -374,6 +374,10 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
     vigra_precondition((reinterpret_cast<const uintptr_t>(destAlphaBuffer) & 0x7) == 0, "dest alpha image buffer not 8-byte aligned");
 
     const char* const gpuVendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
+    if (!gpuVendor) {
+      std::cerr << "No OpenGL vendor found" << std::endl;
+      abort();
+    }
     const bool needsAtanWorkaround = (strncmp(gpuVendor, "ATI", 3) == 0);
 
     if(printDebug)
@@ -1249,7 +1253,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
         }
 
         glDrawBuffer((pass & 1) ? GL_COLOR_ATTACHMENT1_EXT : GL_COLOR_ATTACHMENT0_EXT);
-        
+
         glFinish();
         if(printDebug)
         {
