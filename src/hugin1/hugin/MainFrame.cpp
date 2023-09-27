@@ -1001,7 +1001,7 @@ void MainFrame::OnSaveProject(wxCommandEvent & e)
         scriptName = m_filename;
     } else {
         // the project file is just a PTOptimizer script...
-        DEBUG_DEBUG("stripping " << path << " from image filenames");
+        //DEBUG_DEBUG("stripping " << path << " from image filenames");
         const std::string script(scriptName.GetFullPath().mb_str(HUGIN_CONV_FILENAME));
         pano.WritePTOFile(script, hugin_utils::getPathPrefix(script));
 
