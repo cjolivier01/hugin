@@ -54,7 +54,7 @@
 #endif
 
 
-#ifdef DEBUG
+#ifdef HUGIN_DEBUG
     // debug trace
     #define DEBUG_TRACE(msg) { std::cerr << "TRACE " << DEBUG_HEADER << msg << std::endl; }
     // low level debug info
@@ -86,7 +86,7 @@
 
 namespace hugin_utils
 {
-    
+
     /** current time as a string */
     IMPEX std::string GetCurrentTimeString();
 
@@ -199,7 +199,7 @@ namespace hugin_utils
         return ret;
     }
 
-    IMPEX void ControlPointErrorColour(const double cperr, 
+    IMPEX void ControlPointErrorColour(const double cperr,
         double &r,double &g, double &b);
 
     /** checks if file exists */
@@ -222,7 +222,7 @@ namespace hugin_utils
     IMPEX std::string GetDataDir();
 
     /** returns the directory for user specific Hugin settings, e.g. lens database
-        the directory is automatically created if it does not exists 
+        the directory is automatically created if it does not exists
         @return path, empty if path could not retrieved or not created */
     IMPEX std::string GetUserAppDataDir();
 
