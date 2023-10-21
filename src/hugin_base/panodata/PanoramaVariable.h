@@ -48,7 +48,7 @@ namespace HuginBase {
 class IMPEX Variable
 {
 public :
-// in the hsi version, class Variable needs a default Ctor    
+// in the hsi version, class Variable needs a default Ctor
 #ifdef HUGIN_HSI
         Variable(const std::string & name = "" ,
                  double val = 0.0)
@@ -58,21 +58,21 @@ public :
         Variable(const std::string & name, double val = 0.0)
             : name(name), value(val)
         {};
-#endif        
+#endif
         virtual ~Variable()
         {};
-        
+
 
         /// print this variable
         virtual std::ostream & print(std::ostream & o) const;
 
-        
+
         const std::string & getName() const
             { return name; }
-        
+
         void setValue(double v)
             { value = v; }
-        
+
         double getValue() const
             { return value; }
 
@@ -86,7 +86,7 @@ public :
 // a linked variable (which contains the link target explicitly
 class IMPEX LinkedVariable : public Variable
 {
-    
+
     public:
         LinkedVariable(const std::string & name = "",
                        double val = 0.0,
@@ -96,10 +96,10 @@ class IMPEX LinkedVariable : public Variable
 
         bool isLinked() const
         { return m_link >= 0; }
-        
+
         int getLink()  const
         { return m_link; }
-        
+
         void setLink(int link)
         { m_link = link; }
 
@@ -135,39 +135,39 @@ class IMPEX LensVariable : public Variable
 #endif
         virtual ~LensVariable()
             {};
-        
-        
+
+
         ///
         virtual std::ostream& printLink(std::ostream & o, unsigned int link) const;
 
-        
+
         ///
         bool isLinked() const
             { return linked; }
         ///
         void setLinked(bool l=true)
             { linked = l; }
-        
+
     private:
         bool linked;
-    
+
 };
 
 /** functor to print a variable. */
 #ifndef SWIG
 /* this gave me trouble in hsi, currently deactivated
  * TODO: find out how it can be made to work */
-struct PrintVar : public std::unary_function<Variable, void>
-{
-    explicit PrintVar(std::ostream & o)
-        : os(o)
-    {};
-    
-    void operator()(Variable x) const
-        { x.print(os) << " "; };
-    
-    std::ostream& os;
-};
+// struct PrintVar : public std::unary_function<Variable, void>
+// {
+//     explicit PrintVar(std::ostream & o)
+//         : os(o)
+//     {};
+
+//     void operator()(Variable x) const
+//         { x.print(os) << " "; };
+
+//     std::ostream& os;
+// };
 #endif
 
 ///

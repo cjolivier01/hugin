@@ -47,7 +47,7 @@ static double 	sinc		( double x );
 static double 	cubic01		( double x );
 static double 	cubic12		( double x );
 
-static double sinc( double x )
+static inline double sinc( double x )
 {
     x *= M_PI;
     if(x != 0.0)
@@ -62,13 +62,13 @@ static double sinc( double x )
 static const double	A(-0.75);
 
 // 0 <= x < 1
-static double cubic01( double x )
+static inline double cubic01( double x )
 {
     return	(( A + 2.0 )*x - ( A + 3.0 ))*x*x +1.0;
 }
 // 1 <= x < 2
 
-static double cubic12( double x )
+static inline double cubic12( double x )
 {
     return	(( A * x - 5.0 * A ) * x + 8.0 * A ) * x - 4.0 * A;
 
@@ -387,16 +387,16 @@ public:
 
                 if (m_warparound) {
                     // Boundary condition: wrap around the image.
-                    if (bounded_kx < 0) 
+                    if (bounded_kx < 0)
                         bounded_kx += m_w;
-                    if (bounded_kx >= m_w) 
+                    if (bounded_kx >= m_w)
                         bounded_kx -= m_w;
                 } else {
                     // Boundary condition: replicate first and last column.
                     //                if (srcx + kx < 0) bounded_kx -= (srcx + kx);
                     //                if (srcx + kx >= src_w) bounded_kx -= (srcx + kx - (src_w - 1));
                     // Boundary condition: do not replicate left and right
-                    if (bounded_kx < 0) 
+                    if (bounded_kx < 0)
                         continue;
                     if (bounded_kx >= m_w)
                         continue;
@@ -597,16 +597,16 @@ public:
 
                 if (m_warparound) {
                     // Boundary condition: wrap around the image.
-                    if (bounded_kx < 0) 
+                    if (bounded_kx < 0)
                         bounded_kx += m_w;
-                    if (bounded_kx >= m_w) 
+                    if (bounded_kx >= m_w)
                         bounded_kx -= m_w;
                 } else {
                     // Boundary condition: replicate first and last column.
                     //                if (srcx + kx < 0) bounded_kx -= (srcx + kx);
                     //                if (srcx + kx >= src_w) bounded_kx -= (srcx + kx - (src_w - 1));
                     // Boundary condition: do not replicate left and right
-                    if (bounded_kx < 0) 
+                    if (bounded_kx < 0)
                         continue;
                     if (bounded_kx >= m_w)
                         continue;
@@ -689,7 +689,7 @@ public:
         // first pass of separable filter
 
         RealPixelType p(vigra::NumericTraits<RealPixelType>::zero());
-        double m = 0; 
+        double m = 0;
         double weightsum = 0.0;
         for (int ky = 0; ky < INTERPOLATOR::size; ky++) {
             int bounded_ky = srcy + 1 + ky - INTERPOLATOR::size/2;
@@ -704,16 +704,16 @@ public:
 
                 if (m_warparound) {
                     // Boundary condition: wrap around the image.
-                    if (bounded_kx < 0) 
+                    if (bounded_kx < 0)
                         bounded_kx += m_w;
-                    if (bounded_kx >= m_w) 
+                    if (bounded_kx >= m_w)
                         bounded_kx -= m_w;
                 } else {
                     // Boundary condition: replicate first and last column.
                     //                if (srcx + kx < 0) bounded_kx -= (srcx + kx);
                     //                if (srcx + kx >= src_w) bounded_kx -= (srcx + kx - (src_w - 1));
                     // Boundary condition: do not replicate left and right
-                    if (bounded_kx < 0) 
+                    if (bounded_kx < 0)
                         continue;
                     if (bounded_kx >= m_w)
                         continue;
