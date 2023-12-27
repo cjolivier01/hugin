@@ -87,7 +87,7 @@ void Transform::createTransform(const PanoramaData & pano, unsigned int imgNr,
 
 void Transform::createInvTransform(const SrcPanoImage & src, const PanoramaOptions & dest)
 {
-    VariableMap vars;
+        VariableMap vars;
     // not very nice, but I don't like to change all the stuff in this file..
     vars.insert(make_pair(std::string("v"), Variable(std::string("v"), src.getHFOV())));
     vars.insert(make_pair(std::string("a"), Variable("a", src.getRadialDistortion()[0])));
@@ -121,7 +121,7 @@ void Transform::createInvTransform(const SrcPanoImage & src, const PanoramaOptio
 
 void Transform::createTransform(const SrcPanoImage & src, const PanoramaOptions & dest)
 {
-
+    
     VariableMap vars;
     // not very nice, but I don't like to change all the stuff in this file..
     vars.insert(make_pair(std::string("v"), Variable(std::string("v"), src.getHFOV())));

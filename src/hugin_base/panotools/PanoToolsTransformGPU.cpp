@@ -34,7 +34,8 @@
 #include <iomanip>
 
 using std::ostringstream;
-using std::endl;
+//using std::endl;
+#define endl "\n"  // Performance: don't need to flush every time
 
 #define 	distanceparam	(*((double*)params))
 #define 	shift		(*((double*)params))

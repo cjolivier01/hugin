@@ -74,8 +74,13 @@ long getms()
 
 using std::cout;
 using std::cerr;
-using std::endl;
+//using std::endl;
 using std::vector;
+
+//#define endl "\n"
+namespace code {
+constexpr const char *endl = "\n";
+}
 
 using vigra::Rect2D;
 
@@ -173,7 +178,7 @@ static void printInfoLog(GLhandleARB obj) {
     if (infologLength > 1) {
         char* infoLog = new char[infologLength];
         glGetInfoLogARB(obj, infologLength, &charsWritten, infoLog);
-        cout << "nona: GL info log:" << endl << infoLog << endl << endl;
+        cout << "nona: GL info log:" << code::endl << infoLog << code::endl << code::endl;
         delete[] infoLog;
     }
 }
@@ -187,25 +192,25 @@ static bool checkFramebufferStatus(int line, char* file) {
         case GL_FRAMEBUFFER_COMPLETE_EXT:
             return true;
         case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_EXT:
-            cerr << "nona: GL error: Framebuffer incomplete, incomplete attachment in: " << file << ":" << line << endl;
+            cerr << "nona: GL error: Framebuffer incomplete, incomplete attachment in: " << file << ":" << line << code::endl;
             return false;
         case GL_FRAMEBUFFER_UNSUPPORTED_EXT:
-            cerr << "nona: Unsupported framebuffer format in: " << file << ":" << line << endl;
+            cerr << "nona: Unsupported framebuffer format in: " << file << ":" << line << code::endl;
             return false;
         case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_EXT:
-            cerr << "nona: Framebuffer incomplete, missing attachment in: " << file << ":" << line << endl;
+            cerr << "nona: Framebuffer incomplete, missing attachment in: " << file << ":" << line << code::endl;
             return false;
         case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT:
-            cerr << "nona: Framebuffer incomplete, attached images must have same dimensions in: " << file << ":" << line << endl;
+            cerr << "nona: Framebuffer incomplete, attached images must have same dimensions in: " << file << ":" << line << code::endl;
             return false;
         case GL_FRAMEBUFFER_INCOMPLETE_FORMATS_EXT:
-            cerr << "nona: Framebuffer incomplete, attached images must have same format in: " << file << ":" << line << endl;
+            cerr << "nona: Framebuffer incomplete, attached images must have same format in: " << file << ":" << line << code::endl;
             return false;
         case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER_EXT:
-            cerr << "nona: Framebuffer incomplete, missing draw buffer in: " << file << ":" << line << endl;
+            cerr << "nona: Framebuffer incomplete, missing draw buffer in: " << file << ":" << line << code::endl;
             return false;
         case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER_EXT:
-            cerr << "nona: Framebuffer incomplete, missing read buffer in: " << file << ":" << line << endl;
+            cerr << "nona: Framebuffer incomplete, missing read buffer in: " << file << ":" << line << code::endl;
             return false;
     }
 
@@ -227,7 +232,7 @@ static void compileGLSL(const char* programName,
 
     glGetObjectParameterivARB(shaderObject, GL_OBJECT_COMPILE_STATUS_ARB, &success);
     if (!success) {
-        cerr << "nona: " << programName << " shader program could not be compiled." << endl;
+        cerr << "nona: " << programName << " shader program could not be compiled." << code::endl;
         printInfoLog(shaderObject);
         exit(1);
     }
@@ -240,7 +245,7 @@ static void compileGLSL(const char* programName,
 
     glGetObjectParameterivARB(programObject, GL_OBJECT_LINK_STATUS_ARB, &success);
     if (!success) {
-        cerr << "nona: " << programName << " shader program could not be linked." << endl;
+        cerr << "nona: " << programName << " shader program could not be linked." << code::endl;
         printInfoLog(programObject);
         exit(1);
     }
@@ -345,24 +350,24 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
     if(printDebug)
     {
         t1=getms();
-        cout << "destStart=[" << xstart << ", " << ystart << "]" << endl
-             << "destEnd=[" << xend << ", " << yend << "]" << endl
-             << "destSize=[" << destSize << "]" << endl
-             << "srcSize=[" << srcSize << "]" << endl
-             << "srcBuffer=" << srcBuffer << endl
-             << "srcAlphaBuffer=" << srcAlphaBuffer << endl
-             << "destBuffer=" << destBuffer << endl
-             << "destAlphaBuffer=" << destAlphaBuffer << endl
-             << "destGLInternalFormat=" << XGLStringMap[destGLInternalFormat] << endl
-             << "destGLFormat=" << XGLStringMap[destGLFormat] << endl
-             << "destGLType=" << XGLStringMap[destGLType] << endl
-             << "srcGLInternalFormat=" << XGLStringMap[srcGLInternalFormat] << endl
-             << "srcGLFormat=" << XGLStringMap[srcGLFormat] << endl
-             << "srcGLType=" << XGLStringMap[srcGLType] << endl
-             << "srcAlphaGLType=" << XGLStringMap[srcAlphaGLType] << endl
-             << "destAlphaGLType=" << XGLStringMap[destAlphaGLType] << endl
-             << endl
-             << "warparound=" << warparound << endl;
+        cout << "destStart=[" << xstart << ", " << ystart << "]" << code::endl
+             << "destEnd=[" << xend << ", " << yend << "]" << code::endl
+             << "destSize=[" << destSize << "]" << code::endl
+             << "srcSize=[" << srcSize << "]" << code::endl
+             << "srcBuffer=" << srcBuffer << code::endl
+             << "srcAlphaBuffer=" << srcAlphaBuffer << code::endl
+             << "destBuffer=" << destBuffer << code::endl
+             << "destAlphaBuffer=" << destAlphaBuffer << code::endl
+             << "destGLInternalFormat=" << XGLStringMap[destGLInternalFormat] << code::endl
+             << "destGLFormat=" << XGLStringMap[destGLFormat] << code::endl
+             << "destGLType=" << XGLStringMap[destGLType] << code::endl
+             << "srcGLInternalFormat=" << XGLStringMap[srcGLInternalFormat] << code::endl
+             << "srcGLFormat=" << XGLStringMap[srcGLFormat] << code::endl
+             << "srcGLType=" << XGLStringMap[srcGLType] << code::endl
+             << "srcAlphaGLType=" << XGLStringMap[srcAlphaGLType] << code::endl
+             << "destAlphaGLType=" << XGLStringMap[destAlphaGLType] << code::endl
+             << code::endl
+             << "warparound=" << warparound << code::endl;
     };
 
     vigra_precondition((srcSize.x % 8) == 0, "src image width not a multiple of 8");
@@ -381,7 +386,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
     const bool needsAtanWorkaround = (strncmp(gpuVendor, "ATI", 3) == 0);
 
     if(printDebug)
-        cout << "needsAtanWorkaround=" << needsAtanWorkaround << endl;
+        cout << "needsAtanWorkaround=" << needsAtanWorkaround << code::endl;
 
     GLint maxTextureSize;
     // check maximum possible texture size, GL_MAX_RECTANGLE_TEXTURE_SIZE is only available in OpenGL 3.1 and later
@@ -423,7 +428,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
         };
     };
     if(printDebug)
-        cout << "maxTextureSize=" << maxTextureSize << endl;
+        cout << "maxTextureSize=" << maxTextureSize << code::endl;
 
     // Artificial limit: binding big textures to fbos seems to be very slow.
     //maxTextureSize = 2048;
@@ -480,15 +485,15 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
 
     if(printDebug)
     {
-        cout << "Source chunks:" << endl;
+        cout << "Source chunks:" << code::endl;
         for (vector<Rect2D>::iterator rI = sourceChunks.begin(); rI != sourceChunks.end(); ++rI) {
-            cout << "    " << *rI << endl;
+            cout << "    " << *rI << code::endl;
         }
-        cout << "Dest chunks:" << endl;
+        cout << "Dest chunks:" << code::endl;
         for (vector<Rect2D>::iterator rI = destChunks.begin(); rI != destChunks.end(); ++rI) {
-            cout << "    " << *rI << endl;
+            cout << "    " << *rI << code::endl;
         }
-        cout << "Total GPU memory used: " << totalGpuMemoryUsed << endl;
+        cout << "Total GPU memory used: " << totalGpuMemoryUsed << code::endl;
     };
 
 
@@ -497,9 +502,9 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
     makeChunks(interpolatorSize, interpolatorSize, TextureFetchesPerInterpolatorPass, TextureFetchesPerInterpolatorPass, interpolatorChunks);
     if(printDebug)
     {
-        cout << "Interpolator chunks:" << endl;
+        cout << "Interpolator chunks:" << code::endl;
         for (vector<Rect2D>::iterator rI = interpolatorChunks.begin(); rI != interpolatorChunks.end(); ++rI) {
-            cout << "    " << *rI << endl;
+            cout << "    " << *rI << code::endl;
         }
     };
     bool allInterpolatorChunksAreEqual = true;
@@ -516,54 +521,54 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
     // Prepare coord transform GLSL program
     std::ostringstream oss;
     oss << std::setprecision(20) << std::showpoint;
-    oss << "#version 110" << endl
-        << "#extension GL_ARB_texture_rectangle : enable" << endl
-        << "uniform sampler2DRect SrcTexture;" << endl
-        << "float sinh(in float x) { return (exp(x) - exp(-x)) / 2.0; }" << endl
-        << "float cosh(in float x) { return (exp(x) + exp(-x)) / 2.0; }" << endl;
+    oss << "#version 110" << code::endl
+        << "#extension GL_ARB_texture_rectangle : enable" << code::endl
+        << "uniform sampler2DRect SrcTexture;" << code::endl
+        << "float sinh(in float x) { return (exp(x) - exp(-x)) / 2.0; }" << code::endl
+        << "float cosh(in float x) { return (exp(x) + exp(-x)) / 2.0; }" << code::endl;
     // TODO: OpenGL Shader vers. 1.5 has built-in sinh and cosh function,
     // need to check is this functions are available and compile only when
     // this functions are not available
 
     if (needsAtanWorkaround) {
-        oss << "float atan2_xge0(const in float y, const in float x) {" << endl
-            << "    if (abs(y) > x) {" << endl
-            << "        return sign(y) * (" << (M_PI/2.0) << " - atan(x, abs(y)));" << endl
-            << "    } else {" << endl
-            << "        return atan(y, x);" << endl
-            << "    }" << endl
-            << "}" << endl
-            << "float atan2_safe(const in float y, const in float x) {" << endl
-            << "    if (x >= 0.0) return atan2_xge0(y, x);" << endl
-            << "    else return (sign(y) * " << M_PI << ") - atan2_xge0(y, -x);" << endl
-            << "}" << endl
-            << "float atan_safe(const in float yx) {" << endl
-            << "    if (abs(yx) > 1.0) {" << endl
-            << "        return sign(yx) * (" << (M_PI/2.0) << " - atan(1.0/abs(yx)));" << endl
-            << "    } else {" << endl
-            << "        return atan(yx);" << endl
-            << "    }" << endl
-            << "}" << endl;
+        oss << "float atan2_xge0(const in float y, const in float x) {" << code::endl
+            << "    if (abs(y) > x) {" << code::endl
+            << "        return sign(y) * (" << (M_PI/2.0) << " - atan(x, abs(y)));" << code::endl
+            << "    } else {" << code::endl
+            << "        return atan(y, x);" << code::endl
+            << "    }" << code::endl
+            << "}" << code::endl
+            << "float atan2_safe(const in float y, const in float x) {" << code::endl
+            << "    if (x >= 0.0) return atan2_xge0(y, x);" << code::endl
+            << "    else return (sign(y) * " << M_PI << ") - atan2_xge0(y, -x);" << code::endl
+            << "}" << code::endl
+            << "float atan_safe(const in float yx) {" << code::endl
+            << "    if (abs(yx) > 1.0) {" << code::endl
+            << "        return sign(yx) * (" << (M_PI/2.0) << " - atan(1.0/abs(yx)));" << code::endl
+            << "    } else {" << code::endl
+            << "        return atan(yx);" << code::endl
+            << "    }" << code::endl
+            << "}" << code::endl;
     } else {
-        oss << "float atan2_xge0(const in float y, const in float x) {" << endl
-            << "    return atan(y, x);" << endl
-            << "}" << endl
-            << "float atan2_safe(const in float y, const in float x) {" << endl
-            << "    return atan(y, x);" << endl
-            << "}" << endl
-            << "float atan_safe(const in float yx) {" << endl
-            << "    return atan(yx);" << endl
-            << "}" << endl;
+        oss << "float atan2_xge0(const in float y, const in float x) {" << code::endl
+            << "    return atan(y, x);" << code::endl
+            << "}" << code::endl
+            << "float atan2_safe(const in float y, const in float x) {" << code::endl
+            << "    return atan(y, x);" << code::endl
+            << "}" << code::endl
+            << "float atan_safe(const in float yx) {" << code::endl
+            << "    return atan(yx);" << code::endl
+            << "}" << code::endl;
     }
 
-    oss << "void main(void)" << endl
-        << "{" << endl
-        << "    float discardA = 1.0;" << endl
-        << "    float discardB = 0.0;" << endl
+    oss << "void main(void)" << code::endl
+        << "{" << code::endl
+        << "    float discardA = 1.0;" << code::endl
+        << "    float discardB = 0.0;" << code::endl
         << coordXformGLSL
-        << "    src = src * discardA + vec2(-1000.0, -1000.0) * discardB;" << endl
-        << "    gl_FragColor = vec4(src.s, 0.0, 0.0, src.t);" << endl
-        << "}" << endl;
+        << "    src = src * discardA + vec2(-1000.0, -1000.0) * discardB;" << code::endl
+        << "    gl_FragColor = vec4(src.s, 0.0, 0.0, src.t);" << code::endl
+        << "}" << code::endl;
 
     std::string coordXformKernelSourceString = oss.str();
     const char* coordXformKernelSource = coordXformKernelSourceString.c_str();
@@ -601,88 +606,88 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
     // Prepare interpolation shader program.
     oss.str("");
     oss << std::setprecision(20) << std::showpoint;
-    oss << "#version 110" << endl
-        << "#extension GL_ARB_texture_rectangle : enable" << endl
-        << "uniform sampler2DRect CoordTexture;" << endl
-        << "uniform sampler2DRect SrcTexture;" << endl
-        << "uniform sampler2DRect AccumTexture;" << endl
-        << "uniform vec2 SrcUL;" << endl
-        << "uniform vec2 SrcLR;" << endl
-        << "uniform vec2 KernelUL;" << endl
-        << "uniform vec2 KernelWH;" << endl
-        << "float w(const in float i, const in float f) {" << endl
+    oss << "#version 110" << code::endl
+        << "#extension GL_ARB_texture_rectangle : enable" << code::endl
+        << "uniform sampler2DRect CoordTexture;" << code::endl
+        << "uniform sampler2DRect SrcTexture;" << code::endl
+        << "uniform sampler2DRect AccumTexture;" << code::endl
+        << "uniform vec2 SrcUL;" << code::endl
+        << "uniform vec2 SrcLR;" << code::endl
+        << "uniform vec2 KernelUL;" << code::endl
+        << "uniform vec2 KernelWH;" << code::endl
+        << "float w(const in float i, const in float f) {" << code::endl
         << interpolatorGLSL
-        << "}" << endl
-        << "void main(void)" << endl
-        << "{" << endl
-        << "    vec2 src = texture2DRect(CoordTexture, gl_TexCoord[0].st).sq;" << endl
-        << "    vec4 accum = texture2DRect(AccumTexture, gl_TexCoord[0].st);" << endl
-        << endl;
+        << "}" << code::endl
+        << "void main(void)" << code::endl
+        << "{" << code::endl
+        << "    vec2 src = texture2DRect(CoordTexture, gl_TexCoord[0].st).sq;" << code::endl
+        << "    vec4 accum = texture2DRect(AccumTexture, gl_TexCoord[0].st);" << code::endl
+        << code::endl;
 
     // Unexpectedly, this checking slows down the interpolator render passes by 3x-5x.
     //// Add nothing to pixels where the source image has no overlap with the KernelUL/KernelLR range.
-    //oss << "    if (any(lessThan(src, SrcUL - KernelLR + " << (interpolatorSize / 2.0) << "))) {" << endl
-    //    << "        gl_FragColor = accum;" << endl
-    //    << "        return;" << endl
-    //    << "    }" << endl
-    //    << "    if (any(greaterThanEqual(src, SrcLR - KernelUL + " << ((interpolatorSize / 2.0) - 1.0) << "))) {" << endl
-    //    << "        gl_FragColor = accum;" << endl
-    //    << "        return;" << endl
-    //    << "    }" << endl
-    //    << endl;
+    //oss << "    if (any(lessThan(src, SrcUL - KernelLR + " << (interpolatorSize / 2.0) << "))) {" << code::endl
+    //    << "        gl_FragColor = accum;" << code::endl
+    //    << "        return;" << code::endl
+    //    << "    }" << code::endl
+    //    << "    if (any(greaterThanEqual(src, SrcLR - KernelUL + " << ((interpolatorSize / 2.0) - 1.0) << "))) {" << code::endl
+    //    << "        gl_FragColor = accum;" << code::endl
+    //    << "        return;" << code::endl
+    //    << "    }" << code::endl
+    //    << code::endl;
 
-    oss << "    src -= SrcUL;" << endl
-        << "    vec2 t = floor(src) + " << (1.5 - (interpolatorSize / 2)) << ";" << endl
-        << "    vec2 f = fract(src);" << endl
-        << "    vec2 k = vec2(0.0, 0.0);" << endl
-        << endl;
+    oss << "    src -= SrcUL;" << code::endl
+        << "    vec2 t = floor(src) + " << (1.5 - (interpolatorSize / 2)) << ";" << code::endl
+        << "    vec2 f = fract(src);" << code::endl
+        << "    vec2 k = vec2(0.0, 0.0);" << code::endl
+        << code::endl;
 
     // Interpolator loop
     if (allInterpolatorChunksAreEqual) {
-        oss << "    for (float ky = 0.0; ky < " << static_cast<double>(firstInterpolatorChunk.height()) << "; ky += 1.0) {" << endl;
+        oss << "    for (float ky = 0.0; ky < " << static_cast<double>(firstInterpolatorChunk.height()) << "; ky += 1.0) {" << code::endl;
     } else {
-        oss << "    for (float ky = 0.0; ky < KernelWH.t; ky += 1.0) {" << endl;
+        oss << "    for (float ky = 0.0; ky < KernelWH.t; ky += 1.0) {" << code::endl;
     }
 
-    oss << "        k.t = ky + KernelUL.t;" << endl
-        << "        float wy = w(k.t, f.t);" << endl;
+    oss << "        k.t = ky + KernelUL.t;" << code::endl
+        << "        float wy = w(k.t, f.t);" << code::endl;
 
     if (allInterpolatorChunksAreEqual) {
-        oss << "        for (float kx = 0.0; kx < " << static_cast<double>(firstInterpolatorChunk.width()) << "; kx += 1.0) {" << endl;
+        oss << "        for (float kx = 0.0; kx < " << static_cast<double>(firstInterpolatorChunk.width()) << "; kx += 1.0) {" << code::endl;
     } else {
-        oss << "        for (float kx = 0.0; kx < KernelWH.s; kx += 1.0) {" << endl;
+        oss << "        for (float kx = 0.0; kx < KernelWH.s; kx += 1.0) {" << code::endl;
     }
 
     // FIXME support warparound
-    oss << "            k.s = kx + KernelUL.s;" << endl
-        << "            float wx = w(k.s, f.s);" << endl
-        << "            vec2 ix = t + k;" << endl
-        << "            vec4 sp = texture2DRect(SrcTexture, ix);" << endl
-        << "            float weight = wx * wy * sp.a;" << endl
-        << "            accum += sp * weight;" << endl
-        << "        }" << endl
-        << "    }" << endl;
+    oss << "            k.s = kx + KernelUL.s;" << code::endl
+        << "            float wx = w(k.s, f.s);" << code::endl
+        << "            vec2 ix = t + k;" << code::endl
+        << "            vec4 sp = texture2DRect(SrcTexture, ix);" << code::endl
+        << "            float weight = wx * wy * sp.a;" << code::endl
+        << "            accum += sp * weight;" << code::endl
+        << "        }" << code::endl
+        << "    }" << code::endl;
 
     //// Interpolator loop
     //for (int ky = 0; ky < interpolatorSize; ++ky) {
     //    double bounded_ky_offset = 1.5 + ky - (interpolatorSize / 2);
     //    for (int kx = 0; kx < interpolatorSize; ++kx) {
     //        double bounded_kx_offset = 1.5 + kx - (interpolatorSize / 2);
-    //        oss << "    {" << endl
-    //            << "        // (" << kx << ", " << ky << ")" << endl
-    //            << "        vec2 ix = t + vec2(" << bounded_kx_offset << ", " << bounded_ky_offset << ");" << endl
-    //            << "        vec4 sp = texture2DRect(SrcTexture, ix);" << endl
-    //            //<< "        float weight = w[" << kx << "].s * w[" << ky << "].t * sp.a;" << endl
-    //            << "        float weight = w(" << (double)kx << ", f.s) * w(" << (double)ky << ", f.t) * sp.a;" << endl
-    //            << "        accum += sp * weight;" << endl
-    //            << "    }" << endl;
+    //        oss << "    {" << code::endl
+    //            << "        // (" << kx << ", " << ky << ")" << code::endl
+    //            << "        vec2 ix = t + vec2(" << bounded_kx_offset << ", " << bounded_ky_offset << ");" << code::endl
+    //            << "        vec4 sp = texture2DRect(SrcTexture, ix);" << code::endl
+    //            //<< "        float weight = w[" << kx << "].s * w[" << ky << "].t * sp.a;" << code::endl
+    //            << "        float weight = w(" << (double)kx << ", f.s) * w(" << (double)ky << ", f.t) * sp.a;" << code::endl
+    //            << "        accum += sp * weight;" << code::endl
+    //            << "    }" << code::endl;
     //    }
     //}
 
-    oss << endl
-        << "    gl_FragColor = accum;" << endl
-        << "}" << endl
-        << endl;
+    oss << code::endl
+        << "    gl_FragColor = accum;" << code::endl
+        << "}" << code::endl
+        << code::endl;
 
     std::string interpolatorKernelSourceString = oss.str();
     const char* interpolatorKernelSource = interpolatorKernelSourceString.c_str();
@@ -708,32 +713,32 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
     // Prepare normalization/photometric shader program
     oss.str("");
     oss << std::setprecision(20) << std::showpoint;
-    oss << "#version 120" << endl
-        << "#extension GL_ARB_texture_rectangle : enable" << endl
-        << "uniform sampler2DRect NormTexture;" << endl
-        << "uniform sampler2DRect CoordTexture;" << endl;
+    oss << "#version 120" << code::endl
+        << "#extension GL_ARB_texture_rectangle : enable" << code::endl
+        << "uniform sampler2DRect NormTexture;" << code::endl
+        << "uniform sampler2DRect CoordTexture;" << code::endl;
 
     if (!invLut.empty()) {
-        oss << "uniform sampler2DRect InvLutTexture;" << endl;
+        oss << "uniform sampler2DRect InvLutTexture;" << code::endl;
     }
 
     if (!destLut.empty()) {
-        oss << "uniform sampler2DRect DestLutTexture;" << endl;
+        oss << "uniform sampler2DRect DestLutTexture;" << code::endl;
     }
 
-    oss << "void main(void)" << endl
-        << "{" << endl
-        << "    // Normalization" << endl
-        << "    vec4 n = texture2DRect(NormTexture, gl_TexCoord[0].st);" << endl
-        << "    vec4 p = vec4(0.0, 0.0, 0.0, 0.0);" << endl
-        << "    if (n.a >= 0.2) p = n / n.a;" << endl
-        << endl
-        << "    // Photometric" << endl
+    oss << "void main(void)" << code::endl
+        << "{" << code::endl
+        << "    // Normalization" << code::endl
+        << "    vec4 n = texture2DRect(NormTexture, gl_TexCoord[0].st);" << code::endl
+        << "    vec4 p = vec4(0.0, 0.0, 0.0, 0.0);" << code::endl
+        << "    if (n.a >= 0.2) p = n / n.a;" << code::endl
+        << code::endl
+        << "    // Photometric" << code::endl
         << photometricGLSL
-        << endl
-        << "    gl_FragColor = p;" << endl
-        << "}" << endl
-        << endl;
+        << code::endl
+        << "    gl_FragColor = p;" << code::endl
+        << "}" << code::endl
+        << code::endl;
 
     std::string normalizationPhotometricKernelSourceString = oss.str();
     const char* normalizationPhotometricKernelSource = normalizationPhotometricKernelSourceString.c_str();
@@ -794,7 +799,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
     if(printDebug)
     {
         t21=getms();
-        cout << "gpu shader program compile time = " << ((t21 - t1)/1000.0) << endl;
+        cout << "gpu shader program compile time = " << ((t21 - t1)/1000.0) << code::endl;
     };
 
     // General GL setup
@@ -963,7 +968,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
     glFinish();
     if(printDebug)
     {
-        cout << "gpu shader texture/framebuffer setup time = " << ((getms()-t21)/1000.0) << endl;
+        cout << "gpu shader texture/framebuffer setup time = " << ((getms()-t21)/1000.0) << code::endl;
     };
 
     // Render each dest chunk
@@ -992,7 +997,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
         if(printDebug)
         {
             long t4=getms();
-            cout << "gpu dest chunk=" << *dI << " coord image render time = " << ((t4-t3)/1000.0) << endl;
+            cout << "gpu dest chunk=" << *dI << " coord image render time = " << ((t4-t3)/1000.0) << code::endl;
         };
 
         // Multipass rendering of dest image
@@ -1024,7 +1029,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
                     if(printDebug)
                     {
                         t6=getms();
-                        cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src upload = " << ((t6-t5)/1000.0) << endl;
+                        cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src upload = " << ((t6-t5)/1000.0) << code::endl;
                     };
 
                     if (srcAlphaBuffer != NULL) {
@@ -1042,7 +1047,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
                         if(printDebug)
                         {
                             t7=getms();
-                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src alpha upload = " << ((t7-t6)/1000.0) << endl;
+                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src alpha upload = " << ((t7-t6)/1000.0) << code::endl;
                         };
 
                         glPolygonMode(GL_FRONT, GL_FILL);
@@ -1057,7 +1062,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
                         glFinish();
                         if(printDebug)
                         {
-                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src+alpha render = " << ((getms()-t7)/1000.0) << endl;
+                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src+alpha render = " << ((getms()-t7)/1000.0) << code::endl;
                         };
                     }
                 }
@@ -1077,7 +1082,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
                     if(printDebug)
                     {
                         t6=getms();
-                        cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src upload = " << ((t6-t5)/1000.0) << endl;
+                        cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src upload = " << ((t6-t5)/1000.0) << code::endl;
                     };
 
                     if (srcAlphaBuffer != NULL) {
@@ -1093,7 +1098,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
                         if(printDebug)
                         {
                             t7=getms();
-                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src alpha upload = " << ((t7- t6)/1000.0) << endl;
+                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src alpha upload = " << ((t7- t6)/1000.0) << code::endl;
                         };
 
                         glPolygonMode(GL_FRONT, GL_FILL);
@@ -1114,7 +1119,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
                         glFinish();
                         if(printDebug)
                         {
-                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src+alpha render = " << ((getms()-t7)/1000.0) << endl;
+                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src+alpha render = " << ((getms()-t7)/1000.0) << code::endl;
                         };
                     }
                     else {
@@ -1139,7 +1144,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
                         if(printDebug)
                         {
                             t7=getms();
-                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src render = " << ((t7-t6)/1000.0) << endl;
+                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src render = " << ((t7-t6)/1000.0) << code::endl;
                         };
                     }
                 }
@@ -1197,7 +1202,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
                 if(printDebug)
                 {
                     t10=getms();
-                    cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " interpolation chunk=" << *iI << " setup = " << ((t10-t9)/1000.0) << endl;
+                    cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " interpolation chunk=" << *iI << " setup = " << ((t10-t9)/1000.0) << code::endl;
                 };
 
                 glPolygonMode(GL_FRONT, GL_FILL);
@@ -1214,7 +1219,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
                 {
                     t11=getms();
                     t9=getms();
-                    cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " interpolation chunk=" << *iI << " render = " << ((t11-t10)/1000.0) << endl;
+                    cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " interpolation chunk=" << *iI << " render = " << ((t11-t10)/1000.0) << code::endl;
                 };
 
             } // next interpolation chunk
@@ -1258,7 +1263,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
         if(printDebug)
         {
             t12=getms();
-            cout << "gpu dest chunk=" << *dI << " normalization setup = " << ((t12-t11)/1000.0) << endl;
+            cout << "gpu dest chunk=" << *dI << " normalization setup = " << ((t12-t11)/1000.0) << code::endl;
         };
 
         glPolygonMode(GL_FRONT, GL_FILL);
@@ -1274,7 +1279,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
         if(printDebug)
         {
             t13=getms();
-            cout << "gpu dest chunk=" << *dI << " normalization render = " << ((t13-t12)/1000.0) << endl;
+            cout << "gpu dest chunk=" << *dI << " normalization render = " << ((t13-t12)/1000.0) << code::endl;
         };
 
         pass++;
@@ -1296,7 +1301,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
             if(printDebug)
             {
                 t14=getms();
-                cout << "gpu dest chunk=" << *dI << " rgb readback = " << ((t14-t13)/1000.0) << endl;
+                cout << "gpu dest chunk=" << *dI << " rgb readback = " << ((t14-t13)/1000.0) << code::endl;
             };
         }
         else {
@@ -1315,7 +1320,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
             if(printDebug)
             {
                 t14=getms();
-                cout << "gpu dest chunk=" << *dI << " dest rgb disassembly setup = " << ((t14-t13)/1000.0) << endl;
+                cout << "gpu dest chunk=" << *dI << " dest rgb disassembly setup = " << ((t14-t13)/1000.0) << code::endl;
             };
 
             glPolygonMode(GL_FRONT, GL_FILL);
@@ -1335,7 +1340,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
             if(printDebug)
             {
                 t15=getms();
-                cout << "gpu dest chunk=" << *dI << " dest rgb disassembly render = " << ((t15-t14)/1000.0) << endl;
+                cout << "gpu dest chunk=" << *dI << " dest rgb disassembly render = " << ((t15-t14)/1000.0) << code::endl;
             };
 
             glReadBuffer(GL_COLOR_ATTACHMENT0_EXT);
@@ -1348,7 +1353,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
             if(printDebug)
             {
                 t16=getms();
-                cout << "gpu dest chunk=" << *dI << " rgb readback = " << ((t16-t15)/1000.0) << endl;
+                cout << "gpu dest chunk=" << *dI << " rgb readback = " << ((t16-t15)/1000.0) << code::endl;
             };
         }
 
@@ -1367,7 +1372,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
             if(printDebug)
             {
                 t17=getms();
-                cout << "gpu dest chunk=" << *dI << " dest alpha disassembly setup = " << ((t17-t16)/1000.0) << endl;
+                cout << "gpu dest chunk=" << *dI << " dest alpha disassembly setup = " << ((t17-t16)/1000.0) << code::endl;
             };
 
             glPolygonMode(GL_FRONT, GL_FILL);
@@ -1387,7 +1392,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
             if(printDebug)
             {
                 t18=getms();
-                cout << "gpu dest chunk=" << *dI << " dest alpha disassembly render = " << ((t18-t17)/1000.0) << endl;
+                cout << "gpu dest chunk=" << *dI << " dest alpha disassembly render = " << ((t18-t17)/1000.0) << code::endl;
             };
 
             // Readback dest alpha chunk
@@ -1401,7 +1406,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
             if(printDebug)
             {
                 t19=getms();
-                cout << "gpu dest chunk=" << *dI << " alpha readback = " << ((t19-t18)/1000.0) << endl;
+                cout << "gpu dest chunk=" << *dI << " alpha readback = " << ((t19-t18)/1000.0) << code::endl;
             };
         }
 
@@ -1447,8 +1452,8 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
     if(printDebug)
     {
         long t20=getms();
-        cout << "gpu destruct time = " << ((t20-t19)/1000.0) << endl;
-        cout << "gpu total time = " << ((t20-t1)/1000.0) << endl;
+        cout << "gpu destruct time = " << ((t20-t19)/1000.0) << code::endl;
+        cout << "gpu total time = " << ((t20-t1)/1000.0) << code::endl;
     };
 
     return true;
