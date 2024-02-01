@@ -31,7 +31,8 @@
 // assistant panel
 #define HUGIN_ASS_NCONTROLPOINTS             20l
 #define HUGIN_ASS_MAX_NORMAL_FOV            100.0
-#define HUGIN_ASS_PANO_DOWNSIZE_FACTOR        0.7
+//#define HUGIN_ASS_PANO_DOWNSIZE_FACTOR        0.7
+#define HUGIN_ASS_PANO_DOWNSIZE_FACTOR        1.0
 #define HUGIN_ASS_AUTO_ALIGN                  0l
 #define HUGIN_ASS_AUTO_CPCLEAN                1l
 #define HUGIN_ASS_LINEFIND                    1l
