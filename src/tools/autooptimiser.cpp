@@ -390,7 +390,8 @@ int main(int argc, char* argv[])
         };
 
         // downscale pano a little
-        const double sizeFactor = 0.7;
+        //const double sizeFactor = 0.7;
+        const double sizeFactor = 1.0;
         const double w = HuginBase::CalculateOptimalScale::calcOptimalScale(pano);
         opts.setWidth(hugin_utils::roundi(opts.getWidth()*w*sizeFactor), true);
         pano.setOptions(opts);
