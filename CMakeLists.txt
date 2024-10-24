@@ -369,7 +369,7 @@ IF(WIN32)
   ENDIF()
 ENDIF(WIN32)
 
-FIND_PACKAGE(Boost 1.47 COMPONENTS filesystem system)
+FIND_PACKAGE(Boost COMPONENTS filesystem system)
 
 IF (NOT Boost_FOUND)
   IF(WIN32)
