@@ -67,6 +67,7 @@ static void usage(const char* name)
          << "    Postprocessing options:" << std::endl
          << "     -l       level horizon (works best for horizontal panos)" << std::endl
          << "     -s       automatically select a suitable output projection and size" << std::endl
+         << "     -x       set scale size factor manually" << std::endl
          << "    Other options:" << std::endl
          << "     -q       quiet operation (no progress is reported)" << std::endl
          << "     -v HFOV  specify horizontal field of view of input images." << std::endl
@@ -84,7 +85,7 @@ static void usage(const char* name)
 int main(int argc, char* argv[])
 {
     // parse arguments
-    const char* optstring = "alho:npqsv:m";
+    const char* optstring = "alho:npqsv:mx:";
     int c;
     enum
     {
@@ -107,6 +108,7 @@ int main(int argc, char* argv[])
     bool quiet = false;
     bool doPhotometric = false;
     double hfov = 0.0;
+    double scalef = 1.0;
     while ((c = getopt_long(argc, argv, optstring, longOptions, nullptr)) != -1)
     {
         switch (c)
@@ -137,6 +139,9 @@ int main(int argc, char* argv[])
                 break;
             case 'v':
                 hfov = atof(optarg);
+                break;
+            case 'x':
+                scalef = atof(optarg);
                 break;
             case 'm':
                 doPhotometric = true;
@@ -390,8 +395,7 @@ int main(int argc, char* argv[])
         };
 
         // downscale pano a little
-        //const double sizeFactor = 0.7;
-        const double sizeFactor = 1.0;
+        const double sizeFactor = scalef;
         const double w = HuginBase::CalculateOptimalScale::calcOptimalScale(pano);
         opts.setWidth(hugin_utils::roundi(opts.getWidth()*w*sizeFactor), true);
         pano.setOptions(opts);
