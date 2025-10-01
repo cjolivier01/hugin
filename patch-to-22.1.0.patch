@@ -1,0 +1,1503 @@
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..796b96d
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1 @@
++/build
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 420337a..1fbe0ab 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -18,6 +18,8 @@ if(POLICY CMP0127)
+   cmake_policy(SET CMP0127 NEW)
+ endif()
+ 
++#list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/external/hugin/CMakeModules")
++
+ if(APPLE)
+   set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9")
+   if (MAC_SELF_CONTAINED_BUNDLE)
+@@ -28,7 +30,7 @@ if(APPLE)
+   set(CMAKE_REQUIRED_INCLUDES ${CMAKE_SOURCE_DIR}/mac/ExternalPrograms/repository/include)
+ endif(APPLE)
+ 
+-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules )
++set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules )
+ 
+ ##
+ ## Cleaner Debian Packaging (disable by -DDISABLE_DPKG=ON)
+@@ -54,7 +56,7 @@ IF(NOT DISABLE_DPKG)
+   endif()
+ ENDIF()
+ 
+-include(HuginMacros)
++include(${CMAKE_CURRENT_LIST_DIR}/CMakeModules/HuginMacros.cmake)
+ include(CheckIncludeFiles)
+ 
+ ##  global setup
+@@ -116,10 +118,10 @@ set(HUGIN_LIB_VERSION 0.0)
+ # before any system includes
+ 
+ include_directories( ${CMAKE_BINARY_DIR}/src )
+-include_directories( ${CMAKE_SOURCE_DIR}/src/hugin_base )
+-include_directories( ${CMAKE_SOURCE_DIR}/src/celeste )
+-include_directories( ${CMAKE_BINARY_DIR}/src/celeste )
+-include_directories( ${CMAKE_SOURCE_DIR}/src )
++include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src/hugin_base )
++include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src/celeste )
++include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src/celeste )
++include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src )
+ 
+ # this function is not available on some systems, notably FreeBSD and Windows
+ include(CheckFunctionExists)
+@@ -142,9 +144,9 @@ IF (WIN32)
+   ##
+   ## The directory that contains the hugin source root is a good
+   ## place to look for support packages, so post it in cache.
+-  ## 
++  ##
+   ## Our FIND_PACKAGE calls modules will search SOURCE_BASE_DIR
+-  ## after the local standard places  
++  ## after the local standard places
+   ##
+   # extract pathname from CMAKE_SOURCE_DIR (note result must be a local var)
+   STRING( REGEX REPLACE "(.*)/[^/]+$" "\\1" work "${CMAKE_SOURCE_DIR}" )
+@@ -290,7 +292,7 @@ IF(PANO13_FOUND)
+   SET(PANO_INCLUDE_DIR ${PANO13_INCLUDE_DIR})
+ ELSE(PANO13_FOUND)
+   MESSAGE(SEND_ERROR "libpano13 required")
+-ENDIF(PANO13_FOUND) 
++ENDIF(PANO13_FOUND)
+ INCLUDE_DIRECTORIES(${PANO_INCLUDE_DIR})
+ 
+ # Check CXX11 compiler
+@@ -316,7 +318,7 @@ check_cxx_source_compiles(
+       #include <filesystem>
+     #endif
+     #include <string>
+-    
++
+     #if defined _MSC_VER && _MSC_VER <= 1900
+     namespace fs = std::tr2::sys;
+     #else
+@@ -328,7 +330,7 @@ check_cxx_source_compiles(
+       fs::path filepath;
+       filepath=fs::absolute(filepath);
+       std::string s=filepath.filename().string();
+-      return 0;    
++      return 0;
+     };
+   "
+   HAVE_STD_FILESYSTEM
+@@ -358,8 +360,8 @@ IF(WIN32)
+     SET(Boost_USE_STATIC_LIBS ON)
+     SET(Boost_USE_STATIC_RUNTIME ON)
+   ENDIF()
+-  # If BOOST_ROOT was defined in the environment, use it. 
+-  IF(NOT BOOST_ROOT AND NOT $ENV{BOOST_ROOT} STREQUAL "") 
++  # If BOOST_ROOT was defined in the environment, use it.
++  IF(NOT BOOST_ROOT AND NOT $ENV{BOOST_ROOT} STREQUAL "")
+     SET(BOOST_ROOT $ENV{BOOST_ROOT})
+   ENDIF()
+   IF(NOT BOOST_ROOT)
+@@ -367,7 +369,7 @@ IF(WIN32)
+   ENDIF()
+ ENDIF(WIN32)
+ 
+-FIND_PACKAGE(Boost 1.47 COMPONENTS filesystem system)
++FIND_PACKAGE(Boost COMPONENTS filesystem system)
+ 
+ IF (NOT Boost_FOUND)
+   IF(WIN32)
+@@ -384,21 +386,21 @@ ENDIF()
+ # find enblend-enfuse base path
+ IF(WIN32)
+   FIND_PATH(ENBLEND_DIR bin/enblend.exe enblend.exe
+-    PATHS 
+-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.2-win64 
+-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.2-win32 
+-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.5-win64 
+-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.5-win32 
+-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.4-win64 
+-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.4-win32 
+-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.3-win64 
+-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.3-win32 
+-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.2-win64 
+-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.2-win32 
+-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.1-win64 
+-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.1-win32 
+-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.1 
+-      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1 
++    PATHS
++      ${SOURCE_BASE_DIR}/enblend-enfuse-4.2-win64
++      ${SOURCE_BASE_DIR}/enblend-enfuse-4.2-win32
++      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.5-win64
++      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.5-win32
++      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.4-win64
++      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.4-win32
++      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.3-win64
++      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.3-win32
++      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.2-win64
++      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.2-win32
++      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.1-win64
++      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.1-win32
++      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1.1
++      ${SOURCE_BASE_DIR}/enblend-enfuse-4.1
+       ${SOURCE_BASE_DIR}/enblend-enfuse-4.0
+       ${SOURCE_BASE_DIR}/enblend-3.1
+       ${SOURCE_BASE_DIR}/enblend-enfuse-3.2
+@@ -453,7 +455,7 @@ IF(OPENMP_FOUND)
+     SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_CXX_FLAGS}")
+   ENDIF()
+ ELSE()
+-  MESSAGE(WARNING "Compiler does not support OpenMP. OpenMP is required for multi-threaded processes. So only single threaded execution is compiled now.") 
++  MESSAGE(WARNING "Compiler does not support OpenMP. OpenMP is required for multi-threaded processes. So only single threaded execution is compiled now.")
+ ENDIF()
+ 
+ IF(WIN32)
+@@ -525,7 +527,7 @@ ENDIF()
+ 
+ #
+ # Check build type and set options accordingly
+-# 
++#
+ IF(NOT CMAKE_BUILD_TYPE)
+   SET(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
+       "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
+@@ -558,8 +560,8 @@ ELSE(NOT MANDIR AND NOT $ENV{MANDIR} STREQUAL "")
+     SET (MANDIR "share/man")
+ ENDIF(NOT MANDIR AND NOT $ENV{MANDIR} STREQUAL "")
+ 
+-SET(LOCALEDIR share/locale) 
+-SET(ICONDIR share/icons) 
++SET(LOCALEDIR share/locale)
++SET(ICONDIR share/icons)
+ SET(LINKDIR share/applications)
+ SET(LIBDIR  lib${LIB_SUFFIX})
+ SET(INSTALL_XRC_DIR ${CMAKE_INSTALL_PREFIX}/share/hugin/xrc)
+@@ -618,7 +620,7 @@ ELSE()
+     # install into place in build-dir
+     SET( CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/INSTALL/FILES CACHE FILEPATH "install prefix" FORCE)
+     INCLUDE (win_bundle)
+-	
++
+ 	#Build HuginSetup
+ 	OPTION (BUILD_HUGINSETUP "Build HuginSetup (NSIS Installer)" OFF)
+     IF(BUILD_HUGINSETUP)
+@@ -684,7 +686,7 @@ ENDIF ()
+ IF(APPLE)
+ 
+   IF(MAC_SELF_CONTAINED_BUNDLE)
+-    SET(CMAKE_MACOSX_RPATH FALSE) 
++    SET(CMAKE_MACOSX_RPATH FALSE)
+ 
+     ADD_CUSTOM_TARGET(Mac ALL)
+     SET(APPS Hugin PTBatcherGUI calibrate_lens_gui HuginStitchProject)
+@@ -716,14 +718,14 @@ IF(APPLE)
+         :enblend :enfuse :hugin_hdrmerge :nona :verdandi)
+ 
+     INSTALL( DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/tools_mac
+-             DESTINATION Hugin 
++             DESTINATION Hugin
+              COMPONENT "tools_mac"
+              FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+              PATTERN .DS_Store EXCLUDE )
+ 
+   ENDIF(MAC_SELF_CONTAINED_BUNDLE)
+ 
+-  
++
+   ADD_DEFINITIONS(-D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0)
+ 
+   #This namespace workaround is not needed for CMake >= 2.5.x
+@@ -803,7 +805,7 @@ SET(CPACK_SOURCE_IGNORE_FILES
+ "/lens_calibrate/calibrate_lens$"
+ "/nona_gui/nona_gui$"
+ "/stitch_project/hugin_stitch_project$"
+-"/deghosting/deghosting_mask$" 
++"/deghosting/deghosting_mask$"
+ "/outdated/"
+ "/build/"
+ "/CVS/"
+@@ -822,8 +824,8 @@ SET(CPACK_SOURCE_IGNORE_FILES
+ "\\\\.a$"
+ "\\\\.lo$"
+ "\\\\.so$"
+-"\\\\.so\\\\.0$" 
+-"\\\\.so\\\\.0\\\\.0$" 
++"\\\\.so\\\\.0$"
++"\\\\.so\\\\.0\\\\.0$"
+ "\\\\.la$"
+ "Makefile\\\\.in$"
+ "/\\\\.hg/"
+@@ -841,7 +843,7 @@ IF(NOT DISABLE_DPKG)
+   SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
+   # when building, don't use the install RPATH already
+   # (but later on when installing)
+-  SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
++  SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+ 
+   SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib/hugin")
+   SET(CPACK_DEBIAN_PACKAGE_DEBUG ON)
+@@ -872,13 +874,13 @@ ENDIF()
+ 
+ # ignore some directories when creating rpm
+ SET(CPACK_RPM_SPEC_MORE_DEFINE "%define ignore \#")
+-SET(CPACK_RPM_USER_FILELIST 
++SET(CPACK_RPM_USER_FILELIST
+   "%ignore /usr/local"
+-  "%ignore /usr/local/bin" 
+-  "%ignore /usr/local/lib" 
+-  "%ignore /usr/local/share" 
+-  "%ignore /usr/local/share/applications" 
+-  "%ignore /usr/local/share/man" 
++  "%ignore /usr/local/bin"
++  "%ignore /usr/local/lib"
++  "%ignore /usr/local/share"
++  "%ignore /usr/local/share/applications"
++  "%ignore /usr/local/share/man"
+   "%ignore /usr/local/share/man/man1"
+   "%ignore /usr/lib/python2.7"
+   "%ignore /usr/lib/python2.7/site-packages"
+@@ -930,7 +932,7 @@ SET(CPACK_PACKAGE_VENDOR "Hugin developer team")
+ SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Hugin - Panorama photo stitcher")
+ IF(MSVC_VERSION EQUAL 1900)
+   IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
+-    SET(CPACK_WIX_EXTRA_SOURCES 
++    SET(CPACK_WIX_EXTRA_SOURCES
+       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/redist_vc14_x64.wxs"
+       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/filetype.wxs"
+     )
+@@ -943,7 +945,7 @@ IF(MSVC_VERSION EQUAL 1900)
+   SET(CPACK_WIX_PATCH_FILE "${CMAKE_SOURCE_DIR}/platforms/windows/wix/redist.xml")
+ ELSEIF(MSVC_VERSION GREATER_EQUAL 1930)
+   IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
+-    SET(CPACK_WIX_EXTRA_SOURCES 
++    SET(CPACK_WIX_EXTRA_SOURCES
+       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/redist_vc17_x64.wxs"
+       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/filetype.wxs"
+     )
+@@ -956,7 +958,7 @@ ELSEIF(MSVC_VERSION GREATER_EQUAL 1930)
+   SET(CPACK_WIX_PATCH_FILE "${CMAKE_SOURCE_DIR}/platforms/windows/wix/redist.xml")
+ ELSEIF(MSVC_VERSION GREATER_EQUAL 1920)
+   IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
+-    SET(CPACK_WIX_EXTRA_SOURCES 
++    SET(CPACK_WIX_EXTRA_SOURCES
+       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/redist_vc16_x64.wxs"
+       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/filetype.wxs"
+     )
+@@ -969,7 +971,7 @@ ELSEIF(MSVC_VERSION GREATER_EQUAL 1920)
+   SET(CPACK_WIX_PATCH_FILE "${CMAKE_SOURCE_DIR}/platforms/windows/wix/redist.xml")
+ ELSEIF(MSVC_VERSION GREATER_EQUAL 1910)
+   IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
+-    SET(CPACK_WIX_EXTRA_SOURCES 
++    SET(CPACK_WIX_EXTRA_SOURCES
+       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/redist_vc15_x64.wxs"
+       "${CMAKE_SOURCE_DIR}/platforms/windows/wix/filetype.wxs"
+     )
+@@ -996,6 +998,8 @@ CONFIGURE_FILE(
+   "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+   IMMEDIATE @ONLY)
+ 
++IF(NOT HAS_UNINSTALL_TARGET)
+ ADD_CUSTOM_TARGET(uninstall
+   "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
++ENDIF()
+ 
+diff --git a/CMakeModules/FindPackageHandleStandardArgs.cmake b/CMakeModules/FindPackageHandleStandardArgs.cmake
+deleted file mode 100644
+index 151d812..0000000
+--- a/CMakeModules/FindPackageHandleStandardArgs.cmake
++++ /dev/null
+@@ -1,58 +0,0 @@
+-# FIND_PACKAGE_HANDLE_STANDARD_ARGS(NAME (DEFAULT_MSG|"Custom failure message") VAR1 ... )
+-#    This macro is intended to be used in FindXXX.cmake modules files.
+-#    It handles the REQUIRED and QUIET argument to FIND_PACKAGE() and
+-#    it also sets the <UPPERCASED_NAME>_FOUND variable.
+-#    The package is found if all variables listed are TRUE.
+-#    Example:
+-#
+-#    FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibXml2 DEFAULT_MSG LIBXML2_LIBRARIES LIBXML2_INCLUDE_DIR)
+-#
+-#    LibXml2 is considered to be found, if both LIBXML2_LIBRARIES and 
+-#    LIBXML2_INCLUDE_DIR are valid. Then also LIBXML2_FOUND is set to TRUE.
+-#    If it is not found and REQUIRED was used, it fails with FATAL_ERROR, 
+-#    independent whether QUIET was used or not.
+-#    If it is found, the location is reported using the VAR1 argument, so 
+-#    here a message "Found LibXml2: /usr/lib/libxml2.so" will be printed out.
+-#    If the second argument is DEFAULT_MSG, the message in the failure case will 
+-#    be "Could NOT find LibXml2", if you don't like this message you can specify
+-#    your own custom failure message there.
+-
+-MACRO(FIND_PACKAGE_HANDLE_STANDARD_ARGS _NAME _FAIL_MSG _VAR1 )
+-
+-  IF("${_FAIL_MSG}" STREQUAL "DEFAULT_MSG")
+-    IF (${_NAME}_FIND_REQUIRED)
+-      SET(_FAIL_MESSAGE "Could not find REQUIRED package ${_NAME}")
+-    ELSE (${_NAME}_FIND_REQUIRED)
+-      SET(_FAIL_MESSAGE "Could not find OPTIONAL package ${_NAME}")
+-    ENDIF (${_NAME}_FIND_REQUIRED)
+-  ELSE("${_FAIL_MSG}" STREQUAL "DEFAULT_MSG")
+-    SET(_FAIL_MESSAGE "${_FAIL_MSG}")
+-  ENDIF("${_FAIL_MSG}" STREQUAL "DEFAULT_MSG")
+-
+-  STRING(TOUPPER ${_NAME} _NAME_UPPER)
+-
+-  SET(${_NAME_UPPER}_FOUND TRUE)
+-  IF(NOT ${_VAR1})
+-    SET(${_NAME_UPPER}_FOUND FALSE)
+-  ENDIF(NOT ${_VAR1})
+-
+-  FOREACH(_CURRENT_VAR ${ARGN})
+-    IF(NOT ${_CURRENT_VAR})
+-      SET(${_NAME_UPPER}_FOUND FALSE)
+-    ENDIF(NOT ${_CURRENT_VAR})
+-  ENDFOREACH(_CURRENT_VAR)
+-
+-  IF (${_NAME_UPPER}_FOUND)
+-    IF (NOT ${_NAME}_FIND_QUIETLY)
+-        MESSAGE(STATUS "Found ${_NAME}: ${${_VAR1}}")
+-    ENDIF (NOT ${_NAME}_FIND_QUIETLY)
+-  ELSE (${_NAME_UPPER}_FOUND)
+-    IF (${_NAME}_FIND_REQUIRED)
+-        MESSAGE(FATAL_ERROR "${_FAIL_MESSAGE}")
+-    ELSE (${_NAME}_FIND_REQUIRED)
+-      IF (NOT ${_NAME}_FIND_QUIETLY)
+-        MESSAGE(STATUS "${_FAIL_MESSAGE}")
+-      ENDIF (NOT ${_NAME}_FIND_QUIETLY)
+-    ENDIF (${_NAME}_FIND_REQUIRED)
+-  ENDIF (${_NAME_UPPER}_FOUND)
+-ENDMACRO(FIND_PACKAGE_HANDLE_STANDARD_ARGS)
+diff --git a/src/celeste/CMakeLists.txt b/src/celeste/CMakeLists.txt
+index e99f094..4abcf3e 100644
+--- a/src/celeste/CMakeLists.txt
++++ b/src/celeste/CMakeLists.txt
+@@ -1,21 +1,21 @@
+ #    Copyright (C) 2008 by Tim Nugent
+ #    timnugent@gmail.com
+-# 
++#
+ #    This file is part of hugin.
+-# 
++#
+ #    Hugin is free software: you can redistribute it and/or modify
+ #    it under the terms of the GNU General Public License as published by
+ #    the Free Software Foundation, either version 2 of the License, or
+ #    (at your option) any later version.
+-#  
++#
+ #    Hugin is distributed in the hope that it will be useful,
+ #    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ #    GNU General Public License for more details.
+-#  
++#
+ #    You should have received a copy of the GNU General Public License
+ #    along with Hugin  If not, see <http://www.gnu.org/licenses/>.
+- 
++
+ IF(NOT WIN32)
+     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+ ENDIF(NOT WIN32)
+@@ -65,21 +65,21 @@ ELSE (${HUGIN_SHARED_LIBS})
+     # messages are quite obtrusive in windows cmakesetup.exe
+     IF (NOT WIN32)
+     	#message("Using these CMAKE_CXX_FLAGS : ${CMAKE_CXX_FLAGS}")
+-	ENDIF (NOT WIN32)	
++	ENDIF (NOT WIN32)
+ 	ADD_LIBRARY(celeste STATIC ${CELESTE_SRC})
+ 	TARGET_LINK_LIBRARIES(celeste huginbase ${common_libs})
+ 	set_target_properties(celeste PROPERTIES VERSION ${HUGIN_LIB_VERSION})
+ ENDIF (${HUGIN_SHARED_LIBS})
+ 
+ # standalone
+-ADD_EXECUTABLE(celeste_standalone ../hugin_config.h  Main.cpp )
++ADD_EXECUTABLE(celeste_standalone ${CMAKE_BINARY_DIR}/src/hugin_config.h  Main.cpp )
+ target_link_libraries( celeste_standalone celeste ${image_libs} ${common_libs})
+ 
+ SET (CELESTE_MODEL
+ 	data/celeste.model
+ )
+ 
+-INSTALL(TARGETS celeste_standalone DESTINATION ${BINDIR}) 
++INSTALL(TARGETS celeste_standalone DESTINATION ${BINDIR})
+ INSTALL(FILES ${CELESTE_MODEL} DESTINATION ${HUGINDATADIR}/data)
+ 
+ #add_subdirectory(training)
+diff --git a/src/hugin1/CMakeLists.txt b/src/hugin1/CMakeLists.txt
+index 46bbc14..089e201 100644
+--- a/src/hugin1/CMakeLists.txt
++++ b/src/hugin1/CMakeLists.txt
+@@ -1,5 +1,5 @@
+ 
+-include_directories( ${CMAKE_SOURCE_DIR}/src/hugin1 )
++include_directories( ${CMAKE_CURRENT_SOURCE_DIR} )
+ 
+ INCLUDE(${wxWidgets_USE_FILE})
+ 
+@@ -10,15 +10,15 @@ ENDIF(WIN32)
+ 
+ # populate correct dpi aware manifest from wxWidgets
+ IF(WIN32)
+-  IF(CMAKE_SIZEOF_VOID_P EQUAL 8) 
++  IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
+     # 64 bit build
+-    FIND_FILE(WINDOWS_DPI_MANIFEST 
+-      NAMES amd64_dpi_aware_pmv2.manifest amd64-dpi-aware-pmv2.manifest wx_dpi_aware_pmv2.manifest 
++    FIND_FILE(WINDOWS_DPI_MANIFEST
++      NAMES amd64_dpi_aware_pmv2.manifest amd64-dpi-aware-pmv2.manifest wx_dpi_aware_pmv2.manifest
+       PATHS "${wxWidgets_ROOT_DIR}/include/wx/msw/"
+     )
+   ELSE()
+     # 32 bit build
+-    FIND_FILE(WINDOWS_DPI_MANIFEST 
++    FIND_FILE(WINDOWS_DPI_MANIFEST
+       NAMES wx_dpi_aware_pmv2.manifest wx-dpi-aware-pmv2.manifest
+       PATHS "${wxWidgets_ROOT_DIR}/include/wx/msw/"
+     )
+diff --git a/src/hugin1/hugin/MainFrame.cpp b/src/hugin1/hugin/MainFrame.cpp
+index 7e8c13c..388904e 100644
+--- a/src/hugin1/hugin/MainFrame.cpp
++++ b/src/hugin1/hugin/MainFrame.cpp
+@@ -1001,7 +1001,7 @@ void MainFrame::OnSaveProject(wxCommandEvent & e)
+         scriptName = m_filename;
+     } else {
+         // the project file is just a PTOptimizer script...
+-        DEBUG_DEBUG("stripping " << path << " from image filenames");
++        //DEBUG_DEBUG("stripping " << path << " from image filenames");
+         const std::string script(scriptName.GetFullPath().mb_str(HUGIN_CONV_FILENAME));
+         pano.WritePTOFile(script, hugin_utils::getPathPrefix(script));
+ 
+diff --git a/src/hugin1/hugin/config_defaults.h b/src/hugin1/hugin/config_defaults.h
+index 1770ea9..b179acb 100644
+--- a/src/hugin1/hugin/config_defaults.h
++++ b/src/hugin1/hugin/config_defaults.h
+@@ -31,7 +31,8 @@
+ // assistant panel
+ #define HUGIN_ASS_NCONTROLPOINTS             20l
+ #define HUGIN_ASS_MAX_NORMAL_FOV            100.0
+-#define HUGIN_ASS_PANO_DOWNSIZE_FACTOR        0.7
++//#define HUGIN_ASS_PANO_DOWNSIZE_FACTOR        0.7
++#define HUGIN_ASS_PANO_DOWNSIZE_FACTOR        1.0
+ #define HUGIN_ASS_AUTO_ALIGN                  0l
+ #define HUGIN_ASS_AUTO_CPCLEAN                1l
+ #define HUGIN_ASS_LINEFIND                    1l
+diff --git a/src/hugin_base/hugin_utils/utils.h b/src/hugin_base/hugin_utils/utils.h
+index a6d2553..1411206 100644
+--- a/src/hugin_base/hugin_utils/utils.h
++++ b/src/hugin_base/hugin_utils/utils.h
+@@ -54,7 +54,7 @@
+ #endif
+ 
+ 
+-#ifdef DEBUG
++#ifdef HUGIN_DEBUG
+     // debug trace
+     #define DEBUG_TRACE(msg) { std::cerr << "TRACE " << DEBUG_HEADER << msg << std::endl; }
+     // low level debug info
+@@ -86,7 +86,7 @@
+ 
+ namespace hugin_utils
+ {
+-    
++
+     /** current time as a string */
+     IMPEX std::string GetCurrentTimeString();
+ 
+@@ -199,7 +199,7 @@ namespace hugin_utils
+         return ret;
+     }
+ 
+-    IMPEX void ControlPointErrorColour(const double cperr, 
++    IMPEX void ControlPointErrorColour(const double cperr,
+         double &r,double &g, double &b);
+ 
+     /** checks if file exists */
+@@ -222,7 +222,7 @@ namespace hugin_utils
+     IMPEX std::string GetDataDir();
+ 
+     /** returns the directory for user specific Hugin settings, e.g. lens database
+-        the directory is automatically created if it does not exists 
++        the directory is automatically created if it does not exists
+         @return path, empty if path could not retrieved or not created */
+     IMPEX std::string GetUserAppDataDir();
+ 
+diff --git a/src/hugin_base/panodata/PanoramaVariable.h b/src/hugin_base/panodata/PanoramaVariable.h
+index 34db617..c2a3f7d 100644
+--- a/src/hugin_base/panodata/PanoramaVariable.h
++++ b/src/hugin_base/panodata/PanoramaVariable.h
+@@ -48,7 +48,7 @@ namespace HuginBase {
+ class IMPEX Variable
+ {
+ public :
+-// in the hsi version, class Variable needs a default Ctor    
++// in the hsi version, class Variable needs a default Ctor
+ #ifdef HUGIN_HSI
+         Variable(const std::string & name = "" ,
+                  double val = 0.0)
+@@ -58,21 +58,21 @@ public :
+         Variable(const std::string & name, double val = 0.0)
+             : name(name), value(val)
+         {};
+-#endif        
++#endif
+         virtual ~Variable()
+         {};
+-        
++
+ 
+         /// print this variable
+         virtual std::ostream & print(std::ostream & o) const;
+ 
+-        
++
+         const std::string & getName() const
+             { return name; }
+-        
++
+         void setValue(double v)
+             { value = v; }
+-        
++
+         double getValue() const
+             { return value; }
+ 
+@@ -86,7 +86,7 @@ public :
+ // a linked variable (which contains the link target explicitly
+ class IMPEX LinkedVariable : public Variable
+ {
+-    
++
+     public:
+         LinkedVariable(const std::string & name = "",
+                        double val = 0.0,
+@@ -96,10 +96,10 @@ class IMPEX LinkedVariable : public Variable
+ 
+         bool isLinked() const
+         { return m_link >= 0; }
+-        
++
+         int getLink()  const
+         { return m_link; }
+-        
++
+         void setLink(int link)
+         { m_link = link; }
+ 
+@@ -135,39 +135,39 @@ class IMPEX LensVariable : public Variable
+ #endif
+         virtual ~LensVariable()
+             {};
+-        
+-        
++
++
+         ///
+         virtual std::ostream& printLink(std::ostream & o, unsigned int link) const;
+ 
+-        
++
+         ///
+         bool isLinked() const
+             { return linked; }
+         ///
+         void setLinked(bool l=true)
+             { linked = l; }
+-        
++
+     private:
+         bool linked;
+-    
++
+ };
+ 
+ /** functor to print a variable. */
+ #ifndef SWIG
+ /* this gave me trouble in hsi, currently deactivated
+  * TODO: find out how it can be made to work */
+-struct PrintVar : public std::unary_function<Variable, void>
+-{
+-    explicit PrintVar(std::ostream & o)
+-        : os(o)
+-    {};
+-    
+-    void operator()(Variable x) const
+-        { x.print(os) << " "; };
+-    
+-    std::ostream& os;
+-};
++// struct PrintVar : public std::unary_function<Variable, void>
++// {
++//     explicit PrintVar(std::ostream & o)
++//         : os(o)
++//     {};
++
++//     void operator()(Variable x) const
++//         { x.print(os) << " "; };
++
++//     std::ostream& os;
++// };
+ #endif
+ 
+ ///
+diff --git a/src/hugin_base/panotools/PanoToolsInterface.cpp b/src/hugin_base/panotools/PanoToolsInterface.cpp
+index 9a49ee1..f57fd08 100644
+--- a/src/hugin_base/panotools/PanoToolsInterface.cpp
++++ b/src/hugin_base/panotools/PanoToolsInterface.cpp
+@@ -87,7 +87,7 @@ void Transform::createTransform(const PanoramaData & pano, unsigned int imgNr,
+ 
+ void Transform::createInvTransform(const SrcPanoImage & src, const PanoramaOptions & dest)
+ {
+-    VariableMap vars;
++        VariableMap vars;
+     // not very nice, but I don't like to change all the stuff in this file..
+     vars.insert(make_pair(std::string("v"), Variable(std::string("v"), src.getHFOV())));
+     vars.insert(make_pair(std::string("a"), Variable("a", src.getRadialDistortion()[0])));
+@@ -121,7 +121,7 @@ void Transform::createInvTransform(const SrcPanoImage & src, const PanoramaOptio
+ 
+ void Transform::createTransform(const SrcPanoImage & src, const PanoramaOptions & dest)
+ {
+-
++    
+     VariableMap vars;
+     // not very nice, but I don't like to change all the stuff in this file..
+     vars.insert(make_pair(std::string("v"), Variable(std::string("v"), src.getHFOV())));
+diff --git a/src/hugin_base/panotools/PanoToolsTransformGPU.cpp b/src/hugin_base/panotools/PanoToolsTransformGPU.cpp
+index 059a1d5..ad790c3 100644
+--- a/src/hugin_base/panotools/PanoToolsTransformGPU.cpp
++++ b/src/hugin_base/panotools/PanoToolsTransformGPU.cpp
+@@ -34,7 +34,8 @@
+ #include <iomanip>
+ 
+ using std::ostringstream;
+-using std::endl;
++//using std::endl;
++#define endl "\n"  // Performance: don't need to flush every time
+ 
+ #define 	distanceparam	(*((double*)params))
+ #define 	shift		(*((double*)params))
+diff --git a/src/hugin_base/vigra_ext/ImageTransformsGPU.cpp b/src/hugin_base/vigra_ext/ImageTransformsGPU.cpp
+index 413bce8..5654a07 100644
+--- a/src/hugin_base/vigra_ext/ImageTransformsGPU.cpp
++++ b/src/hugin_base/vigra_ext/ImageTransformsGPU.cpp
+@@ -74,9 +74,14 @@ long getms()
+ 
+ using std::cout;
+ using std::cerr;
+-using std::endl;
++//using std::endl;
+ using std::vector;
+ 
++//#define endl "\n"
++namespace code {
++constexpr const char *endl = "\n";
++}
++
+ using vigra::Rect2D;
+ 
+ #define ___NCFILE___ ((char *) __FILE__)
+@@ -173,7 +178,7 @@ static void printInfoLog(GLhandleARB obj) {
+     if (infologLength > 1) {
+         char* infoLog = new char[infologLength];
+         glGetInfoLogARB(obj, infologLength, &charsWritten, infoLog);
+-        cout << "nona: GL info log:" << endl << infoLog << endl << endl;
++        cout << "nona: GL info log:" << code::endl << infoLog << code::endl << code::endl;
+         delete[] infoLog;
+     }
+ }
+@@ -187,25 +192,25 @@ static bool checkFramebufferStatus(int line, char* file) {
+         case GL_FRAMEBUFFER_COMPLETE_EXT:
+             return true;
+         case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_EXT:
+-            cerr << "nona: GL error: Framebuffer incomplete, incomplete attachment in: " << file << ":" << line << endl;
++            cerr << "nona: GL error: Framebuffer incomplete, incomplete attachment in: " << file << ":" << line << code::endl;
+             return false;
+         case GL_FRAMEBUFFER_UNSUPPORTED_EXT:
+-            cerr << "nona: Unsupported framebuffer format in: " << file << ":" << line << endl;
++            cerr << "nona: Unsupported framebuffer format in: " << file << ":" << line << code::endl;
+             return false;
+         case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_EXT:
+-            cerr << "nona: Framebuffer incomplete, missing attachment in: " << file << ":" << line << endl;
++            cerr << "nona: Framebuffer incomplete, missing attachment in: " << file << ":" << line << code::endl;
+             return false;
+         case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT:
+-            cerr << "nona: Framebuffer incomplete, attached images must have same dimensions in: " << file << ":" << line << endl;
++            cerr << "nona: Framebuffer incomplete, attached images must have same dimensions in: " << file << ":" << line << code::endl;
+             return false;
+         case GL_FRAMEBUFFER_INCOMPLETE_FORMATS_EXT:
+-            cerr << "nona: Framebuffer incomplete, attached images must have same format in: " << file << ":" << line << endl;
++            cerr << "nona: Framebuffer incomplete, attached images must have same format in: " << file << ":" << line << code::endl;
+             return false;
+         case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER_EXT:
+-            cerr << "nona: Framebuffer incomplete, missing draw buffer in: " << file << ":" << line << endl;
++            cerr << "nona: Framebuffer incomplete, missing draw buffer in: " << file << ":" << line << code::endl;
+             return false;
+         case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER_EXT:
+-            cerr << "nona: Framebuffer incomplete, missing read buffer in: " << file << ":" << line << endl;
++            cerr << "nona: Framebuffer incomplete, missing read buffer in: " << file << ":" << line << code::endl;
+             return false;
+     }
+ 
+@@ -227,7 +232,7 @@ static void compileGLSL(const char* programName,
+ 
+     glGetObjectParameterivARB(shaderObject, GL_OBJECT_COMPILE_STATUS_ARB, &success);
+     if (!success) {
+-        cerr << "nona: " << programName << " shader program could not be compiled." << endl;
++        cerr << "nona: " << programName << " shader program could not be compiled." << code::endl;
+         printInfoLog(shaderObject);
+         exit(1);
+     }
+@@ -240,7 +245,7 @@ static void compileGLSL(const char* programName,
+ 
+     glGetObjectParameterivARB(programObject, GL_OBJECT_LINK_STATUS_ARB, &success);
+     if (!success) {
+-        cerr << "nona: " << programName << " shader program could not be linked." << endl;
++        cerr << "nona: " << programName << " shader program could not be linked." << code::endl;
+         printInfoLog(programObject);
+         exit(1);
+     }
+@@ -345,24 +350,24 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+     if(printDebug)
+     {
+         t1=getms();
+-        cout << "destStart=[" << xstart << ", " << ystart << "]" << endl
+-             << "destEnd=[" << xend << ", " << yend << "]" << endl
+-             << "destSize=[" << destSize << "]" << endl
+-             << "srcSize=[" << srcSize << "]" << endl
+-             << "srcBuffer=" << srcBuffer << endl
+-             << "srcAlphaBuffer=" << srcAlphaBuffer << endl
+-             << "destBuffer=" << destBuffer << endl
+-             << "destAlphaBuffer=" << destAlphaBuffer << endl
+-             << "destGLInternalFormat=" << XGLStringMap[destGLInternalFormat] << endl
+-             << "destGLFormat=" << XGLStringMap[destGLFormat] << endl
+-             << "destGLType=" << XGLStringMap[destGLType] << endl
+-             << "srcGLInternalFormat=" << XGLStringMap[srcGLInternalFormat] << endl
+-             << "srcGLFormat=" << XGLStringMap[srcGLFormat] << endl
+-             << "srcGLType=" << XGLStringMap[srcGLType] << endl
+-             << "srcAlphaGLType=" << XGLStringMap[srcAlphaGLType] << endl
+-             << "destAlphaGLType=" << XGLStringMap[destAlphaGLType] << endl
+-             << endl
+-             << "warparound=" << warparound << endl;
++        cout << "destStart=[" << xstart << ", " << ystart << "]" << code::endl
++             << "destEnd=[" << xend << ", " << yend << "]" << code::endl
++             << "destSize=[" << destSize << "]" << code::endl
++             << "srcSize=[" << srcSize << "]" << code::endl
++             << "srcBuffer=" << srcBuffer << code::endl
++             << "srcAlphaBuffer=" << srcAlphaBuffer << code::endl
++             << "destBuffer=" << destBuffer << code::endl
++             << "destAlphaBuffer=" << destAlphaBuffer << code::endl
++             << "destGLInternalFormat=" << XGLStringMap[destGLInternalFormat] << code::endl
++             << "destGLFormat=" << XGLStringMap[destGLFormat] << code::endl
++             << "destGLType=" << XGLStringMap[destGLType] << code::endl
++             << "srcGLInternalFormat=" << XGLStringMap[srcGLInternalFormat] << code::endl
++             << "srcGLFormat=" << XGLStringMap[srcGLFormat] << code::endl
++             << "srcGLType=" << XGLStringMap[srcGLType] << code::endl
++             << "srcAlphaGLType=" << XGLStringMap[srcAlphaGLType] << code::endl
++             << "destAlphaGLType=" << XGLStringMap[destAlphaGLType] << code::endl
++             << code::endl
++             << "warparound=" << warparound << code::endl;
+     };
+ 
+     vigra_precondition((srcSize.x % 8) == 0, "src image width not a multiple of 8");
+@@ -374,10 +379,14 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+     vigra_precondition((reinterpret_cast<const uintptr_t>(destAlphaBuffer) & 0x7) == 0, "dest alpha image buffer not 8-byte aligned");
+ 
+     const char* const gpuVendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
++    if (!gpuVendor) {
++      std::cerr << "No OpenGL vendor found" << std::endl;
++      abort();
++    }
+     const bool needsAtanWorkaround = (strncmp(gpuVendor, "ATI", 3) == 0);
+ 
+     if(printDebug)
+-        cout << "needsAtanWorkaround=" << needsAtanWorkaround << endl;
++        cout << "needsAtanWorkaround=" << needsAtanWorkaround << code::endl;
+ 
+     GLint maxTextureSize;
+     // check maximum possible texture size, GL_MAX_RECTANGLE_TEXTURE_SIZE is only available in OpenGL 3.1 and later
+@@ -419,7 +428,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+         };
+     };
+     if(printDebug)
+-        cout << "maxTextureSize=" << maxTextureSize << endl;
++        cout << "maxTextureSize=" << maxTextureSize << code::endl;
+ 
+     // Artificial limit: binding big textures to fbos seems to be very slow.
+     //maxTextureSize = 2048;
+@@ -476,15 +485,15 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+ 
+     if(printDebug)
+     {
+-        cout << "Source chunks:" << endl;
++        cout << "Source chunks:" << code::endl;
+         for (vector<Rect2D>::iterator rI = sourceChunks.begin(); rI != sourceChunks.end(); ++rI) {
+-            cout << "    " << *rI << endl;
++            cout << "    " << *rI << code::endl;
+         }
+-        cout << "Dest chunks:" << endl;
++        cout << "Dest chunks:" << code::endl;
+         for (vector<Rect2D>::iterator rI = destChunks.begin(); rI != destChunks.end(); ++rI) {
+-            cout << "    " << *rI << endl;
++            cout << "    " << *rI << code::endl;
+         }
+-        cout << "Total GPU memory used: " << totalGpuMemoryUsed << endl;
++        cout << "Total GPU memory used: " << totalGpuMemoryUsed << code::endl;
+     };
+ 
+ 
+@@ -493,9 +502,9 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+     makeChunks(interpolatorSize, interpolatorSize, TextureFetchesPerInterpolatorPass, TextureFetchesPerInterpolatorPass, interpolatorChunks);
+     if(printDebug)
+     {
+-        cout << "Interpolator chunks:" << endl;
++        cout << "Interpolator chunks:" << code::endl;
+         for (vector<Rect2D>::iterator rI = interpolatorChunks.begin(); rI != interpolatorChunks.end(); ++rI) {
+-            cout << "    " << *rI << endl;
++            cout << "    " << *rI << code::endl;
+         }
+     };
+     bool allInterpolatorChunksAreEqual = true;
+@@ -512,54 +521,54 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+     // Prepare coord transform GLSL program
+     std::ostringstream oss;
+     oss << std::setprecision(20) << std::showpoint;
+-    oss << "#version 110" << endl
+-        << "#extension GL_ARB_texture_rectangle : enable" << endl
+-        << "uniform sampler2DRect SrcTexture;" << endl
+-        << "float sinh(in float x) { return (exp(x) - exp(-x)) / 2.0; }" << endl
+-        << "float cosh(in float x) { return (exp(x) + exp(-x)) / 2.0; }" << endl;
++    oss << "#version 110" << code::endl
++        << "#extension GL_ARB_texture_rectangle : enable" << code::endl
++        << "uniform sampler2DRect SrcTexture;" << code::endl
++        << "float sinh(in float x) { return (exp(x) - exp(-x)) / 2.0; }" << code::endl
++        << "float cosh(in float x) { return (exp(x) + exp(-x)) / 2.0; }" << code::endl;
+     // TODO: OpenGL Shader vers. 1.5 has built-in sinh and cosh function,
+     // need to check is this functions are available and compile only when
+     // this functions are not available
+ 
+     if (needsAtanWorkaround) {
+-        oss << "float atan2_xge0(const in float y, const in float x) {" << endl
+-            << "    if (abs(y) > x) {" << endl
+-            << "        return sign(y) * (" << (M_PI/2.0) << " - atan(x, abs(y)));" << endl
+-            << "    } else {" << endl
+-            << "        return atan(y, x);" << endl
+-            << "    }" << endl
+-            << "}" << endl
+-            << "float atan2_safe(const in float y, const in float x) {" << endl
+-            << "    if (x >= 0.0) return atan2_xge0(y, x);" << endl
+-            << "    else return (sign(y) * " << M_PI << ") - atan2_xge0(y, -x);" << endl
+-            << "}" << endl
+-            << "float atan_safe(const in float yx) {" << endl
+-            << "    if (abs(yx) > 1.0) {" << endl
+-            << "        return sign(yx) * (" << (M_PI/2.0) << " - atan(1.0/abs(yx)));" << endl
+-            << "    } else {" << endl
+-            << "        return atan(yx);" << endl
+-            << "    }" << endl
+-            << "}" << endl;
++        oss << "float atan2_xge0(const in float y, const in float x) {" << code::endl
++            << "    if (abs(y) > x) {" << code::endl
++            << "        return sign(y) * (" << (M_PI/2.0) << " - atan(x, abs(y)));" << code::endl
++            << "    } else {" << code::endl
++            << "        return atan(y, x);" << code::endl
++            << "    }" << code::endl
++            << "}" << code::endl
++            << "float atan2_safe(const in float y, const in float x) {" << code::endl
++            << "    if (x >= 0.0) return atan2_xge0(y, x);" << code::endl
++            << "    else return (sign(y) * " << M_PI << ") - atan2_xge0(y, -x);" << code::endl
++            << "}" << code::endl
++            << "float atan_safe(const in float yx) {" << code::endl
++            << "    if (abs(yx) > 1.0) {" << code::endl
++            << "        return sign(yx) * (" << (M_PI/2.0) << " - atan(1.0/abs(yx)));" << code::endl
++            << "    } else {" << code::endl
++            << "        return atan(yx);" << code::endl
++            << "    }" << code::endl
++            << "}" << code::endl;
+     } else {
+-        oss << "float atan2_xge0(const in float y, const in float x) {" << endl
+-            << "    return atan(y, x);" << endl
+-            << "}" << endl
+-            << "float atan2_safe(const in float y, const in float x) {" << endl
+-            << "    return atan(y, x);" << endl
+-            << "}" << endl
+-            << "float atan_safe(const in float yx) {" << endl
+-            << "    return atan(yx);" << endl
+-            << "}" << endl;
++        oss << "float atan2_xge0(const in float y, const in float x) {" << code::endl
++            << "    return atan(y, x);" << code::endl
++            << "}" << code::endl
++            << "float atan2_safe(const in float y, const in float x) {" << code::endl
++            << "    return atan(y, x);" << code::endl
++            << "}" << code::endl
++            << "float atan_safe(const in float yx) {" << code::endl
++            << "    return atan(yx);" << code::endl
++            << "}" << code::endl;
+     }
+ 
+-    oss << "void main(void)" << endl
+-        << "{" << endl
+-        << "    float discardA = 1.0;" << endl
+-        << "    float discardB = 0.0;" << endl
++    oss << "void main(void)" << code::endl
++        << "{" << code::endl
++        << "    float discardA = 1.0;" << code::endl
++        << "    float discardB = 0.0;" << code::endl
+         << coordXformGLSL
+-        << "    src = src * discardA + vec2(-1000.0, -1000.0) * discardB;" << endl
+-        << "    gl_FragColor = vec4(src.s, 0.0, 0.0, src.t);" << endl
+-        << "}" << endl;
++        << "    src = src * discardA + vec2(-1000.0, -1000.0) * discardB;" << code::endl
++        << "    gl_FragColor = vec4(src.s, 0.0, 0.0, src.t);" << code::endl
++        << "}" << code::endl;
+ 
+     std::string coordXformKernelSourceString = oss.str();
+     const char* coordXformKernelSource = coordXformKernelSourceString.c_str();
+@@ -597,88 +606,88 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+     // Prepare interpolation shader program.
+     oss.str("");
+     oss << std::setprecision(20) << std::showpoint;
+-    oss << "#version 110" << endl
+-        << "#extension GL_ARB_texture_rectangle : enable" << endl
+-        << "uniform sampler2DRect CoordTexture;" << endl
+-        << "uniform sampler2DRect SrcTexture;" << endl
+-        << "uniform sampler2DRect AccumTexture;" << endl
+-        << "uniform vec2 SrcUL;" << endl
+-        << "uniform vec2 SrcLR;" << endl
+-        << "uniform vec2 KernelUL;" << endl
+-        << "uniform vec2 KernelWH;" << endl
+-        << "float w(const in float i, const in float f) {" << endl
++    oss << "#version 110" << code::endl
++        << "#extension GL_ARB_texture_rectangle : enable" << code::endl
++        << "uniform sampler2DRect CoordTexture;" << code::endl
++        << "uniform sampler2DRect SrcTexture;" << code::endl
++        << "uniform sampler2DRect AccumTexture;" << code::endl
++        << "uniform vec2 SrcUL;" << code::endl
++        << "uniform vec2 SrcLR;" << code::endl
++        << "uniform vec2 KernelUL;" << code::endl
++        << "uniform vec2 KernelWH;" << code::endl
++        << "float w(const in float i, const in float f) {" << code::endl
+         << interpolatorGLSL
+-        << "}" << endl
+-        << "void main(void)" << endl
+-        << "{" << endl
+-        << "    vec2 src = texture2DRect(CoordTexture, gl_TexCoord[0].st).sq;" << endl
+-        << "    vec4 accum = texture2DRect(AccumTexture, gl_TexCoord[0].st);" << endl
+-        << endl;
++        << "}" << code::endl
++        << "void main(void)" << code::endl
++        << "{" << code::endl
++        << "    vec2 src = texture2DRect(CoordTexture, gl_TexCoord[0].st).sq;" << code::endl
++        << "    vec4 accum = texture2DRect(AccumTexture, gl_TexCoord[0].st);" << code::endl
++        << code::endl;
+ 
+     // Unexpectedly, this checking slows down the interpolator render passes by 3x-5x.
+     //// Add nothing to pixels where the source image has no overlap with the KernelUL/KernelLR range.
+-    //oss << "    if (any(lessThan(src, SrcUL - KernelLR + " << (interpolatorSize / 2.0) << "))) {" << endl
+-    //    << "        gl_FragColor = accum;" << endl
+-    //    << "        return;" << endl
+-    //    << "    }" << endl
+-    //    << "    if (any(greaterThanEqual(src, SrcLR - KernelUL + " << ((interpolatorSize / 2.0) - 1.0) << "))) {" << endl
+-    //    << "        gl_FragColor = accum;" << endl
+-    //    << "        return;" << endl
+-    //    << "    }" << endl
+-    //    << endl;
+-
+-    oss << "    src -= SrcUL;" << endl
+-        << "    vec2 t = floor(src) + " << (1.5 - (interpolatorSize / 2)) << ";" << endl
+-        << "    vec2 f = fract(src);" << endl
+-        << "    vec2 k = vec2(0.0, 0.0);" << endl
+-        << endl;
++    //oss << "    if (any(lessThan(src, SrcUL - KernelLR + " << (interpolatorSize / 2.0) << "))) {" << code::endl
++    //    << "        gl_FragColor = accum;" << code::endl
++    //    << "        return;" << code::endl
++    //    << "    }" << code::endl
++    //    << "    if (any(greaterThanEqual(src, SrcLR - KernelUL + " << ((interpolatorSize / 2.0) - 1.0) << "))) {" << code::endl
++    //    << "        gl_FragColor = accum;" << code::endl
++    //    << "        return;" << code::endl
++    //    << "    }" << code::endl
++    //    << code::endl;
++
++    oss << "    src -= SrcUL;" << code::endl
++        << "    vec2 t = floor(src) + " << (1.5 - (interpolatorSize / 2)) << ";" << code::endl
++        << "    vec2 f = fract(src);" << code::endl
++        << "    vec2 k = vec2(0.0, 0.0);" << code::endl
++        << code::endl;
+ 
+     // Interpolator loop
+     if (allInterpolatorChunksAreEqual) {
+-        oss << "    for (float ky = 0.0; ky < " << static_cast<double>(firstInterpolatorChunk.height()) << "; ky += 1.0) {" << endl;
++        oss << "    for (float ky = 0.0; ky < " << static_cast<double>(firstInterpolatorChunk.height()) << "; ky += 1.0) {" << code::endl;
+     } else {
+-        oss << "    for (float ky = 0.0; ky < KernelWH.t; ky += 1.0) {" << endl;
++        oss << "    for (float ky = 0.0; ky < KernelWH.t; ky += 1.0) {" << code::endl;
+     }
+ 
+-    oss << "        k.t = ky + KernelUL.t;" << endl
+-        << "        float wy = w(k.t, f.t);" << endl;
++    oss << "        k.t = ky + KernelUL.t;" << code::endl
++        << "        float wy = w(k.t, f.t);" << code::endl;
+ 
+     if (allInterpolatorChunksAreEqual) {
+-        oss << "        for (float kx = 0.0; kx < " << static_cast<double>(firstInterpolatorChunk.width()) << "; kx += 1.0) {" << endl;
++        oss << "        for (float kx = 0.0; kx < " << static_cast<double>(firstInterpolatorChunk.width()) << "; kx += 1.0) {" << code::endl;
+     } else {
+-        oss << "        for (float kx = 0.0; kx < KernelWH.s; kx += 1.0) {" << endl;
++        oss << "        for (float kx = 0.0; kx < KernelWH.s; kx += 1.0) {" << code::endl;
+     }
+ 
+     // FIXME support warparound
+-    oss << "            k.s = kx + KernelUL.s;" << endl
+-        << "            float wx = w(k.s, f.s);" << endl
+-        << "            vec2 ix = t + k;" << endl
+-        << "            vec4 sp = texture2DRect(SrcTexture, ix);" << endl
+-        << "            float weight = wx * wy * sp.a;" << endl
+-        << "            accum += sp * weight;" << endl
+-        << "        }" << endl
+-        << "    }" << endl;
++    oss << "            k.s = kx + KernelUL.s;" << code::endl
++        << "            float wx = w(k.s, f.s);" << code::endl
++        << "            vec2 ix = t + k;" << code::endl
++        << "            vec4 sp = texture2DRect(SrcTexture, ix);" << code::endl
++        << "            float weight = wx * wy * sp.a;" << code::endl
++        << "            accum += sp * weight;" << code::endl
++        << "        }" << code::endl
++        << "    }" << code::endl;
+ 
+     //// Interpolator loop
+     //for (int ky = 0; ky < interpolatorSize; ++ky) {
+     //    double bounded_ky_offset = 1.5 + ky - (interpolatorSize / 2);
+     //    for (int kx = 0; kx < interpolatorSize; ++kx) {
+     //        double bounded_kx_offset = 1.5 + kx - (interpolatorSize / 2);
+-    //        oss << "    {" << endl
+-    //            << "        // (" << kx << ", " << ky << ")" << endl
+-    //            << "        vec2 ix = t + vec2(" << bounded_kx_offset << ", " << bounded_ky_offset << ");" << endl
+-    //            << "        vec4 sp = texture2DRect(SrcTexture, ix);" << endl
+-    //            //<< "        float weight = w[" << kx << "].s * w[" << ky << "].t * sp.a;" << endl
+-    //            << "        float weight = w(" << (double)kx << ", f.s) * w(" << (double)ky << ", f.t) * sp.a;" << endl
+-    //            << "        accum += sp * weight;" << endl
+-    //            << "    }" << endl;
++    //        oss << "    {" << code::endl
++    //            << "        // (" << kx << ", " << ky << ")" << code::endl
++    //            << "        vec2 ix = t + vec2(" << bounded_kx_offset << ", " << bounded_ky_offset << ");" << code::endl
++    //            << "        vec4 sp = texture2DRect(SrcTexture, ix);" << code::endl
++    //            //<< "        float weight = w[" << kx << "].s * w[" << ky << "].t * sp.a;" << code::endl
++    //            << "        float weight = w(" << (double)kx << ", f.s) * w(" << (double)ky << ", f.t) * sp.a;" << code::endl
++    //            << "        accum += sp * weight;" << code::endl
++    //            << "    }" << code::endl;
+     //    }
+     //}
+ 
+-    oss << endl
+-        << "    gl_FragColor = accum;" << endl
+-        << "}" << endl
+-        << endl;
++    oss << code::endl
++        << "    gl_FragColor = accum;" << code::endl
++        << "}" << code::endl
++        << code::endl;
+ 
+     std::string interpolatorKernelSourceString = oss.str();
+     const char* interpolatorKernelSource = interpolatorKernelSourceString.c_str();
+@@ -704,32 +713,32 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+     // Prepare normalization/photometric shader program
+     oss.str("");
+     oss << std::setprecision(20) << std::showpoint;
+-    oss << "#version 120" << endl
+-        << "#extension GL_ARB_texture_rectangle : enable" << endl
+-        << "uniform sampler2DRect NormTexture;" << endl
+-        << "uniform sampler2DRect CoordTexture;" << endl;
++    oss << "#version 120" << code::endl
++        << "#extension GL_ARB_texture_rectangle : enable" << code::endl
++        << "uniform sampler2DRect NormTexture;" << code::endl
++        << "uniform sampler2DRect CoordTexture;" << code::endl;
+ 
+     if (!invLut.empty()) {
+-        oss << "uniform sampler2DRect InvLutTexture;" << endl;
++        oss << "uniform sampler2DRect InvLutTexture;" << code::endl;
+     }
+ 
+     if (!destLut.empty()) {
+-        oss << "uniform sampler2DRect DestLutTexture;" << endl;
++        oss << "uniform sampler2DRect DestLutTexture;" << code::endl;
+     }
+ 
+-    oss << "void main(void)" << endl
+-        << "{" << endl
+-        << "    // Normalization" << endl
+-        << "    vec4 n = texture2DRect(NormTexture, gl_TexCoord[0].st);" << endl
+-        << "    vec4 p = vec4(0.0, 0.0, 0.0, 0.0);" << endl
+-        << "    if (n.a >= 0.2) p = n / n.a;" << endl
+-        << endl
+-        << "    // Photometric" << endl
++    oss << "void main(void)" << code::endl
++        << "{" << code::endl
++        << "    // Normalization" << code::endl
++        << "    vec4 n = texture2DRect(NormTexture, gl_TexCoord[0].st);" << code::endl
++        << "    vec4 p = vec4(0.0, 0.0, 0.0, 0.0);" << code::endl
++        << "    if (n.a >= 0.2) p = n / n.a;" << code::endl
++        << code::endl
++        << "    // Photometric" << code::endl
+         << photometricGLSL
+-        << endl
+-        << "    gl_FragColor = p;" << endl
+-        << "}" << endl
+-        << endl;
++        << code::endl
++        << "    gl_FragColor = p;" << code::endl
++        << "}" << code::endl
++        << code::endl;
+ 
+     std::string normalizationPhotometricKernelSourceString = oss.str();
+     const char* normalizationPhotometricKernelSource = normalizationPhotometricKernelSourceString.c_str();
+@@ -790,7 +799,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+     if(printDebug)
+     {
+         t21=getms();
+-        cout << "gpu shader program compile time = " << ((t21 - t1)/1000.0) << endl;
++        cout << "gpu shader program compile time = " << ((t21 - t1)/1000.0) << code::endl;
+     };
+ 
+     // General GL setup
+@@ -959,7 +968,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+     glFinish();
+     if(printDebug)
+     {
+-        cout << "gpu shader texture/framebuffer setup time = " << ((getms()-t21)/1000.0) << endl;
++        cout << "gpu shader texture/framebuffer setup time = " << ((getms()-t21)/1000.0) << code::endl;
+     };
+ 
+     // Render each dest chunk
+@@ -988,7 +997,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+         if(printDebug)
+         {
+             long t4=getms();
+-            cout << "gpu dest chunk=" << *dI << " coord image render time = " << ((t4-t3)/1000.0) << endl;
++            cout << "gpu dest chunk=" << *dI << " coord image render time = " << ((t4-t3)/1000.0) << code::endl;
+         };
+ 
+         // Multipass rendering of dest image
+@@ -1020,7 +1029,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+                     if(printDebug)
+                     {
+                         t6=getms();
+-                        cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src upload = " << ((t6-t5)/1000.0) << endl;
++                        cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src upload = " << ((t6-t5)/1000.0) << code::endl;
+                     };
+ 
+                     if (srcAlphaBuffer != NULL) {
+@@ -1038,7 +1047,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+                         if(printDebug)
+                         {
+                             t7=getms();
+-                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src alpha upload = " << ((t7-t6)/1000.0) << endl;
++                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src alpha upload = " << ((t7-t6)/1000.0) << code::endl;
+                         };
+ 
+                         glPolygonMode(GL_FRONT, GL_FILL);
+@@ -1053,7 +1062,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+                         glFinish();
+                         if(printDebug)
+                         {
+-                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src+alpha render = " << ((getms()-t7)/1000.0) << endl;
++                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src+alpha render = " << ((getms()-t7)/1000.0) << code::endl;
+                         };
+                     }
+                 }
+@@ -1073,7 +1082,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+                     if(printDebug)
+                     {
+                         t6=getms();
+-                        cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src upload = " << ((t6-t5)/1000.0) << endl;
++                        cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src upload = " << ((t6-t5)/1000.0) << code::endl;
+                     };
+ 
+                     if (srcAlphaBuffer != NULL) {
+@@ -1089,7 +1098,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+                         if(printDebug)
+                         {
+                             t7=getms();
+-                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src alpha upload = " << ((t7- t6)/1000.0) << endl;
++                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src alpha upload = " << ((t7- t6)/1000.0) << code::endl;
+                         };
+ 
+                         glPolygonMode(GL_FRONT, GL_FILL);
+@@ -1110,7 +1119,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+                         glFinish();
+                         if(printDebug)
+                         {
+-                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src+alpha render = " << ((getms()-t7)/1000.0) << endl;
++                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src+alpha render = " << ((getms()-t7)/1000.0) << code::endl;
+                         };
+                     }
+                     else {
+@@ -1135,7 +1144,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+                         if(printDebug)
+                         {
+                             t7=getms();
+-                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src render = " << ((t7-t6)/1000.0) << endl;
++                            cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " src render = " << ((t7-t6)/1000.0) << code::endl;
+                         };
+                     }
+                 }
+@@ -1193,7 +1202,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+                 if(printDebug)
+                 {
+                     t10=getms();
+-                    cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " interpolation chunk=" << *iI << " setup = " << ((t10-t9)/1000.0) << endl;
++                    cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " interpolation chunk=" << *iI << " setup = " << ((t10-t9)/1000.0) << code::endl;
+                 };
+ 
+                 glPolygonMode(GL_FRONT, GL_FILL);
+@@ -1210,7 +1219,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+                 {
+                     t11=getms();
+                     t9=getms();
+-                    cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " interpolation chunk=" << *iI << " render = " << ((t11-t10)/1000.0) << endl;
++                    cout << "gpu dest chunk=" << *dI << " source chunk=" << *sI << " interpolation chunk=" << *iI << " render = " << ((t11-t10)/1000.0) << code::endl;
+                 };
+ 
+             } // next interpolation chunk
+@@ -1249,12 +1258,12 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+         }
+ 
+         glDrawBuffer((pass & 1) ? GL_COLOR_ATTACHMENT1_EXT : GL_COLOR_ATTACHMENT0_EXT);
+-        
++
+         glFinish();
+         if(printDebug)
+         {
+             t12=getms();
+-            cout << "gpu dest chunk=" << *dI << " normalization setup = " << ((t12-t11)/1000.0) << endl;
++            cout << "gpu dest chunk=" << *dI << " normalization setup = " << ((t12-t11)/1000.0) << code::endl;
+         };
+ 
+         glPolygonMode(GL_FRONT, GL_FILL);
+@@ -1270,7 +1279,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+         if(printDebug)
+         {
+             t13=getms();
+-            cout << "gpu dest chunk=" << *dI << " normalization render = " << ((t13-t12)/1000.0) << endl;
++            cout << "gpu dest chunk=" << *dI << " normalization render = " << ((t13-t12)/1000.0) << code::endl;
+         };
+ 
+         pass++;
+@@ -1292,7 +1301,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+             if(printDebug)
+             {
+                 t14=getms();
+-                cout << "gpu dest chunk=" << *dI << " rgb readback = " << ((t14-t13)/1000.0) << endl;
++                cout << "gpu dest chunk=" << *dI << " rgb readback = " << ((t14-t13)/1000.0) << code::endl;
+             };
+         }
+         else {
+@@ -1311,7 +1320,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+             if(printDebug)
+             {
+                 t14=getms();
+-                cout << "gpu dest chunk=" << *dI << " dest rgb disassembly setup = " << ((t14-t13)/1000.0) << endl;
++                cout << "gpu dest chunk=" << *dI << " dest rgb disassembly setup = " << ((t14-t13)/1000.0) << code::endl;
+             };
+ 
+             glPolygonMode(GL_FRONT, GL_FILL);
+@@ -1331,7 +1340,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+             if(printDebug)
+             {
+                 t15=getms();
+-                cout << "gpu dest chunk=" << *dI << " dest rgb disassembly render = " << ((t15-t14)/1000.0) << endl;
++                cout << "gpu dest chunk=" << *dI << " dest rgb disassembly render = " << ((t15-t14)/1000.0) << code::endl;
+             };
+ 
+             glReadBuffer(GL_COLOR_ATTACHMENT0_EXT);
+@@ -1344,7 +1353,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+             if(printDebug)
+             {
+                 t16=getms();
+-                cout << "gpu dest chunk=" << *dI << " rgb readback = " << ((t16-t15)/1000.0) << endl;
++                cout << "gpu dest chunk=" << *dI << " rgb readback = " << ((t16-t15)/1000.0) << code::endl;
+             };
+         }
+ 
+@@ -1363,7 +1372,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+             if(printDebug)
+             {
+                 t17=getms();
+-                cout << "gpu dest chunk=" << *dI << " dest alpha disassembly setup = " << ((t17-t16)/1000.0) << endl;
++                cout << "gpu dest chunk=" << *dI << " dest alpha disassembly setup = " << ((t17-t16)/1000.0) << code::endl;
+             };
+ 
+             glPolygonMode(GL_FRONT, GL_FILL);
+@@ -1383,7 +1392,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+             if(printDebug)
+             {
+                 t18=getms();
+-                cout << "gpu dest chunk=" << *dI << " dest alpha disassembly render = " << ((t18-t17)/1000.0) << endl;
++                cout << "gpu dest chunk=" << *dI << " dest alpha disassembly render = " << ((t18-t17)/1000.0) << code::endl;
+             };
+ 
+             // Readback dest alpha chunk
+@@ -1397,7 +1406,7 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+             if(printDebug)
+             {
+                 t19=getms();
+-                cout << "gpu dest chunk=" << *dI << " alpha readback = " << ((t19-t18)/1000.0) << endl;
++                cout << "gpu dest chunk=" << *dI << " alpha readback = " << ((t19-t18)/1000.0) << code::endl;
+             };
+         }
+ 
+@@ -1443,8 +1452,8 @@ bool transformImageGPUIntern(const std::string& coordXformGLSL,
+     if(printDebug)
+     {
+         long t20=getms();
+-        cout << "gpu destruct time = " << ((t20-t19)/1000.0) << endl;
+-        cout << "gpu total time = " << ((t20-t1)/1000.0) << endl;
++        cout << "gpu destruct time = " << ((t20-t19)/1000.0) << code::endl;
++        cout << "gpu total time = " << ((t20-t1)/1000.0) << code::endl;
+     };
+ 
+     return true;
+diff --git a/src/hugin_base/vigra_ext/Interpolators.h b/src/hugin_base/vigra_ext/Interpolators.h
+index 8e7da73..34b75a3 100644
+--- a/src/hugin_base/vigra_ext/Interpolators.h
++++ b/src/hugin_base/vigra_ext/Interpolators.h
+@@ -47,7 +47,7 @@ static double 	sinc		( double x );
+ static double 	cubic01		( double x );
+ static double 	cubic12		( double x );
+ 
+-static double sinc( double x )
++static inline double sinc( double x )
+ {
+     x *= M_PI;
+     if(x != 0.0)
+@@ -62,13 +62,13 @@ static double sinc( double x )
+ static const double	A(-0.75);
+ 
+ // 0 <= x < 1
+-static double cubic01( double x )
++static inline double cubic01( double x )
+ {
+     return	(( A + 2.0 )*x - ( A + 3.0 ))*x*x +1.0;
+ }
+ // 1 <= x < 2
+ 
+-static double cubic12( double x )
++static inline double cubic12( double x )
+ {
+     return	(( A * x - 5.0 * A ) * x + 8.0 * A ) * x - 4.0 * A;
+ 
+@@ -387,16 +387,16 @@ public:
+ 
+                 if (m_warparound) {
+                     // Boundary condition: wrap around the image.
+-                    if (bounded_kx < 0) 
++                    if (bounded_kx < 0)
+                         bounded_kx += m_w;
+-                    if (bounded_kx >= m_w) 
++                    if (bounded_kx >= m_w)
+                         bounded_kx -= m_w;
+                 } else {
+                     // Boundary condition: replicate first and last column.
+                     //                if (srcx + kx < 0) bounded_kx -= (srcx + kx);
+                     //                if (srcx + kx >= src_w) bounded_kx -= (srcx + kx - (src_w - 1));
+                     // Boundary condition: do not replicate left and right
+-                    if (bounded_kx < 0) 
++                    if (bounded_kx < 0)
+                         continue;
+                     if (bounded_kx >= m_w)
+                         continue;
+@@ -597,16 +597,16 @@ public:
+ 
+                 if (m_warparound) {
+                     // Boundary condition: wrap around the image.
+-                    if (bounded_kx < 0) 
++                    if (bounded_kx < 0)
+                         bounded_kx += m_w;
+-                    if (bounded_kx >= m_w) 
++                    if (bounded_kx >= m_w)
+                         bounded_kx -= m_w;
+                 } else {
+                     // Boundary condition: replicate first and last column.
+                     //                if (srcx + kx < 0) bounded_kx -= (srcx + kx);
+                     //                if (srcx + kx >= src_w) bounded_kx -= (srcx + kx - (src_w - 1));
+                     // Boundary condition: do not replicate left and right
+-                    if (bounded_kx < 0) 
++                    if (bounded_kx < 0)
+                         continue;
+                     if (bounded_kx >= m_w)
+                         continue;
+@@ -689,7 +689,7 @@ public:
+         // first pass of separable filter
+ 
+         RealPixelType p(vigra::NumericTraits<RealPixelType>::zero());
+-        double m = 0; 
++        double m = 0;
+         double weightsum = 0.0;
+         for (int ky = 0; ky < INTERPOLATOR::size; ky++) {
+             int bounded_ky = srcy + 1 + ky - INTERPOLATOR::size/2;
+@@ -704,16 +704,16 @@ public:
+ 
+                 if (m_warparound) {
+                     // Boundary condition: wrap around the image.
+-                    if (bounded_kx < 0) 
++                    if (bounded_kx < 0)
+                         bounded_kx += m_w;
+-                    if (bounded_kx >= m_w) 
++                    if (bounded_kx >= m_w)
+                         bounded_kx -= m_w;
+                 } else {
+                     // Boundary condition: replicate first and last column.
+                     //                if (srcx + kx < 0) bounded_kx -= (srcx + kx);
+                     //                if (srcx + kx >= src_w) bounded_kx -= (srcx + kx - (src_w - 1));
+                     // Boundary condition: do not replicate left and right
+-                    if (bounded_kx < 0) 
++                    if (bounded_kx < 0)
+                         continue;
+                     if (bounded_kx >= m_w)
+                         continue;
+diff --git a/src/tools/autooptimiser.cpp b/src/tools/autooptimiser.cpp
+index 94ae083..7b42673 100644
+--- a/src/tools/autooptimiser.cpp
++++ b/src/tools/autooptimiser.cpp
+@@ -67,6 +67,7 @@ static void usage(const char* name)
+          << "    Postprocessing options:" << std::endl
+          << "     -l       level horizon (works best for horizontal panos)" << std::endl
+          << "     -s       automatically select a suitable output projection and size" << std::endl
++         << "     -x       set scale size factor manually" << std::endl
+          << "    Other options:" << std::endl
+          << "     -q       quiet operation (no progress is reported)" << std::endl
+          << "     -v HFOV  specify horizontal field of view of input images." << std::endl
+@@ -84,7 +85,7 @@ static void usage(const char* name)
+ int main(int argc, char* argv[])
+ {
+     // parse arguments
+-    const char* optstring = "alho:npqsv:m";
++    const char* optstring = "alho:npqsv:mx:";
+     int c;
+     enum
+     {
+@@ -107,6 +108,7 @@ int main(int argc, char* argv[])
+     bool quiet = false;
+     bool doPhotometric = false;
+     double hfov = 0.0;
++    double scalef = 1.0;
+     while ((c = getopt_long(argc, argv, optstring, longOptions, nullptr)) != -1)
+     {
+         switch (c)
+@@ -138,6 +140,9 @@ int main(int argc, char* argv[])
+             case 'v':
+                 hfov = atof(optarg);
+                 break;
++            case 'x':
++                scalef = atof(optarg);
++                break;
+             case 'm':
+                 doPhotometric = true;
+                 break;
+@@ -390,7 +395,7 @@ int main(int argc, char* argv[])
+         };
+ 
+         // downscale pano a little
+-        const double sizeFactor = 0.7;
++        const double sizeFactor = scalef;
+         const double w = HuginBase::CalculateOptimalScale::calcOptimalScale(pano);
+         opts.setWidth(hugin_utils::roundi(opts.getWidth()*w*sizeFactor), true);
+         pano.setOptions(opts);
