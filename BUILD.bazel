@@ -36,9 +36,19 @@ cmake_build(
     build_args = [],
 )
 
-# Convenience aliases to expose some commonly used binaries from the cmake install.
-# Expose the full install tree as a single target. Useful for consuming tools from the install/bin directory.
+# Convenience target to access the staged install tree produced by the CMake build.
+# This preserves the previous behavior of `//:install_tree` before it became runnable.
 alias(
-    name = "install_tree",
+    name = "staged_install_tree",
     actual = ":hugin_all",
+)
+
+# Runnable installer: builds with CMake and installs to an optional --prefix.
+# Usage:
+#   bazel run //:install_tree -- --prefix=/usr/local
+sh_binary(
+    name = "install_tree",
+    srcs = ["//tools/cmake:install_tree.sh"],
+    data = [":hugin_srcs", ":hugin_all"],
+    args = ["--staged-tree=$(location :hugin_all)"],
 )

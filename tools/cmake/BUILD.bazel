@@ -1,2 +1,1 @@
-exports_files(["cmake_build.bzl"])
-
+exports_files(["cmake_build.bzl", "install_tree.sh"])
