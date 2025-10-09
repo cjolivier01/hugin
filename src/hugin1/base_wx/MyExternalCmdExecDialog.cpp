@@ -36,6 +36,7 @@
 #include "wx/process.h"
 #include "wx/mimetype.h"
 #include <wx/sstream.h>
+#include <wx/tokenzr.h>
 
 #ifdef _WIN32
     #include "wx/dde.h"
@@ -354,6 +355,9 @@ void MyExecPanel::AddToOutput(wxInputStream & s)
                 if (currLine.Last() != wxChar('\n') )
                     currLine.Trim();
             }
+        } else if (c == 0x0) {
+            // ignore 0x0 chars
+            continue;
         } else if (c == 0x0d) {
             lastCR=true;
 #ifndef __WXMSW__
@@ -387,7 +391,7 @@ void MyExecPanel::AddToOutput(wxInputStream & s)
 
     m_textctrl->Replace(m_lastLineStart, m_textctrl->GetLastPosition(), currLine);
     size_t lret = currLine.find_last_of(wxChar('\n'));
-    if (lret > 0 && lret+1 < currLine.size()) {
+    if (lret != wxString::npos && lret>0 && lret+1 < currLine.size()) {
         m_lastLineStart += lret+1;
     }
 }
@@ -513,12 +517,7 @@ void MyExecPanel::CopyLogToClipboard()
 
 wxArrayString MyExecPanel::GetLogAsArrayString()
 {
-    wxArrayString output;
-    for (size_t i = 0; i < m_textctrl->GetNumberOfLines(); ++i)
-    {
-        output.push_back(m_textctrl->GetLineText(i));
-    }
-    return output;
+    return wxStringTokenize(m_textctrl->GetValue(), "\r\n");
 };
 
 void MyExecPanel::AddString(const wxString& s)

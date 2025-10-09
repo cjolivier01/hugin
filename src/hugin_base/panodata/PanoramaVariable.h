@@ -62,10 +62,8 @@ public :
         virtual ~Variable()
         {};
 
-
         /// print this variable
         virtual std::ostream & print(std::ostream & o) const;
-
 
         const std::string & getName() const
             { return name; }
@@ -86,7 +84,6 @@ public :
 // a linked variable (which contains the link target explicitly
 class IMPEX LinkedVariable : public Variable
 {
-
     public:
         LinkedVariable(const std::string & name = "",
                        double val = 0.0,
@@ -136,10 +133,8 @@ class IMPEX LensVariable : public Variable
         virtual ~LensVariable()
             {};
 
-
         ///
         virtual std::ostream& printLink(std::ostream & o, unsigned int link) const;
-
 
         ///
         bool isLinked() const
@@ -162,10 +157,8 @@ class IMPEX LensVariable : public Variable
 //     explicit PrintVar(std::ostream & o)
 //         : os(o)
 //     {};
-
 //     void operator()(Variable x) const
 //         { x.print(os) << " "; };
-
 //     std::ostream& os;
 // };
 #endif

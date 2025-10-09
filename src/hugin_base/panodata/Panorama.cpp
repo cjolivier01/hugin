@@ -2166,15 +2166,15 @@ const bool Panorama::hasPossibleStacks() const
     {
         return false;
     }
-    //check if exposure value is repeated with step size of bracket size
-    if (set_contains(evValues[0], evValues.size()))
+    //check that all exposure layer have the same size indicating that all stacks are of the same size
+    for (size_t layerNr = 1; layerNr < evValues.size(); ++layerNr)
     {
-        return true;
-    }
-    else
-    {
-        return false;
+        if (evValues[0].size() != evValues[layerNr].size())
+        {
+            return false;
+        };
     };
+    return true;
 };
 
 /** create automatically stacks as indicated by metadata */

@@ -1,0 +1,44 @@
+load("//tools/cmake:cmake_build.bzl", "cmake_build")
+
+# Group all source files except build outputs and VCS metadata
+filegroup(
+    name = "hugin_srcs",
+    srcs = glob([
+        "**/*",
+    ], exclude = [
+        "MODULE.bazel",
+        "**/*.swp",
+        "**/*.swo",
+        "**/*.pyc",
+        "**/.DS_Store",
+        ".git/**",
+        "_sanity_build/**",
+        "bazel-*/**",
+        "_bazel*/**",
+        "build/**",
+        "out/**",
+        # Avoid including Bazel outputs in recursive builds
+        "bazel-out/**",
+    ]),
+)
+
+# Build Hugin via CMake inside Bazel using rules_foreign_cc.
+# This uses the existing CMakeLists.txt and installs into a sandboxed prefix.
+cmake_build(
+    name = "hugin_all",
+    srcs = [":hugin_srcs"],
+    cache_entries = {
+        "CMAKE_BUILD_TYPE": "Release",
+        "DISABLE_DPKG": "ON",
+    },
+    # Build default target and then run `cmake --install` into the output tree.
+    targets = [],
+    build_args = [],
+)
+
+# Convenience aliases to expose some commonly used binaries from the cmake install.
+# Expose the full install tree as a single target. Useful for consuming tools from the install/bin directory.
+alias(
+    name = "install_tree",
+    actual = ":hugin_all",
+)
