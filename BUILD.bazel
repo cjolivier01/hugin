@@ -33,7 +33,7 @@ cmake_build(
     },
     # Build default target and then run `cmake --install` into the output tree.
     targets = [],
-    build_args = [],
+    build_args = ["-j"],
 )
 
 # Convenience aliases to expose some commonly used binaries from the cmake install.
