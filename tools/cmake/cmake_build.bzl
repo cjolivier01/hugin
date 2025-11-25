@@ -27,7 +27,6 @@ def _cmake_build_impl(ctx):
         SRCDIR="."
         BDIR="$PWD/_bazel_cmake_build_{name}"
         INSTALL_DIR="{inst}"
-        rm -rf "$BDIR"
         mkdir -p "$BDIR"
         # Configure
         {cmake} -S "$SRCDIR" -B "$BDIR" {dflags}
