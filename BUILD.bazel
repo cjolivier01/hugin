@@ -36,11 +36,44 @@ cmake_build(
     build_args = [],
 )
 
+# Build only the command-line tools used by HockeyMOM.
+cmake_build(
+    name = "cmdline-tools",
+    srcs = [":hugin_srcs"],
+    cache_entries = {
+        "CMAKE_BUILD_TYPE": "Release",
+        "DISABLE_DPKG": "ON",
+    },
+    # Limit the CMake build to these targets for faster builds.
+    targets = [
+        "pto_gen",
+        "autooptimiser",
+        "nona",
+    ],
+    build_args = [],
+    tags = ["manual"],
+)
+
 # Convenience target to access the staged install tree produced by the CMake build.
 # This preserves the previous behavior of `//:install_tree` before it became runnable.
 alias(
     name = "staged_install_tree",
     actual = ":hugin_all",
+)
+
+alias(
+    name = "pto_gen",
+    actual = ":cmdline-tools",
+)
+
+alias(
+    name = "autooptimiser",
+    actual = ":cmdline-tools",
+)
+
+alias(
+    name = "nona",
+    actual = ":cmdline-tools",
 )
 
 # Runnable installer: builds with CMake and installs to an optional --prefix.
