@@ -1,7 +1,5 @@
 
-#build --compiler=clang
 build --nokeep_going --color=yes
-# build --crosstool_top=@toolchain//crosstool:toolchain
 build --copt=-fPIC
 build --copt=-std=c++17
 
@@ -9,9 +7,7 @@ build:debug -c dbg --strip="never"
 build:debug --copt=-g3
 build:debug --copt=-O0
 build:debug --copt=-UNDEBUG
-# build:debug --copt=-v
 build:debug --copt=-fdiagnostics-color=always
-# build:debug --linkopt=-v
 build:debug --linkopt=-Wl,-g
 build:debug --linkopt=-Wl,--discard-none
 
@@ -32,16 +28,6 @@ build --action_env=target_platform="jetson"
 build:jetson --cpu=aarch64
 build:jetson --define=target_platform=jetson
 build:jetson --action_env=target_platform="jetson"
-
-# Necessary for some bazel functionality:
-build --java_runtime_version=remotejdk_11
-
-# Required for docker_rules to work on Mac
-build --@io_bazel_rules_docker//transitions:enable=false
-
-# Stamping
-build --workspace_status_command=$PWD/stamp.sh
-
 
 # Test configuration:
 test --test_output=errors
