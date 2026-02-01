@@ -79,9 +79,18 @@ alias(
 # Runnable installer: builds with CMake and installs to an optional --prefix.
 # Usage:
 #   bazel run //:install_tree -- --prefix=/usr/local
-sh_binary(
+genrule(
     name = "install_tree",
     srcs = ["//tools/cmake:install_tree.sh"],
-    data = [":hugin_srcs", ":hugin_all"],
-    args = ["--staged-tree=$(location :hugin_all)"],
+    tools = [":hugin_all"],
+    outs = ["install_tree_runner.sh"],
+    cmd = """
+printf '%s\n' \
+'#!/usr/bin/env bash' \
+'set -euo pipefail' \
+'\"$(location //tools/cmake:install_tree.sh)\" --staged-tree=\"$(location :hugin_all)\" \"$$@\"' \
+> $@
+chmod +x $@
+""",
+    executable = True,
 )
