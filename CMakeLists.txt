@@ -590,7 +590,9 @@ IF (APPLE)
 ENDIF (APPLE)
 
 IF (HUGIN_SHARED AND UNIX AND NOT APPLE)
-  SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${LIBDIR}/hugin")
+  # The Bazel installer stages Hugin before copying it to the requested prefix.
+  # Keep executables and private libraries relocatable across both locations.
+  SET(CMAKE_INSTALL_RPATH "$ORIGIN/../${LIBDIR}/hugin;$ORIGIN")
   SET(HUGIN_LIBS_PRIVATE_DIR "1" CACHE INTERNAL "Store internal
     libraries in private subdirectory" )
 ELSE ()

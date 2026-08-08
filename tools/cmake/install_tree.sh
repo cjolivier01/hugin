@@ -107,4 +107,14 @@ else
   rsync "${RSYNC_ARGS[@]}" "$STAGED_TREE/" "$PREFIX/"
 fi
 
+NONA_BIN="$PREFIX/bin/nona"
+if [[ ! -x "$NONA_BIN" ]]; then
+  echo "Installed nona executable not found: $NONA_BIN" >&2
+  exit 1
+fi
+if ! "$NONA_BIN" --help >/dev/null; then
+  echo "Installed nona executable failed its runtime check: $NONA_BIN" >&2
+  exit 1
+fi
+
 echo "Installed to: $PREFIX"
