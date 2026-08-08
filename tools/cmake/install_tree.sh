@@ -92,6 +92,7 @@ RSYNC_ARGS=(
   -a
   --no-owner
   --no-group
+  --no-perms
 )
 
 if [[ "$NEED_SUDO" -eq 1 ]]; then
