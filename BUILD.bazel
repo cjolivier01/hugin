@@ -36,7 +36,7 @@ cmake_build(
     build_args = [],
 )
 
-# Build only the command-line tools used by HockeyMOM.
+# Build only the command-line tools used by HockeyMON.
 cmake_build(
     name = "cmdline-tools",
     srcs = [":hugin_srcs"],

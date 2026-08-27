@@ -14,7 +14,7 @@ Build
   # Full Hugin build (all binaries and data)
   bazel build //:hugin_all --action_env=PATH=$PATH
 
-  # Only the CLI tools used by HockeyMOM
+  # Only the CLI tools used by HockeyMON
   bazel build //:cmdline-tools --action_env=PATH=$PATH
 
 - Outputs are installed under:
