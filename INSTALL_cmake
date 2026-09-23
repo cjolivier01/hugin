@@ -11,18 +11,15 @@ Hugin depends on the following packages.
 
 Users compiling Hugin from source will need:
 
-    A C++compiler which supports OpenMP and C++11.
+    A C++compiler which supports OpenMP and C++17.
         * OpenMP support is not required. But when compiling
           without OpenMP nona and cpfind (and some other
           algorithm) are running only with one thread, 
           which is slower.
     CMake (the build system), version >=3.15
-    The wxWidgets GUI toolkit version >=3.0.0.
-    C++17 TS <filesystem> or boost::filesystem (boost >=1.47)
+    The wxWidgets GUI toolkit version >=3.2.0.
     libtiff the TIFF library with LZW support.
     libpano13 version >=2.9.19
-    libjpg the JPEG library
-    libpng the PNG library
     libopenexr the OpenEXR library
     libvigra the VIGRA libray, header files and impex library (>=1.9)
     Exiv2 Image metadata library
@@ -44,12 +41,15 @@ Users compiling Hugin from source will need:
         Python version >=3.0
         Python package setuptools only with Python >=3.12
         SWIG >=2.0.4 
+    when building a static version
+        libjpg the JPEG library
+        libpng the PNG library
     Hugin can be compiled with gcc, as well as with MSVC.
-    The build process requires CMake version >=3.12
+    The build process requires CMake version >=3.15
 
 If cmake fails to pick up some dependencies, make sure you have
 the corresponding development packages installed (often named:
-libjpeg-dev and so on).
+libtiff-dev and so on).
 
 Notes: 
 When using wxWidgets 3.0.x series Hugin does not run native on Wayland. A workaround is to use the
@@ -96,9 +96,6 @@ can be set with the -D command line parameter. Important variables include:
 CMAKE_INSTALL_PREFIX  Destination directory of make install
                       (default: /usr/local)
 CMAKE_BUILD_TYPE      Specify the build type (Release (Default) or Debug)
-LIB_SUFFIX            Specifies suffix used for library paths. For AMD64,
-                      usually 64 is used as prefix. Default: empty.
-                      Setting to 64 results in: $CMAKE_INSTALL_PREFIX/lib64
 HUGIN_SHARED          set to 0 to disable build shared libraries for internal
                       functions.
 BUILD_HSI=on          Set to on to build with Python scripting support

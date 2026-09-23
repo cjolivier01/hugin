@@ -89,8 +89,6 @@ protected:
     void KeyDown(wxKeyEvent & e);
     void KeyUp(wxKeyEvent & e);
 
-    DECLARE_EVENT_TABLE()
-
     ToolHelper *m_tool_helper;
     GLRenderer *m_renderer;
     wxGLContext *m_glContext;

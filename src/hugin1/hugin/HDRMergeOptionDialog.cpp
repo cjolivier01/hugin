@@ -34,6 +34,7 @@
 #endif
 #include <hugin/config_defaults.h>
 #include "hugin/huginApp.h"
+#include "base_wx/wxutils.h"
 
 // somewhere SetDesc gets defined.. this breaks wx/cmdline.h on OSX
 #ifdef SetDesc
@@ -42,24 +43,12 @@
 
 #include <wx/cmdline.h>
 
-BEGIN_EVENT_TABLE(HDRMergeOptionsDialog,wxDialog)
-EVT_CHOICE(XRCID("hdrmerge_option_mode"),HDRMergeOptionsDialog::OnModeChanged)
-EVT_BUTTON(wxID_OK, HDRMergeOptionsDialog::OnOk)
-END_EVENT_TABLE()
-
 HDRMergeOptionsDialog::HDRMergeOptionsDialog(wxWindow *parent)
 {
-    wxXmlResource::Get()->LoadDialog(this, parent, wxT("hdrmerge_options_dialog"));
-
-#ifdef __WXMSW__
-    wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + wxT("data/hugin.ico"),wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(huginApp::Get()->GetXRCPath() + wxT("data/hugin.png"),wxBITMAP_TYPE_PNG);
-    SetIcon(myIcon);
-#endif
+    wxXmlResource::Get()->LoadDialog(this, parent, "hdrmerge_options_dialog");
 
     m_mode=XRCCTRL(*this,"hdrmerge_option_mode",wxChoice);
+    m_mode->Bind(wxEVT_CHOICE, &HDRMergeOptionsDialog::OnModeChanged, this);
     m_panel_avg=XRCCTRL(*this,"hdrmerge_option_panel_avg",wxPanel);
     m_panel_avgslow=XRCCTRL(*this,"hdrmerge_option_panel_avgslow",wxPanel);
     m_panel_khan=XRCCTRL(*this,"hdrmerge_option_panel_khan",wxPanel);
@@ -71,13 +60,14 @@ HDRMergeOptionsDialog::HDRMergeOptionsDialog(wxWindow *parent)
     m_option_khan_ag=XRCCTRL(*this,"hdrmerge_option_khan_ag",wxCheckBox);
     m_option_khan_am=XRCCTRL(*this,"hdrmerge_option_khan_am",wxCheckBox);
     this->CenterOnParent();
+    Bind(wxEVT_BUTTON, &HDRMergeOptionsDialog::OnOk, this, wxID_OK);
 };
 
 void HDRMergeOptionsDialog::SetCommandLineArgument(wxString cmd)
 {
     m_cmd=cmd;
     if (m_cmd.IsEmpty())
-        m_cmd=wxT(HUGIN_HDRMERGE_ARGS);
+        m_cmd=HUGIN_HDRMERGE_ARGS;
     m_cmd.LowerCase();
 	// parse arguments
     static const wxCmdLineEntryDesc cmdLineDesc[] =
@@ -94,13 +84,13 @@ void HDRMergeOptionsDialog::SetCommandLineArgument(wxString cmd)
     parser.SetCmdLine(m_cmd);
     parser.Parse(false);
     wxString param;
-    if(parser.Found(wxT("m"),&param))
+    if(parser.Found("m",&param))
     {
-        if(param.CmpNoCase(wxT("avg_slow"))==0)
+        if(param.CmpNoCase("avg_slow")==0)
             m_mode->SetSelection(1);
         else
         {
-            if(param.CmpNoCase(wxT("khan"))==0)
+            if(param.CmpNoCase("khan")==0)
                 m_mode->SetSelection(2);
             else
                 m_mode->SetSelection(0);
@@ -108,13 +98,13 @@ void HDRMergeOptionsDialog::SetCommandLineArgument(wxString cmd)
     }
     else
         m_mode->SetSelection(0);
-    m_option_c->SetValue(parser.Found(wxT("c")));
+    m_option_c->SetValue(parser.Found("c"));
     long i;
-    if(parser.Found(wxT("i"),&i))
+    if(parser.Found("i",&i))
         m_khan_iter->SetValue(i);
     else
         m_khan_iter->SetValue(4);
-    if(parser.Found(wxT("s"),&param))
+    if(parser.Found("s",&param))
     {
         //change locale for correct numeric output
         char * p = setlocale(LC_NUMERIC,NULL);
@@ -126,15 +116,15 @@ void HDRMergeOptionsDialog::SetCommandLineArgument(wxString cmd)
         setlocale(LC_NUMERIC,old_locale);
         free(old_locale);
         //using current locale for value in GUI
-        m_khan_sigma->SetValue(wxString::Format(wxT("%.2f"),sigma));
+        m_khan_sigma->SetValue(wxString::Format("%.2f",sigma));
     }
     else
-        m_khan_sigma->SetValue(wxT("30"));
-    if(parser.Found(wxT("a"),&param))
+        m_khan_sigma->SetValue("30");
+    if(parser.Found("a",&param))
     {
-        m_option_khan_af->SetValue(param.Contains(wxT("f")));
-        m_option_khan_ag->SetValue(param.Contains(wxT("g")));
-        m_option_khan_am->SetValue(param.Contains(wxT("m")));
+        m_option_khan_af->SetValue(param.Contains("f"));
+        m_option_khan_ag->SetValue(param.Contains("g"));
+        m_option_khan_am->SetValue(param.Contains("m"));
     }
     wxCommandEvent dummy;
     OnModeChanged(dummy);
@@ -150,18 +140,18 @@ bool HDRMergeOptionsDialog::BuildCommandLineArgument()
     switch(selection)
     {
         case 0:
-            m_cmd.Append(wxT("-m avg"));
+            m_cmd.Append("-m avg");
             if(m_option_c->IsChecked())
-                m_cmd.Append(wxT(" -c"));
+                m_cmd.Append(" -c");
             break;
         case 1:
-            m_cmd.Append(wxT("-m avg_slow"));
+            m_cmd.Append("-m avg_slow");
             break;
         case 2:
-            m_cmd.Append(wxT("-m khan"));
+            m_cmd.Append("-m khan");
             if(m_khan_iter->GetValue())
             {
-                m_cmd.Append(wxString::Format(wxT(" -i %d"),m_khan_iter->GetValue()));
+                m_cmd.Append(wxString::Format(" -i %d",m_khan_iter->GetValue()));
             }
             else
             {
@@ -175,7 +165,7 @@ bool HDRMergeOptionsDialog::BuildCommandLineArgument()
                 char * p = setlocale(LC_NUMERIC,NULL);
                 char * old_locale = strdup(p);
                 setlocale(LC_NUMERIC,"C");
-                m_cmd.Append(wxString::Format(wxT(" -s %f"),i));
+                m_cmd.Append(wxString::Format(" -s %f",i));
                 //reset locale
                 setlocale(LC_NUMERIC,old_locale);
                 free(old_locale);
@@ -189,18 +179,18 @@ bool HDRMergeOptionsDialog::BuildCommandLineArgument()
             if(m_option_khan_af->IsChecked() || m_option_khan_ag->IsChecked() || 
                 m_option_khan_am->IsChecked())
             {
-                m_cmd.Append(wxT(" -a "));
+                m_cmd.Append(" -a ");
                 if(m_option_khan_af->IsChecked())
-                    m_cmd.Append(wxT("f"));
+                    m_cmd.Append("f");
                 if(m_option_khan_ag->IsChecked())
-                    m_cmd.Append(wxT("g"));
+                    m_cmd.Append("g");
                 if(m_option_khan_am->IsChecked())
-                    m_cmd.Append(wxT("m"));
+                    m_cmd.Append("m");
             }
             break;
     };
     if(!correct_input)
-        wxMessageBox(errorstring,_("Wrong input"),wxOK | wxICON_INFORMATION);
+        hugin_utils::HuginMessageBox(errorstring,_("Hugin"),wxOK | wxICON_INFORMATION, this);
     return correct_input;
 };
 

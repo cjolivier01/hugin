@@ -254,25 +254,52 @@ void PreviewEditCPTool::AddLineCP(const hugin_utils::FDiff2D& pos1, const hugin_
 {
     HuginBase::UIntSet imgs1 = helper->GetImagesUnderPos(pos1);
     HuginBase::UIntSet imgs2 = helper->GetImagesUnderPos(pos2);
-    HuginBase::UIntSet imgIntersection;
-    std::set_intersection(imgs1.begin(), imgs1.end(), imgs2.begin(), imgs2.end(), std::inserter(imgIntersection, imgIntersection.begin()));
-    if (!imgIntersection.empty())
+    if (imgs1.empty() || imgs2.empty())
     {
-        // start and end point are on the same image
+        // start or end point are not above any image
+        wxBell();
+        // we need to redraw so that the selection vanishes
+        helper->GetVisualizationStatePtr()->ForceRequireRedraw();
+        helper->GetVisualizationStatePtr()->Redraw();
+    }
+    else
+    {
+        HuginBase::UIntSet imgIntersection;
+        std::set_intersection(imgs1.begin(), imgs1.end(), imgs2.begin(), imgs2.end(), std::inserter(imgIntersection, imgIntersection.begin()));
         HuginBase::Panorama* pano = helper->GetPanoramaPtr();
         HuginBase::ControlPoint cp;
-        cp.image1Nr = *imgIntersection.begin();
+        if (!imgIntersection.empty())
+        {
+            // start and end point are on the same image
+            cp.image1Nr = *imgIntersection.begin();
+            HuginBase::PTools::Transform transform;
+            transform.createTransform(pano->getImage(cp.image1Nr), pano->getOptions());
+            double image_x, image_y;
+            transform.transformImgCoord(image_x, image_y, pos1.x, pos1.y);
+            cp.x1 = image_x;
+            cp.y1 = image_y;
+            transform.transformImgCoord(image_x, image_y, pos2.x, pos2.y);
+            cp.image2Nr = cp.image1Nr;
+            cp.x2 = image_x;
+            cp.y2 = image_y;
+        }
+        else
+        {
+            // start and end point are on different images
+            cp.image1Nr = *imgs1.begin();
+            cp.image2Nr = *imgs2.begin();
 
-        HuginBase::PTools::Transform transform;
-        transform.createTransform(pano->getImage(cp.image1Nr), pano->getOptions());
-        double image_x, image_y;
-        transform.transformImgCoord(image_x, image_y, pos1.x, pos1.y);
-        cp.x1 = image_x;
-        cp.y1 = image_y;
-        transform.transformImgCoord(image_x, image_y, pos2.x, pos2.y);
-        cp.image2Nr = cp.image1Nr;
-        cp.x2 = image_x;
-        cp.y2 = image_y;
+            HuginBase::PTools::Transform transform;
+            transform.createTransform(pano->getImage(cp.image1Nr), pano->getOptions());
+            double image_x, image_y;
+            transform.transformImgCoord(image_x, image_y, pos1.x, pos1.y);
+            cp.x1 = image_x;
+            cp.y1 = image_y;
+            transform.createTransform(pano->getImage(cp.image2Nr), pano->getOptions());
+            transform.transformImgCoord(image_x, image_y, pos2.x, pos2.y);
+            cp.x2 = image_x;
+            cp.y2 = image_y;
+        }
         if (abs(pos1.x - pos2.x) < abs(pos1.y - pos2.y))
         {
             cp.mode = HuginBase::ControlPoint::X;
@@ -283,11 +310,4 @@ void PreviewEditCPTool::AddLineCP(const hugin_utils::FDiff2D& pos1, const hugin_
         };
         PanoCommand::GlobalCmdHist::getInstance().addCommand(new PanoCommand::AddCtrlPointCmd(*pano, cp));
     }
-    else
-    {
-        wxBell();
-        // we need to redraw so that the selection vanishes
-        helper->GetVisualizationStatePtr()->ForceRequireRedraw();
-        helper->GetVisualizationStatePtr()->Redraw();
-    };
 }

@@ -85,9 +85,16 @@ This package contains the following programs:
  
  - pto_move Moves Hugin project files with associated images
  
- - lensdb Maintenance tool for Hugins camera and lens database 
+ - hugin_lensdb Maintenance tool for Hugins camera and lens database 
 
  - verdandi Merges images using watershed algorithm
+
+ - hugin_stacker Merges overlapping images with different statistics 
+   (e.g. mean, mininmum, maximum)
+
+ - hugin_toolbox GUI for several small utilies, contains
+   - a GUI for enfuse
+   - a GUI for perspective correction
  
 These programs are built on top of the pano13 library,
 http://panotools.sourceforge.net/

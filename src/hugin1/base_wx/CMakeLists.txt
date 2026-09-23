@@ -4,7 +4,7 @@ SET(HUGIN_WX_BASE_SRC wxImageCache.cpp MyProgressDialog.cpp PTWXDlg.cpp
                       RunStitchPanel.cpp LensTools.cpp wxLensDB.cpp HFOVDialog.cpp
                       Command.cpp PanoCommand.cpp wxPanoCommand.cpp CommandHistory.cpp
                       Executor.cpp AssistantExecutor.cpp StitchingExecutor.cpp wxcms.cpp 
-                      wxPlatform.cpp GraphTools.cpp)
+                      wxPlatform.cpp wxutils.cpp GraphTools.cpp)
 SET(HUGIN_WX_BASE_HEADER wxImageCache.h MyProgressDialog.h PTWXDlg.h
                       huginConfig.h MyExternalCmdExecDialog.h platform.h
                       RunStitchPanel.h LensTools.h wxLensDB.h HFOVDialog.h

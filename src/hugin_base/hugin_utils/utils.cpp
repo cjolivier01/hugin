@@ -49,7 +49,7 @@
 #include <hugin_config.h>
 #endif
 #include <algorithm>
-#include <hugin_utils/filesystem.h>
+#include <filesystem>
 #include <lcms2.h>
 
 #ifdef __APPLE__
@@ -404,7 +404,7 @@ std::string GetAbsoluteFilename(const std::string& filename)
 
 bool IsFileTypeSupported(const std::string& filename)
 {
-    const std::string extension = getExtension(filename);
+    const std::string extension = tolower(getExtension(filename));
     return (vigra::impexListExtensions().find(extension) != std::string::npos);
 };
 
@@ -443,11 +443,11 @@ std::string GetDataDir()
 #ifdef _WIN32
     char buffer[MAX_PATH];//always use MAX_PATH for filepaths
     GetModuleFileName(NULL,buffer,sizeof(buffer));
-    fs::path data_path(buffer);
+    std::filesystem::path data_path(buffer);
     data_path.remove_filename();
     if (data_path.has_parent_path())
     {
-        return (data_path.parent_path() / "share/hugin/data").string() + "\\";
+        return std::filesystem::absolute(data_path.parent_path() / ".." / "share" / "hugin" / "data").string() + "\\";
     };
     return std::string();
 #elif defined MAC_SELF_CONTAINED_BUNDLE
@@ -461,7 +461,7 @@ std::string GetDataDir()
     }
     return data_path;
 #elif defined UNIX_SELF_CONTAINED_BUNDLE
-    fs::path data_path = fs::read_symlink("/proc/self/exe");
+    std::filesystem::path data_path = std::filesystem::read_symlink("/proc/self/exe");
     data_path.remove_filename();
     if (data_path.has_parent_path())
     {
@@ -496,17 +496,16 @@ std::string GetHomeDir()
 
 std::string GetUserAppDataDir()
 {
-    fs::path path;
+    std::filesystem::path path;
 #ifdef _WIN32
     char fullpath[_MAX_PATH];
     if(SHGetFolderPath(NULL, CSIDL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, fullpath)!=S_OK)
     {
         return std::string();
     };
-    path = fs::path(fullpath);
+    path = std::filesystem::path(fullpath);
     path /= "hugin";
 #else
-#ifdef USE_XDG_DIRS
     char *xdgDataDir = getenv("XDG_DATA_HOME");
     if (xdgDataDir == NULL || strlen(xdgDataDir) == 0)
     {
@@ -517,31 +516,19 @@ std::string GetUserAppDataDir()
         {
             return std::string();
         };
-        path = fs::path(homeDir);
+        path = std::filesystem::path(homeDir);
         path /= ".local/share/hugin";
     }
     else
     {
-        // XDG_DATA_HOME set, use hugindata sub directory
-        path = fs::path(xdgDataDir);
+        // XDG_DATA_HOME set, use hugin sub directory
+        path = std::filesystem::path(xdgDataDir);
         path /= "hugin";
     };
-#else
-    // old behaviour, save in users home directory, sub-directory .hugindata
-    const std::string homeDir = GetHomeDir();
-    if (homeDir.empty())
-    {
-        return std::string();
-    };
-    path = fs::path(homeDir);
-    // we have already a file with name ".hugin" for our wxWidgets settings
-    // therefore we use directory ".hugindata" in homedir
-    path /= ".hugindata";
 #endif
-#endif
-    if (!fs::exists(path))
+    if (!std::filesystem::exists(path))
     {
-        if (!fs::create_directories(path))
+        if (!std::filesystem::create_directories(path))
         {
             std::cerr << "ERROR: Could not create destination directory: " << path.string() << std::endl
                 << "Maybe you have not sufficient rights to create this directory." << std::endl;
@@ -947,6 +934,30 @@ std::string GetICCDesc(const cmsHPROFILE& profile)
     cmsGetProfileInfoASCII(profile, cmsInfoDescription, cmsNoLanguage, cmsNoCountry, &information[0], size);
     StrTrim(information);
     return information;
+}
+
+// check is icc profile is linear using cmsDetectRGBProfileGamma from LCMS2
+bool IsLinearICCProfile(const vigra::ImageImportInfo::ICCProfile& iccProfile)
+{
+#if LCMS_VERSION >= 2130
+    // function is available in lcms2 2.13.0 and later
+    if (iccProfile.empty())
+    {
+        return false;
+    }
+    cmsHPROFILE profile = cmsOpenProfileFromMem(iccProfile.data(), iccProfile.size());
+    if (profile == NULL)
+    {
+        // invalid profile
+        return false;
+    }
+    // get gamma value from profile
+    const cmsFloat64Number gamma = cmsDetectRGBProfileGamma(profile, 0.15);
+    cmsCloseProfile(profile);
+    return gamma > 0.6 && gamma < 1.4;
+#else
+    return false;
+#endif
 }
 
 /** return vector of known extensions of raw files, all lower case */

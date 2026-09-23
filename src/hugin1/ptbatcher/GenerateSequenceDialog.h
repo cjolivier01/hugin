@@ -100,8 +100,6 @@ private:
     wxTextCtrl* m_imageTemplate;
     wxButton* m_changeImageTemplate;
     wxButton* m_changeAllImagesTemplate;
-
-    DECLARE_EVENT_TABLE()
 };
 
 

@@ -105,7 +105,7 @@ class IMPEX ImageCache
                 };
 
                 ///
-                ImageCacheRGB8Ptr get8BitImage();
+                ImageCacheRGB8Ptr get8BitImage(int desiredMapping = -1);
         };
 
         /** a shared pointer to the entry */
@@ -291,19 +291,6 @@ class IMPEX ImageCache
         static void importAndConvertImage(const vigra::ImageImportInfo& info,
                                    vigra::pair<DestIterator, DestAccessor> dest,
                                    const std::string& type);
-        
-    //    template <class SrcPixelType,
-    //              class DestIterator, class DestAccessor>
-    //    void importAndConvertGrayImage(const ImageImportInfo& info,
-    //                                   vigra::pair<DestIterator, DestAccessor> dest,
-    //                                   wxString type);
-        
-    //    template <class SrcPixelType,
-    //              class DestIterator, class DestAccessor>
-    //    void importAndConvertGrayAlphaImage(const ImageImportInfo & info,
-    //                                        vigra::pair<DestIterator, DestAccessor> dest,
-    //                                        wxString type);
-        
         template <class SrcPixelType,
                   class DestIterator, class DestAccessor,
                   class MaskIterator, class MaskAccessor>

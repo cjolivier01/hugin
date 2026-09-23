@@ -52,14 +52,15 @@ public:
      * must have been called with a valid (and still valid9 ViewState pointer to
      * the ViewState used by the preview.
      * 
-     * @param startLat lattiude of the first point in degrees.
+     * @param startLat latitude of the first point in degrees.
      * @param startLong longitude of the first point in degrees.
-     * @param endLat lattide of the second point in degrees.
+     * @param endLat latitude of the second point in degrees.
      * @param endLong longitude of the second point in degrees.
      * @param width width of the line in pixels.
+     * @param straightLine if false a great circle is drawn, otherwise a straight line in 2D
      */
     void drawLineFromSpherical(double startLat, double startLong,
-                               double endLat, double endLong, double width = 1.0);
+                               double endLat, double endLong, double width = 1.0, bool straightLine = false);
 private:
     VisualizationState * m_visualizationState;
 };
@@ -73,9 +74,9 @@ class GreatCircleArc
          */
         GreatCircleArc();
         /** Create a great circle arc.
-         * @param startLat lattiude of the first point in degrees.
+         * @param startLat latitude of the first point in degrees.
          * @param startLong longitude of the first point in degrees.
-         * @param endLat lattide of the second point in degrees.
+         * @param endLat latitude of the second point in degrees.
          * @param endLong longitude of the second point in degrees.
          */
         GreatCircleArc(double startLat, double startLong,
@@ -83,7 +84,7 @@ class GreatCircleArc
                        VisualizationState & m_visualizationState);
         /// Draw the great circle arc on the fast preview
         void draw(bool withCross=true, double width = 1.0) const;
-        /** Return the square of the minimal distance between the great circle arc and a coorinate on the panorama.
+        /** Return the square of the minimal distance between the great circle arc and a coordinate on the panorama.
          * This is an approximation, but should be reasonable.
          */
         float squareDistance(hugin_utils::FDiff2D point) const;
@@ -111,6 +112,20 @@ class GreatCircleArc
         std::vector<LineSegment> m_lines;
         VisualizationState * m_visualizationState;
 		
+};
+
+class StraightLineFromSphericals : public GreatCircleArc
+{
+public:
+    /** Create a straight line from begin to end in spherical coordinates.
+     * @param startLat latitude of the first point in degrees.
+     * @param startLong longitude of the first point in degrees.
+     * @param endLat latitude of the second point in degrees.
+     * @param endLong longitude of the second point in degrees.
+     */
+    StraightLineFromSphericals(double startLat, double startLong,
+        double endLat, double endLong,
+        VisualizationState& m_visualizationState);
 };
 
 #endif

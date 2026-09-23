@@ -56,8 +56,6 @@ private:
     wxArrayString m_rawImages;
     wxArrayString m_images;
     PanoCommand::PanoCommand* m_cmd=NULL;
-
-    DECLARE_EVENT_TABLE()
 };
 
 #endif //_RAW_IMPORT_H

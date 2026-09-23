@@ -1056,7 +1056,7 @@ CorrelationResult PointFineTuneRotSearch(const IMAGET & templImg,
     else {
         // not enough values for subpixel estimation.
         res = resCorrelate;
-        DEBUG_ERROR("subpixel estimation not done, maxima to close to border");
+        DEBUG_DEBUG("subpixel estimation not done, maxima to close to border");
     }
 
     res.maxpos = res.maxpos + searchUL;

@@ -25,22 +25,24 @@
 
 #include <iostream>
 #include <iomanip>
+#include <vector>
+#include <time.h>
 
 #include "hugin_config.h"
-#if defined HAVE_EPOXY && HAVE_EPOXY
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
 #endif
+#if defined HAVE_EPOXY && HAVE_EPOXY
 #include <epoxy/gl.h>
+#else
+#include <GL/glew.h>
+#endif
 #ifdef __APPLE__
 #include <OpenGL/glu.h>
 #include <GLUT/glut.h>
 #else
 #include <GL/glu.h>
-#endif
-#else
-#include <GL/glew.h>
 #endif
 
 #include <string.h>
@@ -54,7 +56,6 @@
 #include <vigra_ext/ImageTransformsGPU.h>
 
 #ifdef _WIN32
-#include <windows.h>
 long getms()
 {
     return GetTickCount();
@@ -68,9 +69,6 @@ long getms()
     return (long)(tv.tv_sec*1000+(tv.tv_usec/1000));
 };
 #endif
-#include <time.h>
-
-#include <vector>
 
 using std::cout;
 using std::cerr;

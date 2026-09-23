@@ -36,7 +36,7 @@ class ProgressStatusBar : public wxStatusBar
 {
 public:
     /** constructor, create the gauge internal */
-    ProgressStatusBar(wxWindow *parent, wxWindowID id, long style = wxST_SIZEGRIP, const wxString &name = wxT("statusBar"));
+    ProgressStatusBar(wxWindow *parent, wxWindowID id, long style = wxST_SIZEGRIP, const wxString &name = "statusBar");
     /** destructor, clean up all stuff */
     ~ProgressStatusBar();
     /** size change handler, correctly position gauge when size has changed */
@@ -50,8 +50,6 @@ public:
 private:
     wxGauge *m_progress;
     int m_progressValue;
-
-    DECLARE_EVENT_TABLE();
 };
 
 #endif // PROGRESSSTATUSBAR_H

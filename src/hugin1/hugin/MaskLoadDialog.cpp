@@ -28,6 +28,7 @@
 
 #include "hugin/MaskLoadDialog.h"
 #include "base_wx/wxPlatform.h"
+#include "base_wx/wxutils.h"
 #ifdef __APPLE__
 #include "panoinc_WX.h"
 #include "panoinc.h"
@@ -35,51 +36,40 @@
 #include <hugin/config_defaults.h>
 #include "hugin/huginApp.h"
 
-BEGIN_EVENT_TABLE(MaskLoadDialog,wxDialog)
-EVT_RADIOBOX(XRCID("mask_rescale"),MaskLoadDialog::ProcessMask)
-EVT_RADIOBOX(XRCID("mask_rotate"),MaskLoadDialog::ProcessMask)
-END_EVENT_TABLE()
-
 MaskLoadDialog::MaskLoadDialog(wxWindow *parent)
 {
-    wxXmlResource::Get()->LoadDialog(this, parent, wxT("mask_load_dialog"));
-
-#ifdef __WXMSW__
-    wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + wxT("data/hugin.ico"),wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(huginApp::Get()->GetXRCPath() + wxT("data/hugin.png"),wxBITMAP_TYPE_PNG);
-    SetIcon(myIcon);
-#endif
+    wxXmlResource::Get()->LoadDialog(this, parent, "mask_load_dialog");
 
     m_image=XRCCTRL(*this,"mask_preview",MaskImageCtrl);
     m_image->setPreviewOnly();
     //load and set colours
     wxColour defaultColour;
-    defaultColour.Set(wxT(HUGIN_MASK_COLOUR_POLYGON_NEGATIVE));
-    wxColour colour=wxConfigBase::Get()->Read(wxT("/MaskEditorPanel/ColourPolygonNegative"),defaultColour.GetAsString(wxC2S_HTML_SYNTAX));
+    defaultColour.Set(HUGIN_MASK_COLOUR_POLYGON_NEGATIVE);
+    wxColour colour=wxConfigBase::Get()->Read("/MaskEditorPanel/ColourPolygonNegative",defaultColour.GetAsString(wxC2S_HTML_SYNTAX));
     m_image->SetUserColourPolygonNegative(colour);
-    defaultColour.Set(wxT(HUGIN_MASK_COLOUR_POLYGON_POSITIVE));
-    colour=wxConfigBase::Get()->Read(wxT("/MaskEditorPanel/ColourPolygonPositive"),defaultColour.GetAsString(wxC2S_HTML_SYNTAX));
+    defaultColour.Set(HUGIN_MASK_COLOUR_POLYGON_POSITIVE);
+    colour=wxConfigBase::Get()->Read("/MaskEditorPanel/ColourPolygonPositive",defaultColour.GetAsString(wxC2S_HTML_SYNTAX));
     m_image->SetUserColourPolygonPositive(colour);
-    defaultColour.Set(wxT(HUGIN_MASK_COLOUR_POINT_SELECTED));
-    colour=wxConfigBase::Get()->Read(wxT("/MaskEditorPanel/ColourPointSelected"),defaultColour.GetAsString(wxC2S_HTML_SYNTAX));
+    defaultColour.Set(HUGIN_MASK_COLOUR_POINT_SELECTED);
+    colour=wxConfigBase::Get()->Read("/MaskEditorPanel/ColourPointSelected",defaultColour.GetAsString(wxC2S_HTML_SYNTAX));
     m_image->SetUserColourPointSelected(colour);
-    defaultColour.Set(wxT(HUGIN_MASK_COLOUR_POINT_UNSELECTED));
-    colour=wxConfigBase::Get()->Read(wxT("/MaskEditorPanel/ColourPointUnselected"),defaultColour.GetAsString(wxC2S_HTML_SYNTAX));
+    defaultColour.Set(HUGIN_MASK_COLOUR_POINT_UNSELECTED);
+    colour=wxConfigBase::Get()->Read("/MaskEditorPanel/ColourPointUnselected",defaultColour.GetAsString(wxC2S_HTML_SYNTAX));
     m_image->SetUserColourPointUnselected(colour);
 
     m_maskScaleMode=XRCCTRL(*this,"mask_rescale",wxRadioBox);
+    m_maskScaleMode->Bind(wxEVT_RADIOBOX, &MaskLoadDialog::ProcessMask, this);
     m_maskRotateMode=XRCCTRL(*this,"mask_rotate",wxRadioBox);
+    m_maskRotateMode->Bind(wxEVT_RADIOBOX, &MaskLoadDialog::ProcessMask, this);
 
-    RestoreFramePosition(this, wxT("MaskLoadDialog"));
+    hugin_utils::RestoreFramePosition(this, "MaskLoadDialog");
     if(GetSize().GetWidth()<400)
         SetClientSize(400,GetSize().GetHeight());
 };
 
 MaskLoadDialog::~MaskLoadDialog()
 {
-    StoreFramePosition(this, wxT("MaskLoadDialog"));
+    hugin_utils::StoreFramePosition(this, "MaskLoadDialog");
 };
 
 void MaskLoadDialog::initValues(const HuginBase::SrcPanoImage image, const HuginBase::MaskPolygonVector newMask, const vigra::Size2D maskSize)
@@ -97,8 +87,8 @@ void MaskLoadDialog::initValues(const HuginBase::SrcPanoImage image, const Hugin
         m_imageSize.setHeight(100);
     if((m_maskSize.width()==0) || (m_maskSize.height()==0))
         m_maskSize=m_imageSize;
-    XRCCTRL(*this,"label_image_size",wxStaticText)->SetLabel(wxString::Format(wxT("%d x %d"),m_imageSize.width(),m_imageSize.height()));
-    XRCCTRL(*this,"label_mask_size",wxStaticText)->SetLabel(wxString::Format(wxT("%d x %d"),m_maskSize.width(),m_maskSize.height()));
+    XRCCTRL(*this,"label_image_size",wxStaticText)->SetLabel(wxString::Format("%d x %d",m_imageSize.width(),m_imageSize.height()));
+    XRCCTRL(*this,"label_mask_size",wxStaticText)->SetLabel(wxString::Format("%d x %d",m_maskSize.width(),m_maskSize.height()));
     //if image is rotated, set rotation to clockwise
     if((m_maskSize.width()==m_imageSize.height()) && (m_maskSize.height()==m_imageSize.width()))
         m_maskRotateMode->SetSelection(1);

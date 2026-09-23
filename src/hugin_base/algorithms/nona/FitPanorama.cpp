@@ -29,6 +29,7 @@
 #include <panodata/PanoramaData.h>
 #include <panotools/PanoToolsInterface.h>
 #include <algorithms/nona/CalculateFOV.h>
+#include <algorithms/nona/ComputeImageROI.h>
 
 namespace HuginBase {
 
@@ -55,15 +56,40 @@ void CalculateFitPanorama::fitPano(PanoramaData& panorama, double& HFOV, double&
     fov.x = std::min(fov.x, panorama.getOptions().getMaxHFOV());
     fov.y = std::min(fov.y, panorama.getOptions().getMaxVFOV());
     
-    hugin_utils::FDiff2D pmiddle;
-    // special case for projections with max VFOV > 180 (fisheye, stereographic)
-    if (panorama.getOptions().getMaxVFOV() >  180 && fov.x > 180) {
-        transf.transform(pmiddle, hugin_utils::FDiff2D(180, 180 - fov.x / 2 + 0.01));
-    } else {
-        transf.transform(pmiddle, hugin_utils::FDiff2D(0, fov.y / 2));
+    // special treatment for rectilinear projection
+    if (panorama.getOptions().getProjection() == HuginBase::PanoramaOptions::RECTILINEAR)
+    {
+        // first calculate the maximal vertical fov for maximal horizontal fov
+        hugin_utils::FDiff2D pedge;
+        transf.transform(pedge, fov / 2.0);
+        // with this maximal vfov calculate the output roi for each active image
+        // to get the maximal vertical area covered by images
+        HuginBase::PanoramaOptions tempOpts = panorama.getOptions();
+        tempOpts.setHFOV(fov.x);
+        tempOpts.setHeight(fabs(2 * pedge.y));
+        tempOpts.setROI(vigra::Rect2D(0, 0, tempOpts.getWidth(), tempOpts.getHeight()));
+        vigra::Rect2D roi;
+        for (const auto& i : panorama.getActiveImages())
+        {
+            roi |= estimateOutputROI(panorama, tempOpts, i);
+        };
+        height = 2.0 * std::max(tempOpts.getHeight() / 2.0 - roi.top(), roi.bottom() - tempOpts.getHeight() / 2.0);
     }
-    
-    height = fabs(2*pmiddle.y);
+    else
+    {
+        hugin_utils::FDiff2D pmiddle;
+        // special case for projections with max VFOV > 180 (fisheye, stereographic)
+        if (panorama.getOptions().getMaxVFOV() > 180 && fov.x > 180)
+        {
+            transf.transform(pmiddle, hugin_utils::FDiff2D(180, 180 - fov.x / 2 + 0.01));
+        }
+        else
+        {
+            transf.transform(pmiddle, hugin_utils::FDiff2D(0, fov.y / 2));
+        };
+
+        height = fabs(2 * pmiddle.y);
+    };
     HFOV = fov.x;
 }
 

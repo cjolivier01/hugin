@@ -29,7 +29,7 @@
 #include <string>
 #include <fstream>
 #include "hugin_config.h"
-#include <hugin_utils/filesystem.h>
+#include <filesystem>
 #include <getopt.h>
 #include <panodata/Panorama.h>
 #include <hugin_utils/stl_utils.h>
@@ -37,7 +37,7 @@
 #include <panodata/StandardImageVariableGroups.h>
 #include <hugin_base/panotools/PanoToolsUtils.h>
 
-typedef std::vector<fs::path> pathVec;
+typedef std::vector<std::filesystem::path> pathVec;
 
 
 template <class iteratorType>
@@ -54,7 +54,7 @@ bool iterateFileSystem(std::string src, pathVec& projectFiles)
             };
         }
     }
-    catch(fs::filesystem_error& e)
+    catch(std::filesystem::filesystem_error& e)
     {
         std::cout << e.what() << std::endl;
         return false;
@@ -66,15 +66,15 @@ void FindPTOFiles(pathVec& projectFiles, std::string src, bool recursive)
 {
     if(recursive)
     {
-        iterateFileSystem<fs::recursive_directory_iterator>(src, projectFiles);
+        iterateFileSystem<std::filesystem::recursive_directory_iterator>(src, projectFiles);
     }
     else
     {
-        iterateFileSystem<fs::directory_iterator>(src, projectFiles);
+        iterateFileSystem<std::filesystem::directory_iterator>(src, projectFiles);
     };
 };
 
-bool CheckProjectFile(const fs::path filename)
+bool CheckProjectFile(const std::filesystem::path filename)
 {
     // open project file
     HuginBase::Panorama pano;
@@ -232,11 +232,11 @@ int main(int argc, char* argv[])
 
     if (populate)
     {
-        fs::path p(basepath);
-        if (fs::exists(p))
+        std::filesystem::path p(basepath);
+        if (std::filesystem::exists(p))
         {
-            p = fs::absolute(p);
-            if (fs::is_directory(p))
+            p = std::filesystem::absolute(p);
+            if (std::filesystem::is_directory(p))
             {
                 pathVec projectFiles;
                 FindPTOFiles(projectFiles, p.string(), recursive);

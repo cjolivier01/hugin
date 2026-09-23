@@ -45,21 +45,6 @@ namespace hugin_utils
 
 } // namespace
 
-#if defined __WXMSW__ && !wxCHECK_VERSION(3,1,1)
-  // workaround for wxWidgets bug 14888
-  // see: http://trac.wxwidgets.org/ticket/14888
-  // if this is fixed upstreams this workaround can be removed
-void HuginCHMHelpController::DisplayHelpPage(const wxString& name)
-{
-    // instead of passing filename as dwData to HH_DISPLAY_TOPIC
-    // we pass chmFilename::filename to pszfile 
-    wxString command(GetValidFilename());
-    command.Append(wxT("::"));
-    command.Append(name);
-    CallHtmlHelp(GetParentWindow(), command.t_str(), 0 /* =HH_DISPLAY_TOPIC */);
-};
-#endif
-
 #ifndef __WXMSW__
 #include <wx/confbase.h>
 #include <wx/gdicmn.h> 
@@ -99,7 +84,7 @@ WXIMPEX void FixHelpSettings()
 }
 #endif
 
-#if defined __WXGTK__ && wxCHECK_VERSION(3,1,1)
+#if defined __WXGTK__
 #include <wx/stdpaths.h>
 #include <wx/app.h>
 #include <wx/filename.h>

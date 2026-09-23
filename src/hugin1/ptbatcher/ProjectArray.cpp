@@ -93,7 +93,7 @@ HuginBase::PanoramaOptions Project::ReadOptions(wxString projectFile)
     {
         wxString pathToPTO;
         wxFileName::SplitPath(projectFile, &pathToPTO, NULL, NULL);
-        pathToPTO.Append(wxT("/"));
+        pathToPTO.Append("/");
 
         HuginBase::PanoramaMemento newPano;
         int ptoVersion = 0;
@@ -104,8 +104,8 @@ HuginBase::PanoramaOptions Project::ReadOptions(wxString projectFile)
             {
                 HuginBase::PanoramaOptions opts = pano.getOptions();
                 // no options stored in file, use default arguments in config
-                opts.enblendOptions = wxConfigBase::Get()->Read(wxT("/Enblend/Args"), wxT("")).mb_str(wxConvLocal);
-                opts.enfuseOptions = wxConfigBase::Get()->Read(wxT("/Enfuse/Args"), wxT("")).mb_str(wxConvLocal);
+                opts.enblendOptions = wxConfigBase::Get()->Read("/Enblend/Args", wxEmptyString).mb_str(wxConvLocal);
+                opts.enfuseOptions = wxConfigBase::Get()->Read("/Enfuse/Args", wxEmptyString).mb_str(wxConvLocal);
                 pano.setOptions(opts);
             }
             // set default prefix, if not given

@@ -125,8 +125,6 @@
                         <object class="sizeritem">
                           <object class="wxCheckBox" name="pref_show_projection_hints">
                             <label>Show hints about projections</label>
-                            <enabled>0</enabled>
-                            <hidden>1</hidden>
                             <tooltip>The hints are shown only in the fast preview window</tooltip>
                           </object>
                           <flag>wxALL|wxEXPAND|wxALIGN_TOP</flag>

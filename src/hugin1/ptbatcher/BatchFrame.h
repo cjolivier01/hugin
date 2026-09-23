@@ -35,10 +35,6 @@
 #if !wxUSE_HELP
 #error wxWidgets needs to be compiled with help support (wxUSE_HELP not set)
 #endif
-#if defined __WXMSW__ && !(wxCHECK_VERSION(3,1,1))
-#include "base_wx/wxPlatform.h"
-#define wxHelpController HuginCHMHelpController
-#endif
 #include "BatchTrayIcon.h"
 //#include <wx/app.h>
 #include "ProgressStatusBar.h"
@@ -143,10 +139,6 @@ public:
     bool IsRunning();
     /** returns true, if batch is paused */
     bool IsPaused();
-    /** sets status message, also updates tooltip of taskbar icon
-     *  @param status text for status bar
-     */
-    void SetStatusInformation(wxString status);
     /** update visibility of verbose output window depending on status of verbose checkbox */
     void UpdateBatchVerboseStatus();
     /** returns true, if last session was finished minimized */
@@ -194,8 +186,6 @@ private:
     void OnRefillListBox(wxCommandEvent& e);
     /** create or destroy the tray icon */
     void UpdateTrayIcon(const bool createTrayIcon);
-
-    DECLARE_EVENT_TABLE()
 };
 
 #endif //BATCHFRAME_H

@@ -30,9 +30,7 @@
 #include <string>
 #include "ProjectArray.h"
 #include "RunStitchFrame.h"
-#if wxCHECK_VERSION(3,1,0)
 #include <wx/power.h>
-#endif
 
 #ifndef FRAMEARRAY
 #define FRAMEARRAY
@@ -169,21 +167,11 @@ private:
 
     //vector, which stores the failed projects and filename of saved logfile
     std::vector<FailedProject> m_failedProjects;
-#if wxCHECK_VERSION(3,1,0)
     wxPowerResourceBlocker* m_resBlocker;
-#endif
-
-    DECLARE_EVENT_TABLE()
 };
 
-#if defined _WIN32 && defined Hugin_shared
-DECLARE_LOCAL_EVENT_TYPE(EVT_BATCH_FAILED,-1)
-DECLARE_LOCAL_EVENT_TYPE(EVT_INFORMATION,-1)
-DECLARE_LOCAL_EVENT_TYPE(EVT_UPDATE_PARENT, -1)
-#else
-DECLARE_EVENT_TYPE(EVT_BATCH_FAILED,-1)
-DECLARE_EVENT_TYPE(EVT_INFORMATION,-1)
-DECLARE_EVENT_TYPE(EVT_UPDATE_PARENT, -1)
-#endif
+wxDECLARE_EVENT(EVT_BATCH_FAILED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_INFORMATION, wxCommandEvent);
+wxDECLARE_EVENT(EVT_UPDATE_PARENT, wxCommandEvent);
 
 #endif //BATCH_H

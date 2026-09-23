@@ -29,6 +29,7 @@
 #include "panoinc.h"
 #include "PTWXDlg.h"
 #include <wx/app.h>
+#include "wxutils.h"
 
 extern "C" {
 #include <pano13/filter.h>
@@ -44,16 +45,20 @@ static void PTPrintErrorWX(char* fmt, va_list ap)
     vsprintf(message, fmt, ap);
 	
 //		MessageBox(GetFocus(), (LPSTR)message, (LPSTR)"", MB_OK | MB_ICONHAND) ;
-    wxMessageBox(wxString(message,wxConvLocal), _("Panorama Tools"), wxOK | wxICON_HAND);
+    hugin_utils::HuginMessageBox(wxString(message,wxConvLocal), _("Panorama Tools"), wxOK | wxICON_HAND, wxGetActiveWindow());
 }	
 
-
+#ifdef __WXMSW__
+typedef wxGenericProgressDialog PTProgressDialog;
+#else
+typedef wxProgressDialog PTProgressDialog;
+#endif
 // Progress report; return false if canceled
 
 
 static int PTProgressWX( int command, char* argument ){
 
-    static wxProgressDialog * dlg = 0;
+    static PTProgressDialog* dlg = 0;
 //    MSG	msg;
     long percent;	
     switch( command ){
@@ -63,8 +68,8 @@ static int PTProgressWX( int command, char* argument ){
                 wxTheApp->Yield();
                 dlg = 0;
             } else {
-                dlg = new wxProgressDialog(_("Panorama Tools"),
-                                           wxT("\n\n\n"), 100, wxGetActiveWindow(),
+                dlg = new PTProgressDialog(_("Panorama Tools"),
+                                           "\n\n\n", 100, wxGetActiveWindow(),
                                            wxPD_APP_MODAL | wxPD_CAN_ABORT);
                 if (dlg == 0) {
                     return FALSE;
@@ -106,7 +111,7 @@ static int PTInfoDlgWX ( int command, char* argument )	// Display info: same arg
     char 				text[256];
     static char			mainMessage[256];						
 
-    static wxProgressDialog * dlg = 0;
+    static PTProgressDialog* dlg = 0;
 //    MSG	msg;
     switch( command ){
         case _initProgress:
@@ -117,11 +122,11 @@ static int PTInfoDlgWX ( int command, char* argument )	// Display info: same arg
             } else {
                 // we need to ensure that there is are enough lines in the dialog..
                 // create progress dialog
-                dlg = new wxProgressDialog(_("Panorama Tools"),
+                dlg = new PTProgressDialog(_("Panorama Tools"),
 #ifdef __WXMAC__
-                                           wxT("0123456789012345678901234567890123456789012345\n\n\n\n\n"),
+                                           "0123456789012345678901234567890123456789012345\n\n\n\n\n",
 #else
-                                           wxT("0123456789012345678901234567890123456789012345\n\n\n"),
+                                           "0123456789012345678901234567890123456789012345\n\n\n",
 #endif
                                            100, wxGetActiveWindow(),
                                            wxPD_APP_MODAL | wxPD_CAN_ABORT | wxPD_ELAPSED_TIME);

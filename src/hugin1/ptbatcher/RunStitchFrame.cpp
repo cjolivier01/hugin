@@ -26,11 +26,6 @@
 
 #include "RunStitchFrame.h"
 
-BEGIN_EVENT_TABLE(RunStitchFrame, wxFrame)
-    EVT_BUTTON(wxID_CANCEL, RunStitchFrame::OnCancel)
-    EVT_END_PROCESS(-1, RunStitchFrame::OnProcessTerminate)
-END_EVENT_TABLE()
-
 RunStitchFrame::RunStitchFrame(wxWindow* parent, const wxString& title, const wxPoint& pos, const wxSize& size)  //ProjectArray projList, wxListBox *projListBox)
     : wxFrame(parent, -1, title, pos, size, wxRESIZE_BORDER | wxCAPTION | wxCLIP_CHILDREN), m_isStitching(false)
 {
@@ -43,12 +38,14 @@ RunStitchFrame::RunStitchFrame(wxWindow* parent, const wxString& title, const wx
     topsizer->Add( new wxButton(this, wxID_CANCEL, _("Cancel")),
                    0, wxALL | wxALIGN_RIGHT, 10);
 
+    SetSizer( topsizer );
 #ifdef __WXMSW__
     // wxFrame does have a strange background color on Windows..
-    this->SetBackgroundColour(m_stitchPanel->GetBackgroundColour());
+    SetBackgroundColour(m_stitchPanel->GetBackgroundColour());
 #endif
 
-    SetSizer( topsizer );
+    Bind(wxEVT_BUTTON, &RunStitchFrame::OnCancel, this, wxID_CANCEL);
+    Bind(wxEVT_END_PROCESS, &RunStitchFrame::OnProcessTerminate, this);
 }
 
 int RunStitchFrame::GetProcessId()

@@ -34,12 +34,6 @@
 #include "LensCalApp.h"
 #include "base_wx/wxcms.h"
 
-BEGIN_EVENT_TABLE(LensCalImageCtrl, wxPanel)
-    EVT_SIZE(LensCalImageCtrl::Resize)
-    EVT_PAINT(LensCalImageCtrl::OnPaint)
-    EVT_MOUSE_EVENTS(LensCalImageCtrl::OnMouseEvent)
-END_EVENT_TABLE()
-
 // init some values
 LensCalImageCtrl::LensCalImageCtrl() : wxPanel()
 {
@@ -60,6 +54,11 @@ LensCalImageCtrl::LensCalImageCtrl() : wxPanel()
     wxString profileName;
     HuginBase::Color::GetMonitorProfile(profileName, m_monitorProfile);
     m_hasMonitorProfile = !profileName.IsEmpty();
+    // bind event handler
+    Bind(wxEVT_SIZE, &LensCalImageCtrl::Resize, this);
+    Bind(wxEVT_PAINT, &LensCalImageCtrl::OnPaint, this);
+    Bind(wxEVT_LEFT_DOWN, &LensCalImageCtrl::OnMouseEvent, this);
+    Bind(wxEVT_RIGHT_DOWN, &LensCalImageCtrl::OnMouseEvent, this);
 };
 
 const LensCalImageCtrl::LensCalPreviewMode LensCalImageCtrl::GetMode()
@@ -69,16 +68,6 @@ const LensCalImageCtrl::LensCalPreviewMode LensCalImageCtrl::GetMode()
 
 void LensCalImageCtrl::OnMouseEvent(wxMouseEvent &e)
 {
-    if(e.Entering() || e.Leaving())
-    {
-        e.Skip();
-        return;
-    };
-    if(!e.LeftIsDown() && !e.RightIsDown())
-    {
-        e.Skip();
-        return;
-    };
     if(m_imageLines==NULL)
     {
         return;
@@ -448,14 +437,14 @@ LensCalImageCtrlXmlHandler::LensCalImageCtrlXmlHandler() : wxXmlResourceHandler(
 wxObject *LensCalImageCtrlXmlHandler::DoCreateResource()
 {
     XRC_MAKE_INSTANCE(cp, LensCalImageCtrl)
-    cp->Create(m_parentAsWindow, GetID(), GetPosition(), GetSize(), GetStyle(wxT("style")), GetName());
+    cp->Create(m_parentAsWindow, GetID(), GetPosition(), GetSize(), GetStyle("style"), GetName());
     SetupWindow(cp);
     return cp;
 }
 
 bool LensCalImageCtrlXmlHandler::CanHandle(wxXmlNode *node)
 {
-    return IsOfClass(node, wxT("LensCalCanvas"));
+    return IsOfClass(node, "LensCalCanvas");
 }
 
 IMPLEMENT_DYNAMIC_CLASS(LensCalImageCtrlXmlHandler, wxXmlResourceHandler)

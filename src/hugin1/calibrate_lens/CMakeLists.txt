@@ -17,7 +17,7 @@ ELSEIF(APPLE)
   set( MACOSX_BUNDLE_LONG_VERSION_STRING "Version ${MACOSX_BUNDLE_BUNDLE_VERSION}" )
   set( MACOSX_BUNDLE_INFO_STRING "calibrate_lens_gui ${MACOSX_BUNDLE_BUNDLE_VERSION}" )
   set( MACOSX_BUNDLE_BUNDLE_NAME "calibrate_lens_gui" )
-  set( MACOSX_BUNDLE_COPYRIGHT "Copyright 2024 Pablo d'Angelo" )
+  set( MACOSX_BUNDLE_COPYRIGHT "Copyright 2025 Pablo d'Angelo" )
   # set( MACOSX_BUNDLE_SIGNATURE "Hgin" )
 
   IF(MAC_SELF_CONTAINED_BUNDLE)
@@ -51,6 +51,7 @@ ELSEIF(APPLE)
                                 ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.ico
                                 ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.jpg
                                 ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.png
+                                ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.svg
                                 ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.txt
                                 ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.pl )
 

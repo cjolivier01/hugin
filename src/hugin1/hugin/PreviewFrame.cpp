@@ -31,6 +31,7 @@
 #include "panoinc.h"
 
 #include "base_wx/platform.h"
+#include "base_wx/wxutils.h"
 #include "hugin/config_defaults.h"
 #include "hugin/PreviewFrame.h"
 #include "hugin/huginApp.h"
@@ -70,35 +71,6 @@ enum {
     ID_REDO = wxID_HIGHEST+1702
 };
 
-BEGIN_EVENT_TABLE(PreviewFrame, wxFrame)
-    EVT_CLOSE(PreviewFrame::OnClose)
-//    EVT_CHECKBOX(-1, PreviewFrame::OnAutoPreviewToggle)
-    EVT_TOOL(XRCID("preview_center_tool"), PreviewFrame::OnCenterHorizontally)
-    EVT_TOOL(XRCID("preview_fit_pano_tool"), PreviewFrame::OnFitPano)
-    EVT_TOOL(XRCID("preview_straighten_pano_tool"), PreviewFrame::OnStraighten)
-    EVT_TOOL(XRCID("preview_auto_update_tool"), PreviewFrame::OnAutoPreviewToggle)
-    EVT_TOOL(XRCID("preview_update_tool"), PreviewFrame::OnUpdate)
-    EVT_TOOL(XRCID("preview_show_all_tool"), PreviewFrame::OnShowAll)
-    EVT_TOOL(XRCID("preview_show_none_tool"), PreviewFrame::OnShowNone)
-    EVT_TOOL(XRCID("preview_num_transform"), PreviewFrame::OnNumTransform)
-    EVT_TEXT_ENTER( -1 , PreviewFrame::OnTextCtrlChanged)
-
-    EVT_BUTTON(ID_EXPOSURE_DEFAULT, PreviewFrame::OnDefaultExposure)
-    EVT_SPIN_DOWN(ID_EXPOSURE_SPIN, PreviewFrame::OnDecreaseExposure)
-    EVT_SPIN_UP(ID_EXPOSURE_SPIN, PreviewFrame::OnIncreaseExposure)
-    EVT_SPIN_DOWN(ID_RANGE_COMPRESSION_SPIN, PreviewFrame::OnRangeCompressionDecrease)
-    EVT_SPIN_UP(ID_RANGE_COMPRESSION_SPIN, PreviewFrame::OnRangeCompressionIncrease)
-    EVT_CHOICE(ID_BLEND_CHOICE, PreviewFrame::OnBlendChoice)
-    EVT_CHOICE(ID_PROJECTION_CHOICE, PreviewFrame::OnProjectionChoice)
-    EVT_CHOICE(ID_OUTPUTMODE_CHOICE, PreviewFrame::OnOutputChoice)
-    EVT_TOGGLEBUTTON(-1, PreviewFrame::OnChangeDisplayedImgs)
-	EVT_SCROLL_CHANGED(PreviewFrame::OnChangeFOV)
-	EVT_TOOL(ID_FULL_SCREEN, PreviewFrame::OnFullScreen)
-    EVT_TOOL(ID_UNDO, PreviewFrame::OnUndo)
-    EVT_TOOL(ID_REDO, PreviewFrame::OnRedo)
-    EVT_BUTTON(PROJ_PARAM_RESET_ID, PreviewFrame::OnProjParameterReset)
-END_EVENT_TABLE()
-
 #define PF_STYLE (wxMAXIMIZE_BOX | wxMINIMIZE_BOX | wxRESIZE_BORDER | wxSYSTEM_MENU | wxCAPTION | wxCLOSE_BOX | wxCLIP_CHILDREN)
 
 PreviewFrame::PreviewFrame(wxFrame * frame, HuginBase::Panorama &pano)
@@ -109,7 +81,7 @@ PreviewFrame::PreviewFrame(wxFrame * frame, HuginBase::Panorama &pano)
 	DEBUG_TRACE("");
 
     m_oldProjFormat = -1;
-    m_ToolBar = wxXmlResource::Get()->LoadToolBar(this, wxT("preview_toolbar"));
+    m_ToolBar = wxXmlResource::Get()->LoadToolBar(this, "preview_toolbar");
     DEBUG_ASSERT(m_ToolBar);
     // create tool bar
     SetToolBar(m_ToolBar);
@@ -192,6 +164,7 @@ PreviewFrame::PreviewFrame(wxFrame * frame, HuginBase::Panorama &pano)
                         5);       // border width
     m_ProjectionChoice = new wxChoice(this, ID_PROJECTION_CHOICE,
                                       wxDefaultPosition, wxDefaultSize);
+    m_ProjectionChoice->Bind(wxEVT_CHOICE, &PreviewFrame::OnProjectionChoice, this);
 
     /* populate with all available projection types */
     int nP = panoProjectionFormatCount();
@@ -219,12 +192,13 @@ PreviewFrame::PreviewFrame(wxFrame * frame, HuginBase::Panorama &pano)
     m_choices[0] = _("normal");
     m_choices[1] = _("difference");
 
-    int oldMode = wxConfigBase::Get()->Read(wxT("/PreviewFrame/blendMode"), 0l);
+    int oldMode = wxConfigBase::Get()->Read("/PreviewFrame/blendMode", 0l);
     if (oldMode > 1) oldMode = 0;
     m_BlendModeChoice = new wxChoice(this, ID_BLEND_CHOICE,
                                      wxDefaultPosition, wxDefaultSize,
                                      2, m_choices);
     m_BlendModeChoice->SetSelection((PreviewPanel::BlendMode) oldMode);
+    m_BlendModeChoice->Bind(wxEVT_CHOICE, &PreviewFrame::OnBlendChoice, this);
 
     blendModeSizer->Add(m_BlendModeChoice,
                         0,
@@ -244,6 +218,7 @@ PreviewFrame::PreviewFrame(wxFrame * frame, HuginBase::Panorama &pano)
                                       wxDefaultPosition, wxDefaultSize,
                                       2, m_choices);
     m_outputModeChoice->SetSelection(0);
+    m_outputModeChoice->Bind(wxEVT_CHOICE, &PreviewFrame::OnOutputChoice, this);
     blendModeSizer->Add(m_outputModeChoice,
                         0,
                         wxALL | wxALIGN_CENTER_VERTICAL,
@@ -258,14 +233,17 @@ PreviewFrame::PreviewFrame(wxFrame * frame, HuginBase::Panorama &pano)
     
     m_defaultExposureBut = new wxBitmapButton(this, ID_EXPOSURE_DEFAULT,
                                               wxArtProvider::GetBitmap(wxART_REDO));
+    m_defaultExposureBut->Bind(wxEVT_BUTTON, &PreviewFrame::OnDefaultExposure, this);
+
     blendModeSizer->Add(m_defaultExposureBut, 0, wxLEFT | wxRIGHT, 5);
 
 //    m_decExposureBut = new wxBitmapButton(this, ID_EXPOSURE_DECREASE,
 //                                          wxArtProvider::GetBitmap(wxART_GO_BACK));
 //    blendModeSizer->Add(m_decExposureBut);
 
-    m_exposureTextCtrl = new wxTextCtrl(this, ID_EXPOSURE_TEXT, wxT("0"),
+    m_exposureTextCtrl = new wxTextCtrl(this, ID_EXPOSURE_TEXT, "0",
                                         wxDefaultPosition,wxSize(50,-1), wxTE_PROCESS_ENTER);
+    m_exposureTextCtrl->Bind(wxEVT_TEXT_ENTER, &PreviewFrame::OnExposureTextChanged, this);
     blendModeSizer->Add(m_exposureTextCtrl,
                           0,        // not vertically strechable
                           wxLEFT | wxTOP | wxBOTTOM  | wxALIGN_CENTER_VERTICAL, // draw border all around
@@ -277,15 +255,22 @@ PreviewFrame::PreviewFrame(wxFrame * frame, HuginBase::Panorama &pano)
     m_exposureSpinBut->SetRange(-0x8000, 0x7fff);
     m_exposureSpinBut->SetValue(0);
     m_exposureSpinBut->SetMaxSize(wxSize(-1, m_exposureTextCtrl->GetSize().GetHeight()));
+    m_exposureSpinBut->Bind(wxEVT_SPIN_DOWN, &PreviewFrame::OnDecreaseExposure, this);
+    m_exposureSpinBut->Bind(wxEVT_SPIN_UP, &PreviewFrame::OnIncreaseExposure, this);
+
     blendModeSizer->Add(m_exposureSpinBut, 0, wxALIGN_CENTER_VERTICAL);
     blendModeSizer->Add(new wxStaticText(this, wxID_ANY, _("Range compression:")), 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, 5);
-    m_rangeCompressionTextCtrl = new wxTextCtrl(this, ID_RANGE_COMPRESSION_TEXT, wxT("0"),
+    m_rangeCompressionTextCtrl = new wxTextCtrl(this, ID_RANGE_COMPRESSION_TEXT, "0",
         wxDefaultPosition, wxSize(30, -1), wxTE_PROCESS_ENTER);
+    m_rangeCompressionTextCtrl->Bind(wxEVT_TEXT_ENTER, &PreviewFrame::OnRangeCompressionTextChanged, this);
     blendModeSizer->Add(m_rangeCompressionTextCtrl, 0, wxLEFT | wxTOP | wxBOTTOM | wxALIGN_CENTER_VERTICAL, 5);
     m_rangeCompressionSpinBut = new wxSpinButton(this, ID_RANGE_COMPRESSION_SPIN, wxDefaultPosition, wxDefaultSize, wxSP_VERTICAL);
     m_rangeCompressionSpinBut->SetRange(-0x8000, 0x7fff);
     m_rangeCompressionSpinBut->SetValue(0);
     m_rangeCompressionSpinBut->SetMaxSize(wxSize(-1, m_rangeCompressionTextCtrl->GetSize().GetHeight()));
+    m_rangeCompressionSpinBut->Bind(wxEVT_SPIN_DOWN, &PreviewFrame::OnRangeCompressionDecrease, this);
+    m_rangeCompressionSpinBut->Bind(wxEVT_SPIN_UP, &PreviewFrame::OnRangeCompressionIncrease, this);
+
     blendModeSizer->Add(m_rangeCompressionSpinBut, 0, wxALIGN_CENTER_VERTICAL);
     m_topsizer->Add(blendModeSizer, 0, wxEXPAND | wxALL, 5);
 
@@ -296,6 +281,7 @@ PreviewFrame::PreviewFrame(wxFrame * frame, HuginBase::Panorama &pano)
     wxBitmapButton * resetProjButton=new wxBitmapButton(this, PROJ_PARAM_RESET_ID, 
         wxArtProvider::GetBitmap(wxART_REDO));
     resetProjButton->SetToolTip(_("Resets the projection's parameters to their default values."));
+    resetProjButton->Bind(wxEVT_BUTTON, &PreviewFrame::OnProjParameterReset, this);
     m_projParamSizer->Add(resetProjButton, 0, wxLEFT | wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
 
     m_projParamNamesLabel.resize(PANO_PROJECTION_MAX_PARMS);
@@ -309,9 +295,10 @@ PreviewFrame::PreviewFrame(wxFrame * frame, HuginBase::Panorama &pano)
                         0,        // not vertically strechable
                         wxALL | wxALIGN_CENTER_VERTICAL, // draw border all around
                         5);       // border width
-        m_projParamTextCtrl[i] = new wxTextCtrl(this, PROJ_PARAM_VAL_ID+i, wxT("0"),
+        m_projParamTextCtrl[i] = new wxTextCtrl(this, PROJ_PARAM_VAL_ID+i, "0",
                                     wxDefaultPosition, wxSize(35,-1), wxTE_PROCESS_ENTER);
         m_projParamTextCtrl[i]->PushEventHandler(new TextKillFocusHandler(this));
+        m_projParamTextCtrl[i]->Bind(wxEVT_TEXT_ENTER, &PreviewFrame::OnTextCtrlChanged, this);
         m_projParamSizer->Add(m_projParamTextCtrl[i],
                         0,        // not vertically strechable
                         wxALL | wxALIGN_CENTER_VERTICAL, // draw border all around
@@ -336,8 +323,8 @@ PreviewFrame::PreviewFrame(wxFrame * frame, HuginBase::Panorama &pano)
     int widths[3] = {-3, 150, 150};
     SetStatusWidths(3, widths);
     SetStatusText(_("Left click to define new center point, right click to move point to horizon."),0);
-    SetStatusText(wxT(""),1);
-    SetStatusText(wxT(""),2);
+    SetStatusText(wxEmptyString,1);
+    SetStatusText(wxEmptyString,2);
 
     // the initial size as calculated by the sizers
     this->SetSizer( m_topsizer );
@@ -345,20 +332,20 @@ PreviewFrame::PreviewFrame(wxFrame * frame, HuginBase::Panorama &pano)
 
     // set the minimize icon
 #ifdef __WXMSW__
-    wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + wxT("data/hugin.ico"),wxBITMAP_TYPE_ICO);
+    wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + "data/hugin.ico",wxBITMAP_TYPE_ICO);
     SetIcons(myIcons);
 #else
-    wxIcon myIcon(huginApp::Get()->GetXRCPath() + wxT("data/hugin.png"),wxBITMAP_TYPE_PNG);
+    wxIcon myIcon(huginApp::Get()->GetXRCPath() + "data/hugin.png",wxBITMAP_TYPE_PNG);
     SetIcon(myIcon);
 #endif
 
     m_pano.addObserver(this);
 
-    RestoreFramePosition(this, wxT("PreviewFrame"));
+    hugin_utils::RestoreFramePosition(this, "PreviewFrame");
     
     m_PreviewPanel->SetBlendMode((PreviewPanel::BlendMode)oldMode );
 
-    long aup = config->Read(wxT("/PreviewFrame/autoUpdate"),0l);
+    long aup = config->Read("/PreviewFrame/autoUpdate",0l);
     m_PreviewPanel->SetAutoUpdate(aup != 0);
 
     m_ToolBar->ToggleTool(XRCID("preview_auto_update_tool"), aup !=0);
@@ -368,7 +355,7 @@ PreviewFrame::PreviewFrame(wxFrame * frame, HuginBase::Panorama &pano)
     this->SetBackgroundColour(m_PreviewPanel->GetBackgroundColour());
 #endif
 
-    if (config->Read(wxT("/PreviewFrame/isShown"), 0l) != 0) {
+    if (config->Read("/PreviewFrame/isShown", 0l) != 0) {
         Show();
     }
     SetStatusText(_("Center panorama with left mouse button, set horizon with right button"),0);
@@ -382,10 +369,24 @@ PreviewFrame::PreviewFrame(wxFrame * frame, HuginBase::Panorama &pano)
     entries[2].Set(wxACCEL_CMD,(int)'R',ID_REDO);
     wxAcceleratorTable accel(3, entries);
     SetAcceleratorTable(accel);
+    Bind(wxEVT_MENU, &PreviewFrame::OnFullScreen, this, ID_FULL_SCREEN);
+    Bind(wxEVT_MENU, &PreviewFrame::OnUndo, this, ID_UNDO);
+    Bind(wxEVT_MENU, &PreviewFrame::OnRedo, this, ID_REDO);
 #ifdef __WXGTK__
     // set explicit focus to button panel, otherwise the hotkey F11 is not right processed
     m_ButtonPanel->SetFocus();
 #endif
+    //Bind event handler
+    Bind(wxEVT_CLOSE_WINDOW, &PreviewFrame::OnClose, this);
+    Bind(wxEVT_TOOL, &PreviewFrame::OnCenterHorizontally, this, XRCID("preview_center_tool"));
+    Bind(wxEVT_TOOL, &PreviewFrame::OnFitPano, this, XRCID("preview_fit_pano_tool"));
+    Bind(wxEVT_TOOL, &PreviewFrame::OnStraighten, this, XRCID("preview_straighten_pano_tool"));
+    Bind(wxEVT_TOOL, &PreviewFrame::OnAutoPreviewToggle, this, XRCID("preview_auto_update_tool"));
+    Bind(wxEVT_TOOL, &PreviewFrame::OnUpdate, this, XRCID("preview_update_tool"));
+    Bind(wxEVT_TOOL, &PreviewFrame::OnShowAll, this, XRCID("preview_show_all_tool"));
+    Bind(wxEVT_TOOL, &PreviewFrame::OnShowNone, this, XRCID("preview_show_none_tool"));
+    Bind(wxEVT_TOOL, &PreviewFrame::OnNumTransform, this, XRCID("preview_num_transform"));
+    Bind(wxEVT_SCROLL_CHANGED, &PreviewFrame::OnChangeFOV, this);
 }
 
 PreviewFrame::~PreviewFrame()
@@ -393,17 +394,17 @@ PreviewFrame::~PreviewFrame()
     DEBUG_TRACE("dtor writing config");
     wxConfigBase * config = wxConfigBase::Get();
 
-    StoreFramePosition(this, wxT("PreviewFrame"));
+    hugin_utils::StoreFramePosition(this, "PreviewFrame");
 
     if ( (!this->IsIconized()) && (! this->IsMaximized()) && this->IsShown()) {
-        config->Write(wxT("/PreviewFrame/isShown"), 1l);
+        config->Write("/PreviewFrame/isShown", 1l);
     } else {
-        config->Write(wxT("/PreviewFrame/isShown"), 0l);
+        config->Write("/PreviewFrame/isShown", 0l);
     }
 
     bool checked = m_ToolBar->GetToolState(XRCID("preview_auto_update_tool"));
-    config->Write(wxT("/PreviewFrame/autoUpdate"), checked ? 1l: 0l);
-    config->Write(wxT("/PreviewFrame/blendMode"), m_BlendModeChoice->GetSelection());
+    config->Write("/PreviewFrame/autoUpdate", checked ? 1l: 0l);
+    config->Write("/PreviewFrame/blendMode", m_BlendModeChoice->GetSelection());
     for (int i=0; i < PANO_PROJECTION_MAX_PARMS; i++)
     {
         m_projParamTextCtrl[i]->PopEventHandler(true);
@@ -510,7 +511,7 @@ void PreviewFrame::panoramaChanged(HuginBase::Panorama &pano)
         Refresh();
     }
     SetStatusText(_("Center panorama with left mouse button, set horizon with right button"),0);
-    SetStatusText(wxString::Format(wxT("%.1f x %.1f"), opts.getHFOV(), opts.getVFOV()),2);
+    SetStatusText(wxString::Format("%.1f x %.1f", opts.getHFOV(), opts.getVFOV()),2);
     m_HFOVSlider->SetValue(hugin_utils::roundi(opts.getHFOV()));
     m_VFOVSlider->SetValue(hugin_utils::roundi(opts.getVFOV()));
 
@@ -546,10 +547,11 @@ void PreviewFrame::panoramaImagesChanged(HuginBase::Panorama &pano, const HuginB
 //                wxImage * bmp = new wxImage(sz.GetWidth(), sz.GetHeight());
                 wxToggleButton * but = new wxToggleButton(m_ButtonPanel,
                                                           ID_TOGGLE_BUT + *it,
-                                                          wxString::Format(wxT(" %d "),*it),
+                                                          wxString::Format(" %d ",*it),
                                                           wxDefaultPosition, wxDefaultSize,
                                                           wxBU_EXACTFIT);
                 but->SetValue(true);
+                but->Bind(wxEVT_TOGGLEBUTTON, &PreviewFrame::OnChangeDisplayedImgs, this);
                 m_ButtonSizer->Add(but,
                                    0,
                                    wxLEFT | wxTOP,
@@ -706,7 +708,7 @@ void PreviewFrame::OnNumTransform(wxCommandEvent & e)
     if (m_pano.getNrOfImages() == 0) return;
 
     wxDialog dlg;
-    wxXmlResource::Get()->LoadDialog(&dlg, this, wxT("dlg_numtrans"));
+    wxXmlResource::Get()->LoadDialog(&dlg, this, "dlg_numtrans");
     dlg.CentreOnParent();
     if (dlg.ShowModal() == wxID_OK ) {
         wxString text = XRCCTRL(dlg, "numtrans_yaw", wxTextCtrl)->GetValue();
@@ -737,80 +739,81 @@ void PreviewFrame::OnNumTransform(wxCommandEvent & e)
     }
 }
 
+void PreviewFrame::OnExposureTextChanged(wxCommandEvent& e)
+{
+    HuginBase::PanoramaOptions opts = m_pano.getOptions();
+    const wxString text = m_exposureTextCtrl->GetValue();
+    double p = 0;
+    if (!text.IsEmpty())
+    {
+        if (!hugin_utils::str2double(text, p))
+        {
+            wxLogError(_("Value must be numeric."));
+            return;
+        }
+        opts.outputExposureValue = p;
+        PanoCommand::GlobalCmdHist::getInstance().addCommand(new PanoCommand::SetPanoOptionsCmd(m_pano, opts));
+        // update preview panel
+        updatePano();
+    }
+}
+
+void PreviewFrame::OnRangeCompressionTextChanged(wxCommandEvent& e)
+{
+    HuginBase::PanoramaOptions opts = m_pano.getOptions();
+    const wxString text = m_rangeCompressionTextCtrl->GetValue();
+    if (text.IsEmpty())
+    {
+        return;
+    }
+    double p = 0;
+    if (!hugin_utils::str2double(text, p))
+    {
+        wxLogError(_("Value must be numeric."));
+        return;
+    }
+    if (p < 0 || p>20)
+    {
+        wxLogError(_("Value for range compression is outside of valid range."));
+        return;
+    }
+    if (p == opts.outputRangeCompression)
+    {
+        return;
+    }
+    opts.outputRangeCompression = p;
+    PanoCommand::GlobalCmdHist::getInstance().addCommand(    new PanoCommand::SetPanoOptionsCmd(m_pano, opts));
+    // update preview panel
+    updatePano();
+}
+
 void PreviewFrame::OnTextCtrlChanged(wxCommandEvent & e)
 {
     HuginBase::PanoramaOptions opts = m_pano.getOptions();
-    if (e.GetEventObject() == m_exposureTextCtrl) {
-        // exposure
-        wxString text = m_exposureTextCtrl->GetValue();
-        DEBUG_INFO ("target exposure = " << text.mb_str(wxConvLocal) );
-        double p = 0;
-        if (text != wxT("")) {
-            if (!hugin_utils::str2double(text, p)) {
-                wxLogError(_("Value must be numeric."));
-                return;
-            }
-        }
-        opts.outputExposureValue = p;
-    }
-    else
+    const int nParam = opts.m_projFeatures.numberOfParameters;
+    std::vector<double> para = opts.getProjectionParameters();
+    for (int i = 0; i < nParam; i++)
     {
-        if (e.GetEventObject() == m_rangeCompressionTextCtrl)
+        if (e.GetEventObject() == m_projParamTextCtrl[i])
         {
-            //range compression
-            const wxString text = m_rangeCompressionTextCtrl->GetValue();
-            if (text.IsEmpty())
-            {
-                return;
-            };
+            wxString text = m_projParamTextCtrl[i]->GetValue();
+            DEBUG_INFO("param " << i << ":  = " << text.mb_str(wxConvLocal));
             double p = 0;
-            if (!hugin_utils::str2double(text, p))
+            if (!text.IsEmpty())
             {
-                wxLogError(_("Value must be numeric."));
-                return;
-            };
-            if (p < 0 || p>20)
-            {
-                wxLogError(_("Value for range compression is outside of valid range."));
-                return;
-            };
-            if (p == opts.outputRangeCompression)
-            {
-                return;
-            };
-            opts.outputRangeCompression = p;
-        }
-        else
-        {
-            int nParam = opts.m_projFeatures.numberOfParameters;
-            std::vector<double> para = opts.getProjectionParameters();
-            for (int i = 0; i < nParam; i++)
-            {
-                if (e.GetEventObject() == m_projParamTextCtrl[i])
+                if (!hugin_utils::str2double(text, p))
                 {
-                    wxString text = m_projParamTextCtrl[i]->GetValue();
-                    DEBUG_INFO("param " << i << ":  = " << text.mb_str(wxConvLocal));
-                    double p = 0;
-                    if (text != wxT(""))
-                    {
-                        if (!hugin_utils::str2double(text, p))
-                        {
-                            wxLogError(_("Value must be numeric."));
-                            return;
-                        }
-                    }
-                    para[i] = p;
+                    wxLogError(_("Value must be numeric."));
+                    return;
                 }
+                para[i] = p;
             }
-            opts.setProjectionParameters(para);
-        };
-    };
-    PanoCommand::GlobalCmdHist::getInstance().addCommand(
-            new PanoCommand::SetPanoOptionsCmd( m_pano, opts )
-                                           );
+        }
+    }
+    opts.setProjectionParameters(para);
+    PanoCommand::GlobalCmdHist::getInstance().addCommand(new PanoCommand::SetPanoOptionsCmd(m_pano, opts));
     // update preview panel
     updatePano();
-
 }
 
 void PreviewFrame::OnProjParameterReset(wxCommandEvent &e)
@@ -969,7 +972,7 @@ void PreviewFrame::updateProgressDisplay()
         msg = wxGetTranslation(wxString(m_message.c_str(), wxConvLocal));
         if (!m_filename.empty())
         {
-            msg.Append(wxT(" "));
+            msg.Append(" ");
             msg.Append(wxString(ProgressDisplay::m_filename.c_str(), HUGIN_CONV_FILENAME));
         };
     };

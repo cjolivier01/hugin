@@ -77,7 +77,7 @@ wxBitmap GenerateFontTexture(const int textureHeight, int& textureWidth, std::ve
     wxFont font(wxSize(0, textureHeight), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
     dc.SetFont(font);
     dc.SetTextForeground(*wxWHITE);
-    dc.DrawText(wxT("0123456789"), 0, 0);
+    dc.DrawText("0123456789", 0, 0);
     textureWidth = 0;
     glyphWidth.resize(10, 0);
     for (int i = 0; i < 10; ++i)

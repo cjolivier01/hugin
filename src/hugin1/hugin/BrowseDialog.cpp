@@ -33,6 +33,7 @@
 #include "base_wx/wxcms.h"
 #include "base_wx/LensTools.h"
 #include "base_wx/platform.h"
+#include "base_wx/wxutils.h"
 
 wxDECLARE_EVENT(wxEVT_COMMAND_THUMBNAILTHREAD_UPDATE, wxCommandEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_THUMBNAILTHREAD_UPDATE, wxCommandEvent);
@@ -150,42 +151,17 @@ protected:
 
 #define THUMBNAIL_SIZE 128
 
-#if !wxCHECK_VERSION(3,1,6)
-// helper function to set image in header
-void SetMyColumnImage(wxListCtrl* list, int col, int image)
-{
-    wxListItem item;
-    item.SetMask(wxLIST_MASK_IMAGE);
-    item.SetImage(image);
-    list->SetColumn(col, item);
-}
-#endif
-
-BEGIN_EVENT_TABLE(BrowsePTOFilesDialog, wxDialog)
-    EVT_BUTTON(wxID_OK, BrowsePTOFilesDialog::OnOk)
-    EVT_BUTTON(XRCID("browse_show_map"), BrowsePTOFilesDialog::OnShowOnMap)
-    EVT_DIRCTRL_SELECTIONCHANGED(XRCID("browse_dirctrl"), BrowsePTOFilesDialog::OnDirectoryChanged)
-    EVT_LIST_ITEM_SELECTED(XRCID("browse_listctrl"), BrowsePTOFilesDialog::OnFileChanged)
-    EVT_LIST_COL_CLICK(XRCID("browse_listctrl"), BrowsePTOFilesDialog::OnListColClick)
-    EVT_COMMAND(wxID_ANY, wxEVT_COMMAND_THUMBNAILTHREAD_UPDATE, BrowsePTOFilesDialog::OnThumbnailUpdate)
-    EVT_CHOICE(XRCID("browse_list_type"), BrowsePTOFilesDialog::OnListTypeChanged)
-END_EVENT_TABLE()
-
 BrowsePTOFilesDialog::BrowsePTOFilesDialog(wxWindow *parent, const wxString startDirectory)
 {
     // load our children. some children might need special
     // initialization. this will be done later.
     wxXmlResource::Get()->LoadDialog(this, parent, "browse_pto_dialog");
 
-#ifdef __WXMSW__
-    wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + wxT("data/hugin.ico"),wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(huginApp::Get()->GetXRCPath() + wxT("data/hugin.png"),wxBITMAP_TYPE_PNG);
-    SetIcon(myIcon);
-#endif
     m_dirCtrl = XRCCTRL(*this, "browse_dirctrl", wxGenericDirCtrl);
+    m_dirCtrl->Bind(wxEVT_DIRCTRL_SELECTIONCHANGED, &BrowsePTOFilesDialog::OnDirectoryChanged, this);
     m_listCtrl = XRCCTRL(*this, "browse_listctrl", wxListCtrl);
+    m_listCtrl->Bind(wxEVT_LIST_ITEM_SELECTED, &BrowsePTOFilesDialog::OnFileChanged, this);
+    m_listCtrl->Bind(wxEVT_LIST_COL_CLICK, &BrowsePTOFilesDialog::OnListColClick, this);
     m_previewCtrl = XRCCTRL(*this, "browse_preview", wxStaticBitmap);
     m_splitter1 = XRCCTRL(*this, "browse_splitter1", wxSplitterWindow);
     m_splitter2 = XRCCTRL(*this, "browse_splitter2", wxSplitterWindow);
@@ -208,8 +184,9 @@ BrowsePTOFilesDialog::BrowsePTOFilesDialog(wxWindow *parent, const wxString star
     m_listCtrl->InsertColumn(9, _("Capture date"), wxLIST_FORMAT_LEFT, 150);
     m_listCtrl->InsertColumn(10, _("Duration"), wxLIST_FORMAT_LEFT, 50);
     m_listType = XRCCTRL(*this, "browse_list_type", wxChoice);
+    m_listType->Bind(wxEVT_CHOICE, &BrowsePTOFilesDialog::OnListTypeChanged, this);
     // restore some settings
-    RestoreFramePosition(this, "BrowsePTODialog");
+    hugin_utils::RestoreFramePosition(this, "BrowsePTODialog");
     wxConfigBase* config = wxConfigBase::Get();
     //splitter position
     int splitter_pos = config->Read("/BrowsePTODialog/splitterPos1", -1l);
@@ -236,44 +213,8 @@ BrowsePTOFilesDialog::BrowsePTOFilesDialog(wxWindow *parent, const wxString star
     m_sortAscending = config->Read("/BrowsePTODialog/SortAscending", 1) == 1 ? true : false;
     if (m_sortCol != -1)
     {
-#if wxCHECK_VERSION(3,1,6)
         m_listCtrl->ShowSortIndicator(m_sortCol, m_sortAscending);
-#else
-        SetMyColumnImage(m_listCtrl, m_sortCol, m_sortAscending ? 0 : 1);
-#endif
     };
-
-#if !wxCHECK_VERSION(3,1,6)
-    // creating bitmaps for indicating sorting order
-    wxMemoryDC memDC;
-    memDC.SetFont(GetFont());
-    wxSize fontSize = memDC.GetTextExtent(wxT("\u25b3"));
-    wxCoord charSize = std::max(fontSize.GetWidth(), fontSize.GetHeight());
-    wxImageList* sortIcons = new wxImageList(charSize, charSize, true, 0);
-    {
-        wxBitmap bmp(charSize, charSize);
-        wxMemoryDC dc(bmp);
-        dc.SetBackgroundMode(wxPENSTYLE_TRANSPARENT);
-        dc.SetBackground(GetBackgroundColour());
-        dc.Clear();
-        dc.SetFont(GetFont());
-        dc.DrawText(wxT("\u25b3"), (charSize - fontSize.GetWidth()) / 2, (charSize - fontSize.GetHeight()) / 2);
-        dc.SelectObject(wxNullBitmap);
-        sortIcons->Add(bmp, GetBackgroundColour());
-    };
-    {
-        wxBitmap bmp(charSize, charSize);
-        wxMemoryDC dc(bmp);
-        dc.SetBackgroundMode(wxPENSTYLE_TRANSPARENT);
-        dc.SetBackground(GetBackgroundColour());
-        dc.Clear();
-        dc.SetFont(GetFont());
-        dc.DrawText(wxT("\u25bd"), (charSize - fontSize.GetWidth()) / 2, (charSize - fontSize.GetHeight()) / 2);
-        dc.SelectObject(wxNullBitmap);
-        sortIcons->Add(bmp, GetBackgroundColour());
-    };
-    m_listCtrl->AssignImageList(sortIcons, wxIMAGE_LIST_SMALL);
-#endif
 
     // fill values for start directory
     if (!startDirectory.IsEmpty())
@@ -285,6 +226,9 @@ BrowsePTOFilesDialog::BrowsePTOFilesDialog(wxWindow *parent, const wxString star
     wxCommandEvent event;
     event.SetInt(listType);
     OnListTypeChanged(event);
+    Bind(wxEVT_BUTTON, &BrowsePTOFilesDialog::OnOk, this, wxID_OK);
+    Bind(wxEVT_BUTTON, &BrowsePTOFilesDialog::OnShowOnMap, this, XRCID("browse_show_map"));
+    Bind(wxEVT_COMMAND_THUMBNAILTHREAD_UPDATE, &BrowsePTOFilesDialog::OnThumbnailUpdate, this);
 };
 
 BrowsePTOFilesDialog::~BrowsePTOFilesDialog()
@@ -292,7 +236,7 @@ BrowsePTOFilesDialog::~BrowsePTOFilesDialog()
     // stop working thread
     EndThumbnailThread();
     // save some settings
-    StoreFramePosition(this, "BrowsePTODialog");
+    hugin_utils::StoreFramePosition(this, "BrowsePTODialog");
     wxConfigBase* config = wxConfigBase::Get();
     config->Write("/BrowsePTODialog/splitterPos1", m_splitter1->GetSashPosition());
     config->Write("/BrowsePTODialog/splitterPos2", m_splitter2->GetSashPosition());
@@ -302,8 +246,8 @@ BrowsePTOFilesDialog::~BrowsePTOFilesDialog()
         config->Write(wxString::Format("/BrowsePTODialog/ColumnWidth%d", j), m_listCtrl->GetColumnWidth(j));
     };
     config->Write("/BrowsePTODialog/ListType", m_listType->GetSelection());
-    config->Write(wxT("/BrowsePTODialog/SortColumn"), m_sortCol);
-    config->Write(wxT("/BrowsePTODialog/SortAscending"), m_sortAscending ? 1 : 0);
+    config->Write("/BrowsePTODialog/SortColumn", m_sortCol);
+    config->Write("/BrowsePTODialog/SortAscending", m_sortAscending ? 1 : 0);
     config->Flush();
 }
 
@@ -450,25 +394,6 @@ PanoInfo BrowsePTOFilesDialog::ParsePTOFile(const wxFileName file)
     return info;
 }
 
-wxString FormatDateTimeSpan(const wxTimeSpan timespan)
-{
-    if (timespan.GetSeconds() > 60)
-    {
-        return timespan.Format(_("%M:%S min"));
-    }
-    else
-    {
-        if (timespan.GetSeconds() < 1)
-        {
-            return wxEmptyString;
-        }
-        else
-        {
-            return timespan.Format(_("%S s"));
-        };
-    };
-}
-
 void BrowsePTOFilesDialog::FillPanoInfo(const PanoInfo& info, long index)
 {
 #ifndef __WXMSW__
@@ -488,7 +413,7 @@ void BrowsePTOFilesDialog::FillPanoInfo(const PanoInfo& info, long index)
         {
             m_listCtrl->SetItem(index, 9, info.start.Format());
         };
-        m_listCtrl->SetItem(index, 10, FormatDateTimeSpan(info.duration));
+        m_listCtrl->SetItem(index, 10, hugin_utils::GetFormattedTimeSpan(info.duration));
     };
 }
 
@@ -510,28 +435,6 @@ void BrowsePTOFilesDialog::UpdateItemTexts(long newStyle)
     SortItems();
 #endif
 }
-
-#if !wxCHECK_VERSION(3,1,6)
-void BrowsePTOFilesDialog::UpdateImagesIndex()
-{
-    if (m_listCtrl->InReportView())
-    {
-        for (size_t i = 0; i < m_listCtrl->GetItemCount(); ++i)
-        {
-            // don't show images in report view
-            m_listCtrl->SetItemImage(i, -1);
-        };
-    }
-    else
-    {
-        // update image index only in icon view
-        for (size_t i = 0; i < m_listCtrl->GetItemCount(); ++i)
-        {
-            m_listCtrl->SetItemImage(i, m_ptoInfo[TranslateIndex(i)].imageIndex);
-        };
-    };
-}
-#endif
 
 void BrowsePTOFilesDialog::OnDirectoryChanged(wxTreeEvent& e)
 {
@@ -594,7 +497,6 @@ void BrowsePTOFilesDialog::OnDblClickListCtrl(wxMouseEvent& e)
 void BrowsePTOFilesDialog::OnListColClick(wxListEvent& e)
 {
     const int newCol = e.GetColumn();
-#if wxCHECK_VERSION(3,1,6)
     if (m_sortCol == newCol)
     {
         m_sortAscending = !m_sortAscending;
@@ -605,23 +507,6 @@ void BrowsePTOFilesDialog::OnListColClick(wxListEvent& e)
         m_sortAscending = true;
     };
     m_listCtrl->ShowSortIndicator(m_sortCol, m_sortAscending);
-#else
-    if (m_sortCol == newCol)
-    {
-        m_sortAscending = !m_sortAscending;
-        SetMyColumnImage(m_listCtrl, m_sortCol, m_sortAscending ? 0 : 1);
-    }
-    else
-    {
-        if (m_sortCol != -1)
-        {
-            SetMyColumnImage(m_listCtrl, m_sortCol, -1);
-        };
-        m_sortCol = newCol;
-        SetMyColumnImage(m_listCtrl, m_sortCol, 0);
-        m_sortAscending = true;
-    };
-#endif
     SortItems();
     Refresh();
 }
@@ -632,7 +517,6 @@ void BrowsePTOFilesDialog::OnThumbnailUpdate(wxCommandEvent& e)
     const int index = e.GetInt();
     ThreadImage* thumbnail= wxDynamicCast(e.GetEventObject(), ThreadImage);
     m_ptoInfo[index].imageIndex = m_thumbnails.Add(*(thumbnail->GetwxImage()));
-#if wxCHECK_VERSION(3,1,6)
     for (size_t i = 0; i < m_listCtrl->GetItemCount(); ++i)
     {
         if (m_listCtrl->GetItemData(i) == index)
@@ -641,9 +525,6 @@ void BrowsePTOFilesDialog::OnThumbnailUpdate(wxCommandEvent& e)
             break;
         };
     };
-#else
-    UpdateImagesIndex();
-#endif
     delete thumbnail;
 #ifndef __WXMSW__
     // a simple Refresh for repainting the control is not working
@@ -668,9 +549,6 @@ void BrowsePTOFilesDialog::OnListTypeChanged(wxCommandEvent& e)
     {
         UpdateItemTexts(wxLC_REPORT | wxLC_AUTOARRANGE | wxLC_SINGLE_SEL | wxLC_HRULES | wxLC_VRULES);
     };
-#if !wxCHECK_VERSION(3,1,6)
-    UpdateImagesIndex();
-#endif
 #ifndef __WXMSW__
     // a simple Refresh for repainting the control is not working
     // all thumbnails are drawn on top of each other

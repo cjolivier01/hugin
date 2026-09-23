@@ -36,10 +36,9 @@
 #ifdef _MSC_VER
 #pragma comment(lib, "PowrProf.lib")
 #endif
-#if wxCHECK_VERSION(3,1,0)
 #include <wx/taskbarbutton.h>
 #endif
-#endif
+#include "base_wx/wxutils.h"
 
 /* file drag and drop handler method */
 bool BatchDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames)
@@ -58,9 +57,9 @@ bool BatchDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& fil
         wxFileName file(filenames[i]);
         if(file.HasExt())
         {
-            if (file.GetExt().CmpNoCase(wxT("pto")) == 0 ||
-                    file.GetExt().CmpNoCase(wxT("ptp")) == 0 ||
-                    file.GetExt().CmpNoCase(wxT("pts")) == 0 )
+            if (file.GetExt().CmpNoCase("pto") == 0 ||
+                    file.GetExt().CmpNoCase("ptp") == 0 ||
+                    file.GetExt().CmpNoCase("pts") == 0 )
             {
                 if(file.FileExists())
                 {
@@ -84,70 +83,22 @@ enum
     EVT_TIMER_UPDATE_LISTBOX
 };
 
-BEGIN_EVENT_TABLE(BatchFrame, wxFrame)
-    EVT_TOOL(XRCID("tool_clear"),BatchFrame::OnButtonClear)
-    EVT_TOOL(XRCID("tool_open"),BatchFrame::OnButtonOpenBatch)
-    EVT_TOOL(XRCID("tool_save"),BatchFrame::OnButtonSaveBatch)
-    EVT_TOOL(XRCID("tool_start"),BatchFrame::OnButtonRunBatch)
-    EVT_TOOL(XRCID("tool_skip"),BatchFrame::OnButtonSkip)
-    EVT_TOOL(XRCID("tool_pause"),BatchFrame::OnButtonPause)
-    EVT_TOOL(XRCID("tool_cancel"),BatchFrame::OnButtonCancel)
-    EVT_TOOL(XRCID("tool_add"),BatchFrame::OnButtonAddToStitchingQueue)
-    EVT_TOOL(XRCID("tool_remove"),BatchFrame::OnButtonRemoveFromList)
-    EVT_TOOL(XRCID("tool_adddir"),BatchFrame::OnButtonAddDir)
-    EVT_MENU(XRCID("menu_add"),BatchFrame::OnButtonAddToStitchingQueue)
-    EVT_MENU(XRCID("menu_add_assistant"),BatchFrame::OnButtonAddToAssistantQueue)
-    EVT_MENU(XRCID("menu_remove"),BatchFrame::OnButtonRemoveFromList)
-    EVT_MENU(XRCID("menu_adddir"),BatchFrame::OnButtonAddDir)
-    EVT_MENU(XRCID("menu_searchpano"), BatchFrame::OnButtonSearchPano)
-    EVT_MENU(XRCID("menu_generate_sequence"), BatchFrame::OnButtonGenerateSequence)
-    EVT_MENU(XRCID("menu_open"),BatchFrame::OnButtonOpenBatch)
-    EVT_MENU(XRCID("menu_save"),BatchFrame::OnButtonSaveBatch)
-    EVT_MENU(XRCID("menu_clear"),BatchFrame::OnButtonClear)
-    EVT_MENU(XRCID("menu_tray"), BatchFrame::OnMinimizeTrayMenu)
-    EVT_MENU(XRCID("menu_exit"),BatchFrame::OnUserExit)
-    EVT_MENU(XRCID("menu_help"),BatchFrame::OnButtonHelp)
-    EVT_BUTTON(XRCID("button_addcommand"),BatchFrame::OnButtonAddCommand)
-    EVT_BUTTON(XRCID("button_remove"),BatchFrame::OnButtonRemoveComplete)
-    EVT_BUTTON(XRCID("button_prefix"),BatchFrame::OnButtonChangePrefix)
-    EVT_BUTTON(XRCID("button_user_defined"), BatchFrame::OnButtonChangeUserDefinedSequence)
-    EVT_BUTTON(XRCID("button_reset"),BatchFrame::OnButtonReset)
-    EVT_BUTTON(XRCID("button_resetall"),BatchFrame::OnButtonResetAll)
-    EVT_BUTTON(XRCID("button_edit"),BatchFrame::OnButtonOpenWithHugin)
-    EVT_BUTTON(XRCID("button_move_up"),BatchFrame::OnButtonMoveUp)
-    EVT_BUTTON(XRCID("button_move_down"),BatchFrame::OnButtonMoveDown)
-    EVT_CHECKBOX(XRCID("cb_overwrite"), BatchFrame::OnCheckOverwrite)
-    EVT_CHOICE(XRCID("choice_end"), BatchFrame::OnChoiceEnd)
-    EVT_CHECKBOX(XRCID("cb_verbose"), BatchFrame::OnCheckVerbose)
-    EVT_CHECKBOX(XRCID("cb_autoremove"), BatchFrame::OnCheckAutoRemove)
-    EVT_CHECKBOX(XRCID("cb_autostitch"), BatchFrame::OnCheckAutoStitch)
-    EVT_CHECKBOX(XRCID("cb_savelog"), BatchFrame::OnCheckSaveLog)
-    EVT_END_PROCESS(-1, BatchFrame::OnProcessTerminate)
-    EVT_CLOSE(BatchFrame::OnClose)
-    EVT_TIMER(EVT_TIMER_UPDATE_LISTBOX, BatchFrame::OnUpdateListBox)
-    EVT_COMMAND(wxID_ANY, EVT_BATCH_FAILED, BatchFrame::OnBatchFailed)
-    EVT_COMMAND(wxID_ANY, EVT_INFORMATION, BatchFrame::OnBatchInformation)
-    EVT_COMMAND(wxID_ANY, EVT_UPDATE_PARENT, BatchFrame::OnRefillListBox)
-    EVT_COMMAND(wxID_ANY, EVT_QUEUE_PROGRESS, BatchFrame::OnProgress)
-    EVT_ICONIZE(BatchFrame::OnMinimize)
-END_EVENT_TABLE()
-
 BatchFrame::BatchFrame(wxLocale* locale, wxString xrc)
 {
     this->SetLocaleAndXRC(locale,xrc);
     m_cancelled = false;
 
     //load xrc resources
-    wxXmlResource::Get()->LoadFrame(this, (wxWindow* )NULL, wxT("batch_frame"));
+    wxXmlResource::Get()->LoadFrame(this, (wxWindow* )NULL, "batch_frame");
     // load our menu bar
 #ifdef __WXMAC__
     wxApp::s_macExitMenuItemId = XRCID("menu_exit");
     wxApp::s_macHelpMenuTitleName = _("&Help");
 #endif
-    SetMenuBar(wxXmlResource::Get()->LoadMenuBar(this, wxT("batch_menu")));
+    SetMenuBar(wxXmlResource::Get()->LoadMenuBar(this, "batch_menu"));
 
     // create tool bar
-    SetToolBar(wxXmlResource::Get()->LoadToolBar(this, wxT("batch_toolbar")));
+    SetToolBar(wxXmlResource::Get()->LoadToolBar(this, "batch_toolbar"));
 
     int widths[2] = { -1, 150 };
     CreateStatusBar(2);
@@ -156,15 +107,15 @@ BatchFrame::BatchFrame(wxLocale* locale, wxString xrc)
 
     // set the minimize icon
 #ifdef __WXMSW__
-    m_iconNormal = wxIcon(m_xrcPrefix + wxT("data/ptbatcher.ico"), wxBITMAP_TYPE_ICO);
-    m_iconRunning = wxIcon(m_xrcPrefix + wxT("data/ptbatcher_running.ico"), wxBITMAP_TYPE_ICO);
-    m_iconPaused = wxIcon(m_xrcPrefix + wxT("data/ptbatcher_pause.ico"), wxBITMAP_TYPE_ICO);
-    wxIconBundle myIcons(m_xrcPrefix + wxT("data/ptbatcher.ico"), wxBITMAP_TYPE_ICO);
+    m_iconNormal = wxIcon(m_xrcPrefix + "data/ptbatcher.ico", wxBITMAP_TYPE_ICO);
+    m_iconRunning = wxIcon(m_xrcPrefix + "data/ptbatcher_running.ico", wxBITMAP_TYPE_ICO);
+    m_iconPaused = wxIcon(m_xrcPrefix + "data/ptbatcher_pause.ico", wxBITMAP_TYPE_ICO);
+    wxIconBundle myIcons(m_xrcPrefix + "data/ptbatcher.ico", wxBITMAP_TYPE_ICO);
     SetIcons(myIcons);
 #else
-    m_iconNormal = wxIcon(m_xrcPrefix + wxT("data/ptbatcher.png"), wxBITMAP_TYPE_PNG);
-    m_iconRunning = wxIcon(m_xrcPrefix + wxT("data/ptbatcher_running.png"), wxBITMAP_TYPE_PNG);
-    m_iconPaused = wxIcon(m_xrcPrefix + wxT("data/ptbatcher_pause.png"), wxBITMAP_TYPE_PNG);
+    m_iconNormal = wxIcon(m_xrcPrefix + "data/ptbatcher.png", wxBITMAP_TYPE_PNG);
+    m_iconRunning = wxIcon(m_xrcPrefix + "data/ptbatcher_running.png", wxBITMAP_TYPE_PNG);
+    m_iconPaused = wxIcon(m_xrcPrefix + "data/ptbatcher_pause.png", wxBITMAP_TYPE_PNG);
     SetIcon(m_iconNormal);
 #endif
 
@@ -176,15 +127,9 @@ BatchFrame::BatchFrame(wxLocale* locale, wxString xrc)
 #else
         wxString text(_("You have pressed the Control key."));
 #endif
-        text.Append(wxT("\n"));
+        text.Append("\n");
         text.Append(_("Should the loading of the batch queue be skipped?"));
-        if(wxMessageBox(text, 
-#ifdef __WXMSW__
-            wxT("PTBatcherGUI"),
-#else
-            wxEmptyString,
-#endif
-            wxYES_NO | wxICON_EXCLAMATION, NULL)==wxNO)
+        if (hugin_utils::HuginMessageBox(text, _("PTBatcherGUI"), wxYES_NO | wxICON_EXCLAMATION, this) == wxNO)
         {
             m_batch->LoadTemp();
         }
@@ -199,6 +144,7 @@ BatchFrame::BatchFrame(wxLocale* locale, wxString xrc)
         m_batch->LoadTemp();
     };
     projListBox = XRCCTRL(*this,"project_listbox",ProjectListBox);
+    projListBox->Bind(wxEVT_LIST_ITEM_ACTIVATED, &BatchFrame::OnButtonOpenWithHugin, this);
     // fill at end list box, check which options are available
     m_endChoice = XRCCTRL(*this, "choice_end", wxChoice);
     m_endChoice->Clear();
@@ -208,6 +154,7 @@ BatchFrame::BatchFrame(wxLocale* locale, wxString xrc)
     // there is no wxShutdown for wxMac
     m_endChoice->Append(_("Shutdown computer"), (void*)Batch::SHUTDOWN);
 #endif
+    m_endChoice->Bind(wxEVT_CHOICE, &BatchFrame::OnChoiceEnd, this);
 #ifdef __WXMSW__
     SYSTEM_POWER_CAPABILITIES pwrCap;
     if (GetPwrCapabilities(&pwrCap))
@@ -235,7 +182,7 @@ BatchFrame::BatchFrame(wxLocale* locale, wxString xrc)
         GetMenuBar()->Enable(XRCID("menu_tray"), true);
         bool minTray;
         // tray icon is disabled by default 
-        wxConfigBase::Get()->Read(wxT("/BatchFrame/minimizeTray"), &minTray, false);
+        wxConfigBase::Get()->Read("/BatchFrame/minimizeTray", &minTray, false);
         GetMenuBar()->Check(XRCID("menu_tray"), minTray);
         UpdateTrayIcon(minTray);
     }
@@ -249,6 +196,56 @@ BatchFrame::BatchFrame(wxLocale* locale, wxString xrc)
     m_updateProjectsTimer = new wxTimer(this, EVT_TIMER_UPDATE_LISTBOX);
     // start timer for check for updates in project files
     m_updateProjectsTimer->StartOnce(5000);
+    // connect all events
+    // tool buttons
+    Bind(wxEVT_TOOL, &BatchFrame::OnButtonClear, this, XRCID("tool_clear"));
+    Bind(wxEVT_TOOL, &BatchFrame::OnButtonOpenBatch, this, XRCID("tool_open"));
+    Bind(wxEVT_TOOL, &BatchFrame::OnButtonSaveBatch, this, XRCID("tool_save"));
+    Bind(wxEVT_TOOL, &BatchFrame::OnButtonRunBatch, this, XRCID("tool_start"));
+    Bind(wxEVT_TOOL, &BatchFrame::OnButtonSkip, this, XRCID("tool_skip"));
+    Bind(wxEVT_TOOL, &BatchFrame::OnButtonPause, this, XRCID("tool_pause"));
+    Bind(wxEVT_TOOL, &BatchFrame::OnButtonCancel, this, XRCID("tool_cancel"));
+    Bind(wxEVT_TOOL, &BatchFrame::OnButtonAddToStitchingQueue, this, XRCID("tool_add"));
+    Bind(wxEVT_TOOL, &BatchFrame::OnButtonRemoveFromList, this, XRCID("tool_remove"));
+    Bind(wxEVT_TOOL, &BatchFrame::OnButtonAddDir, this, XRCID("tool_adddir"));
+    // menu items
+    Bind(wxEVT_MENU, &BatchFrame::OnButtonAddToStitchingQueue, this, XRCID("menu_add"));
+    Bind(wxEVT_MENU, &BatchFrame::OnButtonAddToAssistantQueue, this, XRCID("menu_add_assistant"));
+    Bind(wxEVT_MENU, &BatchFrame::OnButtonRemoveFromList, this, XRCID("menu_remove"));
+    Bind(wxEVT_MENU, &BatchFrame::OnButtonAddDir, this, XRCID("menu_adddir"));
+    Bind(wxEVT_MENU, &BatchFrame::OnButtonSearchPano, this, XRCID("menu_searchpano"));
+    Bind(wxEVT_MENU, &BatchFrame::OnButtonGenerateSequence, this, XRCID("menu_generate_sequence"));
+    Bind(wxEVT_MENU, &BatchFrame::OnButtonOpenBatch, this, XRCID("menu_open"));
+    Bind(wxEVT_MENU, &BatchFrame::OnButtonSaveBatch, this, XRCID("menu_save"));
+    Bind(wxEVT_MENU, &BatchFrame::OnButtonClear, this, XRCID("menu_clear"));
+    Bind(wxEVT_MENU, &BatchFrame::OnMinimizeTrayMenu, this, XRCID("menu_tray"));
+    Bind(wxEVT_MENU, &BatchFrame::OnUserExit, this, XRCID("menu_exit"));
+    Bind(wxEVT_MENU, &BatchFrame::OnButtonHelp, this, XRCID("menu_help"));
+    // buttons
+    Bind(wxEVT_BUTTON, &BatchFrame::OnButtonAddCommand, this, XRCID("button_addcommand"));
+    Bind(wxEVT_BUTTON, &BatchFrame::OnButtonRemoveComplete, this, XRCID("button_remove"));
+    Bind(wxEVT_BUTTON, &BatchFrame::OnButtonChangePrefix, this, XRCID("button_prefix"));
+    Bind(wxEVT_BUTTON, &BatchFrame::OnButtonChangeUserDefinedSequence, this, XRCID("button_user_defined"));
+    Bind(wxEVT_BUTTON, &BatchFrame::OnButtonReset, this, XRCID("button_reset"));
+    Bind(wxEVT_BUTTON, &BatchFrame::OnButtonResetAll, this, XRCID("button_resetall"));
+    Bind(wxEVT_BUTTON, &BatchFrame::OnButtonOpenWithHugin, this, XRCID("button_edit"));
+    Bind(wxEVT_BUTTON, &BatchFrame::OnButtonMoveUp, this, XRCID("button_move_up"));
+    Bind(wxEVT_BUTTON, &BatchFrame::OnButtonMoveDown, this, XRCID("button_move_down"));
+    // checkboxes
+    Bind(wxEVT_CHECKBOX, &BatchFrame::OnCheckOverwrite, this, XRCID("cb_overwrite"));
+    Bind(wxEVT_CHECKBOX, &BatchFrame::OnCheckVerbose, this, XRCID("cb_verbose"));
+    Bind(wxEVT_CHECKBOX, &BatchFrame::OnCheckAutoRemove, this, XRCID("cb_autoremove"));
+    Bind(wxEVT_CHECKBOX, &BatchFrame::OnCheckAutoStitch, this, XRCID("cb_autostitch"));
+    Bind(wxEVT_CHECKBOX, &BatchFrame::OnCheckSaveLog, this, XRCID("cb_savelog"));
+    // some general flow events
+    Bind(wxEVT_END_PROCESS, &BatchFrame::OnProcessTerminate, this);
+    Bind(wxEVT_CLOSE_WINDOW, &BatchFrame::OnClose, this);
+    Bind(wxEVT_TIMER, &BatchFrame::OnUpdateListBox, this, EVT_TIMER_UPDATE_LISTBOX);
+    Bind(EVT_BATCH_FAILED, &BatchFrame::OnBatchFailed, this);
+    Bind(EVT_INFORMATION, &BatchFrame::OnBatchInformation, this);
+    Bind(EVT_UPDATE_PARENT, &BatchFrame::OnRefillListBox, this);
+    Bind(EVT_QUEUE_PROGRESS, &BatchFrame::OnProgress, this);
+    Bind(wxEVT_ICONIZE, &BatchFrame::OnMinimize, this);
 }
 
 wxStatusBar* BatchFrame::OnCreateStatusBar(int number, long style, wxWindowID id, const wxString& name)
@@ -357,14 +354,14 @@ void BatchFrame::OnButtonAddCommand(wxCommandEvent& event)
 
 void BatchFrame::OnButtonAddDir(wxCommandEvent& event)
 {
-    wxString defaultdir = wxConfigBase::Get()->Read(wxT("/BatchFrame/actualPath"),wxT(""));
+    wxString defaultdir = wxConfigBase::Get()->Read("/BatchFrame/actualPath",wxEmptyString);
     wxDirDialog dlg(this,
                     _("Specify a directory to search for projects in"),
                     defaultdir, wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
-    dlg.SetPath(wxConfigBase::Get()->Read(wxT("/BatchFrame/actualPath"),wxT("")));
+    dlg.SetPath(wxConfigBase::Get()->Read("/BatchFrame/actualPath",wxEmptyString));
     if (dlg.ShowModal() == wxID_OK)
     {
-        wxConfig::Get()->Write(wxT("/BatchFrame/actualPath"), dlg.GetPath());  // remember for later
+        wxConfig::Get()->Write("/BatchFrame/actualPath", dlg.GetPath());  // remember for later
         AddDirToList(dlg.GetPath());
     };
 }
@@ -377,17 +374,17 @@ void BatchFrame::OnButtonSearchPano(wxCommandEvent& e)
 
 void BatchFrame::OnButtonGenerateSequence(wxCommandEvent& e)
 {
-    wxString defaultdir = wxConfigBase::Get()->Read(wxT("/BatchFrame/actualPath"), wxT(""));
+    wxString defaultdir = wxConfigBase::Get()->Read("/BatchFrame/actualPath", wxEmptyString);
     wxFileDialog dlg(0,
         _("Specify project source file(s)"),
-        defaultdir, wxT(""),
+        defaultdir, wxEmptyString,
         _("Project files (*.pto)|*.pto|All files (*)|*"),
         wxFD_OPEN , wxDefaultPosition);
     dlg.SetDirectory(defaultdir);
 
     if (dlg.ShowModal() == wxID_OK)
     {
-        wxConfig::Get()->Write(wxT("/BatchFrame/actualPath"), wxPathOnly(dlg.GetPath()));
+        wxConfig::Get()->Write("/BatchFrame/actualPath", wxPathOnly(dlg.GetPath()));
         GenerateSequenceDialog sequenceDialog(this, m_xrcPrefix, dlg.GetPath());
         if (sequenceDialog.IsValidPanorama())
         {
@@ -397,23 +394,18 @@ void BatchFrame::OnButtonGenerateSequence(wxCommandEvent& e)
         }
         else
         {
-            wxMessageBox(wxString::Format(_("Could not read file %s as valid Hugin pto file."), dlg.GetPath()),
-#ifdef __WXMSW__
-                wxT("PTBatcherGUI"),
-#else
-                wxEmptyString,
-#endif
-                wxOK | wxICON_EXCLAMATION, NULL);
+            hugin_utils::HuginMessageBox(wxString::Format(_("Could not read file %s as valid Hugin pto file."), dlg.GetPath()), _("PTBatcherGUI"),
+                wxOK | wxICON_EXCLAMATION, this);
         };
     };
 };
 
 void BatchFrame::OnButtonAddToStitchingQueue(wxCommandEvent& event)
 {
-    wxString defaultdir = wxConfigBase::Get()->Read(wxT("/BatchFrame/actualPath"),wxT(""));
+    wxString defaultdir = wxConfigBase::Get()->Read("/BatchFrame/actualPath",wxEmptyString);
     wxFileDialog dlg(0,
                      _("Specify project source file(s)"),
-                     defaultdir, wxT(""),
+                     defaultdir, wxEmptyString,
                      _("Project files (*.pto)|*.pto|All files (*)|*"),
                      wxFD_OPEN | wxFD_MULTIPLE, wxDefaultPosition);
     dlg.SetDirectory(defaultdir);
@@ -424,9 +416,9 @@ void BatchFrame::OnButtonAddToStitchingQueue(wxCommandEvent& event)
         dlg.GetPaths(paths);
 #ifdef __WXGTK__
         //workaround a bug in GTK, see https://bugzilla.redhat.com/show_bug.cgi?id=849692 and http://trac.wxwidgets.org/ticket/14525
-        wxConfig::Get()->Write(wxT("/BatchFrame/actualPath"), wxPathOnly(paths[0]));  // remember for later
+        wxConfig::Get()->Write("/BatchFrame/actualPath", wxPathOnly(paths[0]));  // remember for later
 #else
-        wxConfig::Get()->Write(wxT("/BatchFrame/actualPath"), dlg.GetDirectory());  // remember for later
+        wxConfig::Get()->Write("/BatchFrame/actualPath", dlg.GetDirectory());  // remember for later
 #endif
         for(unsigned int i=0; i<paths.GetCount(); i++)
         {
@@ -438,10 +430,10 @@ void BatchFrame::OnButtonAddToStitchingQueue(wxCommandEvent& event)
 
 void BatchFrame::OnButtonAddToAssistantQueue(wxCommandEvent& event)
 {
-    wxString defaultdir = wxConfigBase::Get()->Read(wxT("/BatchFrame/actualPath"),wxT(""));
+    wxString defaultdir = wxConfigBase::Get()->Read("/BatchFrame/actualPath",wxEmptyString);
     wxFileDialog dlg(0,
                      _("Specify project source file(s)"),
-                     defaultdir, wxT(""),
+                     defaultdir, wxEmptyString,
                      _("Project files (*.pto)|*.pto|All files (*)|*"),
                      wxFD_OPEN | wxFD_MULTIPLE, wxDefaultPosition);
     dlg.SetDirectory(defaultdir);
@@ -452,9 +444,9 @@ void BatchFrame::OnButtonAddToAssistantQueue(wxCommandEvent& event)
         dlg.GetPaths(paths);
 #ifdef __WXGTK__
         //workaround a bug in GTK, see https://bugzilla.redhat.com/show_bug.cgi?id=849692 and http://trac.wxwidgets.org/ticket/14525
-        wxConfig::Get()->Write(wxT("/BatchFrame/actualPath"), wxPathOnly(paths[0]));  // remember for later
+        wxConfig::Get()->Write("/BatchFrame/actualPath", wxPathOnly(paths[0]));  // remember for later
 #else
-        wxConfig::Get()->Write(wxT("/BatchFrame/actualPath"), dlg.GetDirectory());  // remember for later
+        wxConfig::Get()->Write("/BatchFrame/actualPath", dlg.GetDirectory());  // remember for later
 #endif
 
         for(unsigned int i=0; i<paths.GetCount(); i++)
@@ -499,7 +491,7 @@ void BatchFrame::AddToList(wxString aFile, Project::Target target, wxString user
             s=wxString::Format(_("Add project %s to assistant queue."),aFile.c_str());
             break;
     };
-    SetStatusInformation(s);
+    SetStatusText(s);
     projListBox->AppendProject(m_batch->GetProject(m_batch->GetProjectCount()-1));
     m_batch->SaveTemp();
 }
@@ -519,7 +511,7 @@ void BatchFrame::OnButtonCancel(wxCommandEvent& event)
     GetToolBar()->ToggleTool(XRCID("tool_pause"),false);
     m_cancelled = true;
     m_batch->CancelBatch();
-    SetStatusInformation(_("Batch stopped"));
+    SetStatusText(_("Batch stopped"));
     if (m_tray)
     {
         m_tray->SetIcon(m_iconNormal, _("Hugin's Batch processor"));
@@ -532,12 +524,18 @@ void BatchFrame::OnButtonChangePrefix(wxCommandEvent& event)
     if(selected.size()== 1)
     {
         Project* project = m_batch->GetProject(*selected.begin());
+        if (project->id < 0)
+        {
+            SetStatusText(_("The prefix of command cannot be changed."));
+            wxBell();
+            return;
+        }
         if (project->target == Project::STITCHING)
         {
             wxFileName prefix(project->prefix);
             wxFileDialog dlg(0, wxString::Format(_("Specify output prefix for project %s"), project->path),
                              prefix.GetPath(),
-                             prefix.GetFullName(), wxT(""),
+                             prefix.GetFullName(), wxEmptyString,
                              wxFD_SAVE, wxDefaultPosition);
             if (dlg.ShowModal() == wxID_OK)
             {
@@ -554,13 +552,8 @@ void BatchFrame::OnButtonChangePrefix(wxCommandEvent& event)
                 wxFileName prefix(dlg.GetPath());
                 while (!prefix.IsDirWritable())
                 {
-                    wxMessageBox(wxString::Format(_("You have no permissions to write in folder \"%s\".\nPlease select another folder for the final output."), prefix.GetPath().c_str()),
-#ifdef __WXMSW__
-                        wxT("PTBatcherGUI"),
-#else
-                        wxT(""),
-#endif
-                        wxOK | wxICON_INFORMATION);
+                    hugin_utils::HuginMessageBox(wxString::Format(_("You have no permissions to write in folder \"%s\".\nPlease select another folder for the final output."), prefix.GetPath()),
+                        _("PTBatcherGUI"), wxOK | wxICON_INFORMATION, this);
                     if (dlg.ShowModal() != wxID_OK)
                     {
                         return;
@@ -686,14 +679,7 @@ void BatchFrame::OnButtonClear(wxCommandEvent& event)
 void BatchFrame::OnButtonHelp(wxCommandEvent& event)
 {
     DEBUG_TRACE("");
-#if defined __wxMSW__ && !(wxCHECK_VERSION(3,1,1))
-    // wxWidgets 3.x has a bug, that prevents DisplaySection to work on Win8/10 64 bit
-    // see: http://trac.wxwidgets.org/ticket/14888
-    // so using DisplayContents() and our own implementation of HuginCHMHelpController
-    GetHelpController().DisplayHelpPage(wxT("Hugin_Batch_Processor.html"));
-#else
-    GetHelpController().DisplaySection(wxT("Hugin_Batch_Processor.html"));
-#endif
+    GetHelpController().DisplaySection("Hugin_Batch_Processor.html");
 }
 
 void BatchFrame::OnButtonMoveDown(wxCommandEvent& event)
@@ -726,15 +712,15 @@ void BatchFrame::OnButtonMoveUp(wxCommandEvent& event)
 
 void BatchFrame::OnButtonOpenBatch(wxCommandEvent& event)
 {
-    wxString defaultdir = wxConfigBase::Get()->Read(wxT("/BatchFrame/batchPath"),wxT(""));
+    wxString defaultdir = wxConfigBase::Get()->Read("/BatchFrame/batchPath",wxEmptyString);
     wxFileDialog dlg(0,
                      _("Specify batch file to open"),
-                     defaultdir, wxT(""),
+                     defaultdir, wxEmptyString,
                      _("Batch file (*.ptq)|*.ptq;|All files (*)|*"),
                      wxFD_OPEN, wxDefaultPosition);
     if (dlg.ShowModal() == wxID_OK)
     {
-        wxConfig::Get()->Write(wxT("/BatchFrame/batchPath"), dlg.GetDirectory());  // remember for later
+        wxConfig::Get()->Write("/BatchFrame/batchPath", dlg.GetDirectory());  // remember for later
         int clearCode = m_batch->LoadBatchFile(dlg.GetPath());
         //1 is error code for not clearing batch
         if(clearCode!=1)
@@ -770,14 +756,7 @@ void BatchFrame::OnButtonOpenWithHugin(wxCommandEvent& event)
         if (selected.empty())
         {
             //ask user if he/she wants to load an empty project
-            wxMessageDialog message(this, _("No project selected. Open Hugin without project?"),
-#ifdef _WIN32
-                _("PTBatcherGUI"),
-#else
-                wxT(""),
-#endif
-                wxYES_NO | wxICON_INFORMATION);
-            if (message.ShowModal() == wxID_YES)
+            if (hugin_utils::HuginMessageBox(_("No project selected. Open Hugin without project?"), _("PTBatcherGUI"), wxYES_NO|wxICON_INFORMATION, this) == wxYES)
             {
 #ifdef __WXMAC__
                 wxExecute(_T("open -b net.sourceforge.Hugin"));
@@ -802,7 +781,7 @@ void BatchFrame::OnButtonPause(wxCommandEvent& event)
         {
             m_batch->PauseBatch();
             GetToolBar()->ToggleTool(XRCID("tool_pause"),true);
-            SetStatusInformation(_("Batch paused"));
+            SetStatusText(_("Batch paused"));
             if (m_tray)
             {
                 m_tray->SetIcon(m_iconPaused, _("Pausing processing Hugin's batch queue"));
@@ -812,7 +791,7 @@ void BatchFrame::OnButtonPause(wxCommandEvent& event)
         {
             m_batch->PauseBatch();
             GetToolBar()->ToggleTool(XRCID("tool_pause"),false);
-            SetStatusInformation(_("Continuing batch..."));
+            SetStatusText(_("Continuing batch..."));
             if (m_tray)
             {
                 m_tray->SetIcon(m_iconRunning, _("Processing Hugin's batch queue"));
@@ -831,14 +810,7 @@ void BatchFrame::OnButtonRemoveComplete(wxCommandEvent& event)
     bool removeErrors=false;
     if(!m_batch->NoErrors())
     {
-        wxMessageDialog message(this,_("There are failed projects in the list.\nRemove them too?"),
-#ifdef _WIN32
-                                _("PTBatcherGUI"),
-#else
-                                wxT(""),
-#endif
-                                wxYES_NO | wxICON_INFORMATION );
-        if(message.ShowModal()==wxID_YES)
+        if (hugin_utils::HuginMessageBox(_("There are failed projects in the list.\nRemove them too?"), _("PTBatcherGUI"), wxYES_NO | wxICON_INFORMATION, this) == wxYES)
         {
             removeErrors=true;
         }
@@ -867,14 +839,7 @@ void BatchFrame::OnButtonRemoveFromList(wxCommandEvent& event)
             const int selIndex = *i;
             if (m_batch->GetStatus(selIndex) == Project::RUNNING || m_batch->GetStatus(selIndex) == Project::PAUSED)
             {
-                wxMessageDialog message(this, _("Cannot remove project in progress.\nDo you want to cancel it?"),
-#ifdef _WIN32
-                    _("PTBatcherGUI"),
-#else
-                    wxT(""),
-#endif
-                    wxYES_NO | wxICON_INFORMATION);
-                if (message.ShowModal() == wxID_YES)
+                if (hugin_utils::HuginMessageBox(_("Cannot remove project in progress.\nDo you want to cancel it?"), _("PTBatcherGUI"), wxYES_NO | wxICON_INFORMATION, this) == wxYES)
                 {
                     OnButtonSkip(event);
                 };
@@ -905,14 +870,7 @@ void BatchFrame::OnButtonReset(wxCommandEvent& event)
         {
             if (m_batch->GetStatus(selIndex) == Project::RUNNING || m_batch->GetStatus(selIndex) == Project::PAUSED)
             {
-                wxMessageDialog message(this, _("Cannot reset project in progress.\nDo you want to cancel it?"),
-#ifdef _WIN32
-                    _("PTBatcherGUI"),
-#else
-                    wxT(""),
-#endif
-                    wxYES_NO | wxICON_INFORMATION);
-                if (message.ShowModal() == wxID_YES)
+                if (hugin_utils::HuginMessageBox(_("Cannot reset project in progress.\nDo you want to cancel it?"), _("PTBatcherGUI"), wxYES_NO | wxICON_INFORMATION, this) == wxYES)
                 {
                     OnButtonSkip(event);
                 }
@@ -935,14 +893,7 @@ void BatchFrame::OnButtonResetAll(wxCommandEvent& event)
 {
     if(m_batch->GetRunningCount()!=0)
     {
-        wxMessageDialog message(this, _("Cannot reset projects in progress.\nDo you want to cancel the batch?"),
-#ifdef _WIN32
-                                _("PTBatcherGUI"),
-#else
-                                wxT(""),
-#endif
-                                wxYES_NO | wxICON_INFORMATION);
-        if(message.ShowModal()==wxID_YES)
+        if (hugin_utils::HuginMessageBox(_("Cannot reset projects in progress.\nDo you want to cancel the batch?"), _("PTBatcherGUI"), wxYES_NO | wxICON_INFORMATION, this) == wxYES)
         {
             OnButtonCancel(event);
         }
@@ -972,15 +923,15 @@ void BatchFrame::OnButtonRunBatch(wxCommandEvent& event)
 
 void BatchFrame::OnButtonSaveBatch(wxCommandEvent& event)
 {
-    wxString defaultdir = wxConfigBase::Get()->Read(wxT("/BatchFrame/batchPath"),wxT(""));
+    wxString defaultdir = wxConfigBase::Get()->Read("/BatchFrame/batchPath",wxEmptyString);
     wxFileDialog dlg(0,
                      _("Specify batch file to save"),
-                     defaultdir, wxT(""),
+                     defaultdir, wxEmptyString,
                      _("Batch file (*.ptq)|*.ptq;|All files (*)|*"),
                      wxFD_SAVE | wxFD_OVERWRITE_PROMPT, wxDefaultPosition);
     if (dlg.ShowModal() == wxID_OK)
     {
-        wxConfig::Get()->Write(wxT("/BatchFrame/batchPath"), dlg.GetDirectory());  // remember for later
+        wxConfig::Get()->Write("/BatchFrame/batchPath", dlg.GetDirectory());  // remember for later
         m_batch->SaveBatchFile(dlg.GetPath());
     }
 }
@@ -1052,16 +1003,16 @@ void BatchFrame::SetCheckboxes()
 #if defined __WXMAC__ || defined __WXOSX_COCOA__
     i = 0;
 #else
-    i=config->Read(wxT("/BatchFrame/ShutdownCheck"), 0l);
+    i=config->Read("/BatchFrame/ShutdownCheck", 0l);
 #endif
     if (i != 0)
     {
         SelectEndTask(m_endChoice, Batch::SHUTDOWN);
         m_batch->atEnd = Batch::SHUTDOWN;
     };
-    config->DeleteEntry(wxT("/BatchFrame/ShutdownCheck"));
+    config->DeleteEntry("/BatchFrame/ShutdownCheck");
     // now read current version
-    i = config->Read(wxT("/BatchFrame/AtEnd"), 0l);
+    i = config->Read("/BatchFrame/AtEnd", 0l);
 #if defined __WXMAC__ || defined __WXOSX_COCOA__
     // wxWidgets for MacOS does not support wxShutdown
     if (i == Batch::SHUTDOWN)
@@ -1071,19 +1022,19 @@ void BatchFrame::SetCheckboxes()
 #endif
     m_batch->atEnd = static_cast<Batch::EndTask>(i);
     SelectEndTask(m_endChoice, m_batch->atEnd);
-    i=config->Read(wxT("/BatchFrame/OverwriteCheck"), 0l);
+    i=config->Read("/BatchFrame/OverwriteCheck", 0l);
     XRCCTRL(*this,"cb_overwrite",wxCheckBox)->SetValue(i!=0);
     m_batch->overwrite=(i!=0);
-    i=config->Read(wxT("/BatchFrame/VerboseCheck"), 0l);
+    i=config->Read("/BatchFrame/VerboseCheck", 0l);
     XRCCTRL(*this,"cb_verbose",wxCheckBox)->SetValue(i!=0);
     m_batch->verbose=(i!=0);
-    i=config->Read(wxT("/BatchFrame/AutoRemoveCheck"), 1l);
+    i=config->Read("/BatchFrame/AutoRemoveCheck", 1l);
     XRCCTRL(*this,"cb_autoremove",wxCheckBox)->SetValue(i!=0);
     m_batch->autoremove=(i!=0);
-    i=config->Read(wxT("/BatchFrame/AutoStitchCheck"), 0l);
+    i=config->Read("/BatchFrame/AutoStitchCheck", 0l);
     XRCCTRL(*this,"cb_autostitch",wxCheckBox)->SetValue(i!=0);
     m_batch->autostitch=(i!=0);
-    i=config->Read(wxT("/BatchFrame/SaveLog"), 0l);
+    i=config->Read("/BatchFrame/SaveLog", 0l);
     XRCCTRL(*this, "cb_savelog",wxCheckBox)->SetValue(i!=0);
     m_batch->saveLog=(i!=0);
 };
@@ -1124,12 +1075,12 @@ void BatchFrame::OnCheckOverwrite(wxCommandEvent& event)
     if(event.IsChecked())
     {
         m_batch->overwrite = true;
-        config->Write(wxT("/BatchFrame/OverwriteCheck"), 1l);
+        config->Write("/BatchFrame/OverwriteCheck", 1l);
     }
     else
     {
         m_batch->overwrite = false;
-        config->Write(wxT("/BatchFrame/OverwriteCheck"), 0l);
+        config->Write("/BatchFrame/OverwriteCheck", 0l);
     }
     config->Flush();
 }
@@ -1138,7 +1089,7 @@ void BatchFrame::OnChoiceEnd(wxCommandEvent& event)
 {
     m_batch->atEnd = static_cast<Batch::EndTask>((size_t)m_endChoice->GetClientData(event.GetSelection()));
     wxConfigBase* config=wxConfigBase::Get();
-    config->Write(wxT("/BatchFrame/AtEnd"), static_cast<long>(m_batch->atEnd));
+    config->Write("/BatchFrame/AtEnd", static_cast<long>(m_batch->atEnd));
     config->Flush();
 }
 
@@ -1148,12 +1099,12 @@ void BatchFrame::OnCheckVerbose(wxCommandEvent& event)
     if(event.IsChecked())
     {
         m_batch->verbose = true;
-        config->Write(wxT("/BatchFrame/VerboseCheck"), 1l);
+        config->Write("/BatchFrame/VerboseCheck", 1l);
     }
     else
     {
         m_batch->verbose = false;
-        config->Write(wxT("/BatchFrame/VerboseCheck"), 0l);
+        config->Write("/BatchFrame/VerboseCheck", 0l);
     };
     config->Flush();
     m_batch->ShowOutput(m_batch->verbose);
@@ -1170,11 +1121,11 @@ void BatchFrame::OnCheckAutoRemove(wxCommandEvent& event)
     wxConfigBase* config=wxConfigBase::Get();
     if(m_batch->autoremove)
     {
-        config->Write(wxT("/BatchFrame/AutoRemoveCheck"), 1l);
+        config->Write("/BatchFrame/AutoRemoveCheck", 1l);
     }
     else
     {
-        config->Write(wxT("/BatchFrame/AutoRemoveCheck"), 0l);
+        config->Write("/BatchFrame/AutoRemoveCheck", 0l);
     }
     config->Flush();
 };
@@ -1185,11 +1136,11 @@ void BatchFrame::OnCheckAutoStitch(wxCommandEvent& event)
     wxConfigBase* config=wxConfigBase::Get();
     if(m_batch->autostitch)
     {
-        config->Write(wxT("/BatchFrame/AutoStitchCheck"), 1l);
+        config->Write("/BatchFrame/AutoStitchCheck", 1l);
     }
     else
     {
-        config->Write(wxT("/BatchFrame/AutoStitchCheck"), 0l);
+        config->Write("/BatchFrame/AutoStitchCheck", 0l);
     }
     config->Flush();
 };
@@ -1200,11 +1151,11 @@ void BatchFrame::OnCheckSaveLog(wxCommandEvent& event)
     wxConfigBase* config=wxConfigBase::Get();
     if(m_batch->saveLog)
     {
-        config->Write(wxT("/BatchFrame/SaveLog"), 1l);
+        config->Write("/BatchFrame/SaveLog", 1l);
     }
     else
     {
-        config->Write(wxT("/BatchFrame/SaveLog"), 0l);
+        config->Write("/BatchFrame/SaveLog", 0l);
     }
     config->Flush();
 };
@@ -1214,15 +1165,10 @@ void BatchFrame::OnClose(wxCloseEvent& event)
     // check size of batch queue
     if (m_batch->GetProjectCount() > 500)
     {
-        wxMessageDialog message(this, _("The batch queue contains many items.\nThis can have negative effects on performance.\nShould the batch queue be cleared now?"),
-#ifdef __WXMSW__
-            _("PTBatcherGUI"),
-#else
-            wxT(""),
-#endif
-            wxYES_NO | wxICON_INFORMATION);
-        message.SetYesNoLabels(_("Clear batch queue now"), _("Keep batch queue"));
-        if (message.ShowModal() == wxID_YES)
+        hugin_utils::MessageDialog message = hugin_utils::GetMessageDialog(_("The batch queue contains many items.\nThis can have negative effects on performance.\nShould the batch queue be cleared now?"),
+            _("PTBatcherGUI"), wxYES_NO | wxICON_INFORMATION, this);
+        message->SetYesNoLabels(_("Clear batch queue now"), _("Keep batch queue"));
+        if (message->ShowModal() == wxID_YES)
         {
             m_batch->ClearBatch();
             m_batch->SaveTemp();
@@ -1232,21 +1178,21 @@ void BatchFrame::OnClose(wxCloseEvent& event)
     wxConfigBase* config=wxConfigBase::Get();
     if(IsMaximized())
     {
-        config->Write(wxT("/BatchFrame/Max"), 1l);
-        config->Write(wxT("/BatchFrame/Minimized"), 0l);
+        config->Write("/BatchFrame/Max", 1l);
+        config->Write("/BatchFrame/Minimized", 0l);
     }
     else
     {
-        config->Write(wxT("/BatchFrame/Max"), 0l);
+        config->Write("/BatchFrame/Max", 0l);
         if(m_tray!=NULL && !IsShown())
         {
-            config->Write(wxT("/BatchFrame/Minimized"), 1l);
+            config->Write("/BatchFrame/Minimized", 1l);
         }
         else
         {
-            config->Write(wxT("/BatchFrame/Minimized"), 0l);
-            config->Write(wxT("/BatchFrame/Width"), GetSize().GetWidth());
-            config->Write(wxT("/BatchFrame/Height"), GetSize().GetHeight());
+            config->Write("/BatchFrame/Minimized", 0l);
+            config->Write("/BatchFrame/Width", GetSize().GetWidth());
+            config->Write("/BatchFrame/Height", GetSize().GetHeight());
         };
     }
     config->Flush();
@@ -1272,7 +1218,7 @@ void BatchFrame::RunBatch()
 {
     if(!IsRunning())
     {
-        SetStatusInformation(_("Starting batch"));
+        SetStatusText(_("Starting batch"));
         if (m_tray)
         {
             m_tray->SetIcon(m_iconRunning, _("Processing Hugin's batch queue"));
@@ -1324,21 +1270,17 @@ void BatchFrame::RestoreSize()
 {
     //get saved size
     wxConfigBase* config=wxConfigBase::Get();
-    int width = config->Read(wxT("/BatchFrame/Width"), -1l);
-    int height = config->Read(wxT("/BatchFrame/Height"), -1l);
-    int max = config->Read(wxT("/BatchFrame/Max"), -1l);
-    int min = config->Read(wxT("/BatchFrame/Minimized"), -1l);
+    int width = config->Read("/BatchFrame/Width", -1l);
+    int height = config->Read("/BatchFrame/Height", -1l);
+    int max = config->Read("/BatchFrame/Max", -1l);
+    int min = config->Read("/BatchFrame/Minimized", -1l);
     if((width != -1) && (height != -1))
     {
         SetSize(width,height);
     }
     else
     {
-#if wxCHECK_VERSION(3,1,0)
         SetSize(this->FromDIP(wxSize(600,400)));
-#else
-        SetSize(600, 400);
-#endif
     }
 
     if(max==1)
@@ -1363,32 +1305,11 @@ void BatchFrame::OnBatchFailed(wxCommandEvent& event)
 
 void BatchFrame::OnBatchInformation(wxCommandEvent& e)
 {
-    SetStatusInformation(e.GetString());
+    SetStatusText(e.GetString());
     if (m_tray && e.GetInt() == 1)
     {
         // batch finished, reset icon in task bar
         m_tray->SetIcon(m_iconNormal, _("Hugin's Batch processor"));
-    };
-};
-
-void BatchFrame::SetStatusInformation(wxString status)
-{
-    SetStatusText(status);
-    if(m_tray!=NULL)
-    {
-#if defined __WXMSW__ && wxUSE_TASKBARICON_BALLOONS 
-        m_tray->ShowBalloon(_("PTBatcherGUI"),status,5000,wxICON_INFORMATION);
-#else
-#ifndef __WXMAC__
-        // the balloon does not work correctly on MacOS; it gets the focus
-        // and can not be closed
-        if(!IsShown())
-        {
-            TaskBarBalloon* balloon=new TaskBarBalloon(_("PTBatcherGUI"),status);
-            balloon->showBalloon(5000);
-        };
-#endif
-#endif
     };
 };
 
@@ -1400,7 +1321,7 @@ void BatchFrame::OnProgress(wxCommandEvent& e)
 
 void BatchFrame::UpdateTaskBarProgressBar()
 {
-#if defined __WXMSW__ && wxCHECK_VERSION(3,1,0) && wxUSE_TASKBARBUTTON
+#if defined __WXMSW__ && wxUSE_TASKBARBUTTON
     // provide also a feedback in task bar if available
     if (IsShown())
     {
@@ -1481,7 +1402,7 @@ void BatchFrame::OnMinimizeTrayMenu(wxCommandEvent& event)
 {
     UpdateTrayIcon(event.IsChecked());
     wxConfigBase* config=wxConfigBase::Get();
-    config->Write(wxT("/BatchFrame/minimizeTray"), event.IsChecked());
+    config->Write("/BatchFrame/minimizeTray", event.IsChecked());
     config->Flush();
 }
 

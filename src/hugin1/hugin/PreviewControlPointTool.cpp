@@ -71,7 +71,7 @@ void PreviewControlPointTool::AfterDrawImagesEvent()
             && helper->GetPanoramaPtr()->getImage(cp.image2Nr).getActive())
         {
             // draw line control points blue instead of orange.
-            bool line = cp.mode != HuginBase::ControlPoint::X_Y;
+            const bool line = cp.mode != HuginBase::ControlPoint::X_Y;
             if (line) 
             {
                 glColor3f(0.0, 0.5, 1.0);
@@ -86,7 +86,7 @@ void PreviewControlPointTool::AfterDrawImagesEvent()
             double x1, y1, x2, y2;
             transforms[cp.image1Nr].transformImgCoord(x1, y1, cp.x1, cp.y1);
             transforms[cp.image2Nr].transformImgCoord(x2, y2, cp.x2, cp.y2);
-            m_greatCircles.drawLineFromSpherical(x1, y1, x2, y2);
+            m_greatCircles.drawLineFromSpherical(x1, y1, x2, y2, 1.0, line);
         }
     }
     glColor3f(1.0, 1.0, 1.0);

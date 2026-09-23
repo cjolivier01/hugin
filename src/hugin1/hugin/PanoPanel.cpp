@@ -32,6 +32,7 @@
 #include "panoinc.h"
 #include "base_wx/platform.h"
 #include "base_wx/PanoCommand.h"
+#include "base_wx/wxutils.h"
 
 #include <hugin/config_defaults.h>
 
@@ -62,58 +63,6 @@ extern "C" {
 #include "lensdb/LensDB.h"
 #include "hugin_math/hugin_math.h"
 
-#define WX_BROKEN_SIZER_UNKNOWN
-
-BEGIN_EVENT_TABLE(PanoPanel, wxPanel)
-    EVT_CHOICE ( XRCID("pano_choice_pano_type"),PanoPanel::ProjectionChanged )
-    EVT_TEXT_ENTER( XRCID("pano_text_hfov"),PanoPanel::HFOVChanged )
-    EVT_TEXT_ENTER( XRCID("pano_text_vfov"),PanoPanel::VFOVChanged )
-    EVT_BUTTON ( XRCID("pano_button_calc_fov"), PanoPanel::DoCalcFOV)
-    EVT_TEXT_ENTER ( XRCID("pano_val_width"),PanoPanel::WidthChanged )
-    EVT_TEXT_ENTER ( XRCID("pano_val_height"),PanoPanel::HeightChanged )
-    EVT_TEXT_ENTER ( XRCID("pano_val_roi_top"),PanoPanel::ROIChanged )
-    EVT_TEXT_ENTER ( XRCID("pano_val_roi_bottom"),PanoPanel::ROIChanged )
-    EVT_TEXT_ENTER ( XRCID("pano_val_roi_left"),PanoPanel::ROIChanged )
-    EVT_TEXT_ENTER ( XRCID("pano_val_roi_right"),PanoPanel::ROIChanged )
-    EVT_BUTTON ( XRCID("pano_button_opt_width"), PanoPanel::DoCalcOptimalWidth)
-    EVT_BUTTON ( XRCID("pano_button_opt_roi"), PanoPanel::DoCalcOptimalROI)
-    EVT_BUTTON ( XRCID("pano_button_stitch"),PanoPanel::OnDoStitch )
-
-    EVT_CHECKBOX ( XRCID("pano_cb_ldr_output_blended"), PanoPanel::OnOutputFilesChanged)
-    EVT_CHECKBOX ( XRCID("pano_cb_ldr_output_layers"), PanoPanel::OnOutputFilesChanged)
-    EVT_CHECKBOX ( XRCID("pano_cb_ldr_output_exposure_layers"), PanoPanel::OnOutputFilesChanged)
-    EVT_CHECKBOX ( XRCID("pano_cb_ldr_output_exposure_blended"), PanoPanel::OnOutputFilesChanged)
-    EVT_CHECKBOX ( XRCID("pano_cb_ldr_output_exposure_layers_fused"), PanoPanel::OnOutputFilesChanged)
-    EVT_CHECKBOX ( XRCID("pano_cb_ldr_output_stacks"), PanoPanel::OnOutputFilesChanged)
-    EVT_CHECKBOX ( XRCID("pano_cb_ldr_output_exposure_remapped"), PanoPanel::OnOutputFilesChanged)
-    EVT_CHECKBOX ( XRCID("pano_cb_hdr_output_blended"), PanoPanel::OnOutputFilesChanged)
-    EVT_CHECKBOX ( XRCID("pano_cb_hdr_output_stacks"), PanoPanel::OnOutputFilesChanged)
-    EVT_CHECKBOX ( XRCID("pano_cb_hdr_output_layers"), PanoPanel::OnOutputFilesChanged)
-
-    EVT_CHOICE ( XRCID("pano_choice_remapper"),PanoPanel::RemapperChanged )
-    EVT_BUTTON ( XRCID("pano_button_remapper_opts"),PanoPanel::OnRemapperOptions )
-
-    EVT_CHOICE ( XRCID("pano_choice_fusion"),PanoPanel::FusionChanged )
-    EVT_BUTTON ( XRCID("pano_button_fusion_opts"),PanoPanel::OnFusionOptions )
-
-    EVT_CHOICE ( XRCID("pano_choice_hdrmerge"),PanoPanel::HDRMergeChanged )
-    EVT_BUTTON ( XRCID("pano_button_hdrmerge_opts"),PanoPanel::OnHDRMergeOptions )
-
-    EVT_CHOICE ( XRCID("pano_choice_blender"),PanoPanel::BlenderChanged )
-    EVT_BUTTON ( XRCID("pano_button_blender_opts"),PanoPanel::OnBlenderOptions )
-
-    EVT_CHOICE ( XRCID("pano_choice_edgefill"), PanoPanel::OnEdgeFillChanged)
-    EVT_BUTTON ( XRCID("pano_button_fill_opts"), PanoPanel::OnEdgeFillOptions)
-
-    EVT_CHOICE ( XRCID("pano_choice_file_format"),PanoPanel::FileFormatChanged )
-    EVT_CHOICE ( XRCID("pano_choice_hdr_file_format"),PanoPanel::HDRFileFormatChanged )
-//    EVT_SPINCTRL ( XRCID("pano_output_normal_opts_jpeg_quality"),PanoPanel::OnJPEGQualitySpin )
-    EVT_TEXT_ENTER ( XRCID("pano_output_normal_opts_jpeg_quality"),PanoPanel::OnJPEGQualityText )
-    EVT_CHOICE ( XRCID("pano_output_normal_opts_tiff_compression"),PanoPanel::OnNormalTIFFCompression)
-    EVT_CHOICE ( XRCID("pano_output_hdr_opts_tiff_compression"),PanoPanel::OnHDRTIFFCompression)
-
-END_EVENT_TABLE()
-
 PanoPanel::PanoPanel()
     : pano(0), m_guiLevel(GUI_SIMPLE), updatesDisabled(false)
 {
@@ -127,7 +76,7 @@ bool PanoPanel::Create(wxWindow *parent, wxWindowID id, const wxPoint& pos, cons
         return false;
     }
 
-    wxXmlResource::Get()->LoadPanel(this, wxT("panorama_panel"));
+    wxXmlResource::Get()->LoadPanel(this, "panorama_panel");
     wxPanel * panel = XRCCTRL(*this, "panorama_panel", wxPanel);
 
     wxBoxSizer *topsizer = new wxBoxSizer( wxVERTICAL );
@@ -137,6 +86,7 @@ bool PanoPanel::Create(wxWindow *parent, wxWindowID id, const wxPoint& pos, cons
     // converts KILL_FOCUS events to usable TEXT_ENTER events
     // get gui controls
     m_ProjectionChoice = XRCCTRL(*this, "pano_choice_pano_type" ,wxChoice);
+    m_ProjectionChoice->Bind(wxEVT_CHOICE, &PanoPanel::ProjectionChanged, this);
     DEBUG_ASSERT(m_ProjectionChoice);
 
     m_keepViewOnResize = true;
@@ -176,91 +126,124 @@ bool PanoPanel::Create(wxWindow *parent, wxWindowID id, const wxPoint& pos, cons
     }
     m_HFOVText = XRCCTRL(*this, "pano_text_hfov" ,wxTextCtrl);
     DEBUG_ASSERT(m_HFOVText);
+    m_HFOVText->PushEventHandler(new TextKillFocusHandler(this));
+    m_HFOVText->Bind(wxEVT_TEXT_ENTER, &PanoPanel::HFOVChanged, this);
     m_CalcHFOVButton = XRCCTRL(*this, "pano_button_calc_fov" ,wxButton);
     DEBUG_ASSERT(m_CalcHFOVButton);
-    m_HFOVText->PushEventHandler(new TextKillFocusHandler(this));
+    m_CalcHFOVButton->Bind(wxEVT_BUTTON, &PanoPanel::DoCalcFOV, this);
     m_VFOVText = XRCCTRL(*this, "pano_text_vfov" ,wxTextCtrl);
     DEBUG_ASSERT(m_VFOVText);
     m_VFOVText->PushEventHandler(new TextKillFocusHandler(this));
+    m_VFOVText->Bind(wxEVT_TEXT_ENTER, &PanoPanel::VFOVChanged, this);
 
 
     m_WidthTxt = XRCCTRL(*this, "pano_val_width", wxTextCtrl);
     DEBUG_ASSERT(m_WidthTxt);
     m_WidthTxt->PushEventHandler(new TextKillFocusHandler(this));
+    m_WidthTxt->Bind(wxEVT_TEXT_ENTER, &PanoPanel::WidthChanged, this);
+
     m_CalcOptWidthButton = XRCCTRL(*this, "pano_button_opt_width" ,wxButton);
     DEBUG_ASSERT(m_CalcOptWidthButton);
+    m_CalcOptWidthButton->Bind(wxEVT_BUTTON, &PanoPanel::DoCalcOptimalWidth, this);
 
     m_HeightTxt = XRCCTRL(*this, "pano_val_height", wxTextCtrl);
     DEBUG_ASSERT(m_HeightTxt);
     m_HeightTxt->PushEventHandler(new TextKillFocusHandler(this));
+    m_HeightTxt->Bind(wxEVT_TEXT_ENTER, &PanoPanel::HeightChanged, this);
+
 
     m_ROILeftTxt = XRCCTRL(*this, "pano_val_roi_left", wxTextCtrl);
     DEBUG_ASSERT(m_ROILeftTxt);
     m_ROILeftTxt->PushEventHandler(new TextKillFocusHandler(this));
+    m_ROILeftTxt->Bind(wxEVT_TEXT_ENTER, &PanoPanel::ROIChanged, this);
+
 
     m_ROIRightTxt = XRCCTRL(*this, "pano_val_roi_right", wxTextCtrl);
     DEBUG_ASSERT(m_ROIRightTxt);
     m_ROIRightTxt->PushEventHandler(new TextKillFocusHandler(this));
+    m_ROIRightTxt->Bind(wxEVT_TEXT_ENTER, &PanoPanel::ROIChanged, this);
 
     m_ROITopTxt = XRCCTRL(*this, "pano_val_roi_top", wxTextCtrl);
     DEBUG_ASSERT(m_ROITopTxt);
     m_ROITopTxt->PushEventHandler(new TextKillFocusHandler(this));
+    m_ROITopTxt->Bind(wxEVT_TEXT_ENTER, &PanoPanel::ROIChanged, this);
+
 
     m_ROIBottomTxt = XRCCTRL(*this, "pano_val_roi_bottom", wxTextCtrl);
     DEBUG_ASSERT(m_ROIBottomTxt);
     m_ROIBottomTxt->PushEventHandler(new TextKillFocusHandler(this));
-    
+    m_ROIBottomTxt->Bind(wxEVT_TEXT_ENTER, &PanoPanel::ROIChanged, this);
+
     m_CalcOptROIButton = XRCCTRL(*this, "pano_button_opt_roi" ,wxButton);
-    DEBUG_ASSERT(m_CalcOptROIButton);    
+    DEBUG_ASSERT(m_CalcOptROIButton);
+    m_CalcOptROIButton->Bind(wxEVT_BUTTON, &PanoPanel::DoCalcOptimalROI, this);
 
     m_RemapperChoice = XRCCTRL(*this, "pano_choice_remapper", wxChoice);
     DEBUG_ASSERT(m_RemapperChoice);
+    m_RemapperChoice->Bind(wxEVT_CHOICE, &PanoPanel::RemapperChanged, this);
     m_FusionChoice = XRCCTRL(*this, "pano_choice_fusion", wxChoice);
     DEBUG_ASSERT(m_FusionChoice);
+    m_FusionChoice->Bind(wxEVT_CHOICE, &PanoPanel::FusionChanged, this);
     m_HDRMergeChoice = XRCCTRL(*this, "pano_choice_hdrmerge", wxChoice);
     DEBUG_ASSERT(m_HDRMergeChoice);
+    m_HDRMergeChoice->Bind(wxEVT_CHOICE, &PanoPanel::HDRMergeChanged, this);
     m_BlenderChoice = XRCCTRL(*this, "pano_choice_blender", wxChoice);
     DEBUG_ASSERT(m_BlenderChoice);
     FillBlenderList(m_BlenderChoice);
+    m_BlenderChoice->Bind(wxEVT_CHOICE, &PanoPanel::BlenderChanged, this);
     m_edgeFillChoice = XRCCTRL(*this, "pano_choice_edgefill", wxChoice);
+    m_edgeFillChoice->Bind(wxEVT_CHOICE, &PanoPanel::OnEdgeFillChanged, this);
 
     m_StitchButton = XRCCTRL(*this, "pano_button_stitch", wxButton);
     DEBUG_ASSERT(m_StitchButton);
+    m_StitchButton->Bind(wxEVT_BUTTON, &PanoPanel::OnDoStitch, this);
 
     m_FileFormatChoice = XRCCTRL(*this, "pano_choice_file_format", wxChoice);
     DEBUG_ASSERT(m_FileFormatChoice);
+    m_FileFormatChoice->Bind(wxEVT_CHOICE, &PanoPanel::FileFormatChanged, this);
     m_FileFormatOptionsLabel = XRCCTRL(*this, "pano_output_ldr_format_options_label", wxStaticText);
     
     m_FileFormatJPEGQualityText = XRCCTRL(*this, "pano_output_normal_opts_jpeg_quality", wxTextCtrl);
     DEBUG_ASSERT(m_FileFormatJPEGQualityText);
     m_FileFormatJPEGQualityText->PushEventHandler(new TextKillFocusHandler(this));
+    m_FileFormatJPEGQualityText->Bind(wxEVT_TEXT_ENTER, &PanoPanel::OnJPEGQualityText, this);
 
     m_FileFormatTIFFCompChoice = XRCCTRL(*this, "pano_output_normal_opts_tiff_compression", wxChoice);
     DEBUG_ASSERT(m_FileFormatTIFFCompChoice);
+    m_FileFormatTIFFCompChoice->Bind(wxEVT_CHOICE, &PanoPanel::OnNormalTIFFCompression, this);
 
     m_HDRFileFormatChoice = XRCCTRL(*this, "pano_choice_hdr_file_format", wxChoice);
     DEBUG_ASSERT(m_HDRFileFormatChoice);
+    m_HDRFileFormatChoice->Bind(wxEVT_CHOICE, &PanoPanel::HDRFileFormatChanged, this);
     m_HDRFileFormatLabelTIFFCompression = XRCCTRL(*this, "pano_output_hdr_opts_tiff_compression_label", wxStaticText);
     DEBUG_ASSERT(m_HDRFileFormatLabelTIFFCompression);
     m_FileFormatHDRTIFFCompChoice = XRCCTRL(*this, "pano_output_hdr_opts_tiff_compression", wxChoice);
     DEBUG_ASSERT(m_FileFormatHDRTIFFCompChoice);
+    m_FileFormatHDRTIFFCompChoice->Bind(wxEVT_CHOICE, &PanoPanel::OnHDRTIFFCompression, this);
 
     m_pano_ctrls = XRCCTRL(*this, "pano_controls_panel", wxScrolledWindow);
     DEBUG_ASSERT(m_pano_ctrls);
     m_pano_ctrls->SetSizeHints(20, 20);
     m_pano_ctrls->FitInside();
     m_pano_ctrls->SetScrollRate(10, 10);
+    // bind event handler for buttons
+    Bind(wxEVT_BUTTON, &PanoPanel::OnRemapperOptions, this, XRCID("pano_button_remapper_opts"));
+    Bind(wxEVT_BUTTON, &PanoPanel::OnFusionOptions, this, XRCID("pano_button_fusion_opts"));
+    Bind(wxEVT_BUTTON, &PanoPanel::OnHDRMergeOptions, this, XRCID("pano_button_hdrmerge_opts"));
+    Bind(wxEVT_BUTTON, &PanoPanel::OnBlenderOptions, this, XRCID("pano_button_blender_opts"));
+    Bind(wxEVT_BUTTON, &PanoPanel::OnEdgeFillOptions, this, XRCID("pano_button_fill_opts"));
+    // bind event handler for checkboxes
+    Bind(wxEVT_CHECKBOX, &PanoPanel::OnOutputFilesChanged, this, XRCID("pano_cb_ldr_output_blended"));
+    Bind(wxEVT_CHECKBOX, &PanoPanel::OnOutputFilesChanged, this, XRCID("pano_cb_ldr_output_layers"));
+    Bind(wxEVT_CHECKBOX, &PanoPanel::OnOutputFilesChanged, this, XRCID("pano_cb_ldr_output_exposure_layers"));
+    Bind(wxEVT_CHECKBOX, &PanoPanel::OnOutputFilesChanged, this, XRCID("pano_cb_ldr_output_exposure_blended"));
+    Bind(wxEVT_CHECKBOX, &PanoPanel::OnOutputFilesChanged, this, XRCID("pano_cb_ldr_output_exposure_layers_fused"));
+    Bind(wxEVT_CHECKBOX, &PanoPanel::OnOutputFilesChanged, this, XRCID("pano_cb_ldr_output_stacks"));
+    Bind(wxEVT_CHECKBOX, &PanoPanel::OnOutputFilesChanged, this, XRCID("pano_cb_ldr_output_exposure_remapped"));
+    Bind(wxEVT_CHECKBOX, &PanoPanel::OnOutputFilesChanged, this, XRCID("pano_cb_hdr_output_blended"));
+    Bind(wxEVT_CHECKBOX, &PanoPanel::OnOutputFilesChanged, this, XRCID("pano_cb_hdr_output_stacks"));
+    Bind(wxEVT_CHECKBOX, &PanoPanel::OnOutputFilesChanged, this, XRCID("pano_cb_hdr_output_layers"));
 
-
-/*
-    // trigger creation of apropriate stitcher control, if
-    // not already happend.
-    if (! m_Stitcher) {
-        wxCommandEvent dummy;
-        StitcherChanged(dummy);
-    }
-*/
-    DEBUG_TRACE("")
     return true;
 }
 
@@ -275,7 +258,7 @@ void PanoPanel::Init(HuginBase::Panorama * panorama)
 PanoPanel::~PanoPanel(void)
 {
     DEBUG_TRACE("dtor");
-    wxConfigBase::Get()->Write(wxT("Stitcher/DefaultRemapper"),m_RemapperChoice->GetSelection());
+    wxConfigBase::Get()->Write("Stitcher/DefaultRemapper",m_RemapperChoice->GetSelection());
     wxConfigBase::Get()->Flush();
 
     m_HFOVText->PopEventHandler(true);
@@ -383,42 +366,42 @@ void PanoPanel::UpdateDisplay(const HuginBase::PanoramaOptions & opt, const bool
     m_CalcHFOVButton->Enable(m_keepViewOnResize && hasImages);
     m_CalcOptROIButton->Enable(hasImages);
 
-    m_WidthTxt->ChangeValue(wxString::Format(wxT("%d"), opt.getWidth()));
-    m_HeightTxt->ChangeValue(wxString::Format(wxT("%d"), opt.getHeight()));
+    m_WidthTxt->ChangeValue(wxString::Format("%d", opt.getWidth()));
+    m_HeightTxt->ChangeValue(wxString::Format("%d", opt.getHeight()));
 
-    m_ROILeftTxt->ChangeValue(wxString::Format(wxT("%d"), opt.getROI().left() ));
-    m_ROIRightTxt->ChangeValue(wxString::Format(wxT("%d"), opt.getROI().right() ));
-    m_ROITopTxt->ChangeValue(wxString::Format(wxT("%d"), opt.getROI().top() ));
-    m_ROIBottomTxt->ChangeValue(wxString::Format(wxT("%d"), opt.getROI().bottom() ));
+    m_ROILeftTxt->ChangeValue(wxString::Format("%d", opt.getROI().left() ));
+    m_ROIRightTxt->ChangeValue(wxString::Format("%d", opt.getROI().right() ));
+    m_ROITopTxt->ChangeValue(wxString::Format("%d", opt.getROI().top() ));
+    m_ROIBottomTxt->ChangeValue(wxString::Format("%d", opt.getROI().bottom() ));
     {
         // format text for display of canvas dimension
-        wxString label = wxString::Format(wxT("%d x %d"), opt.getROI().width(), opt.getROI().height());
+        wxString label = wxString::Format("%d x %d", opt.getROI().width(), opt.getROI().height());
         // using opt.getROI().area() can overflow, so use width and height explicit to prevent this
         if ( (opt.getROI().width() / 1000.0) * opt.getROI().height() / 1000.0 >= 20.0)
         {
-            label.Append(wxString::Format(wxT("=%.0f MP"), (opt.getROI().width() / 1000.0) * opt.getROI().height() / 1000.0));
+            label.Append(wxString::Format("=%.0f MP", (opt.getROI().width() / 1000.0) * opt.getROI().height() / 1000.0));
         }
         else
         {
-            label.Append(wxString::Format(wxT("=%.1f MP"), opt.getROI().area() / 1000000.0));
+            label.Append(wxString::Format("=%.1f MP", opt.getROI().area() / 1000000.0));
         };
         if (opt.getROI().width() >0 && opt.getROI().height() > 0)
         {
             const int commonDivisor = hugin_utils::gcd(opt.getROI().width(), opt.getROI().height());
             if (commonDivisor > std::pow(10, hugin_utils::floori(log10f(std::max(opt.getROI().width(), opt.getROI().height()))) - 2))
             {
-                label.Append(wxString::Format(wxT(", %d:%d"), opt.getROI().width() / commonDivisor, opt.getROI().height() / commonDivisor));
+                label.Append(wxString::Format(", %d:%d", opt.getROI().width() / commonDivisor, opt.getROI().height() / commonDivisor));
             }
             else
             {
                 float ratio = 1.0f * opt.getROI().width() / opt.getROI().height();
                 if (ratio > 1.0f)
                 {
-                    label.Append(wxString::Format(wxT(", %.2f:1"), ratio));
+                    label.Append(wxString::Format(", %.2f:1", ratio));
                 }
                 else
                 {
-                    label.Append(wxString::Format(wxT(", 1:%.2f"), 1.0f/ratio));
+                    label.Append(wxString::Format(", 1:%.2f", 1.0f/ratio));
                 };
             };
         };
@@ -534,6 +517,13 @@ void PanoPanel::UpdateDisplay(const HuginBase::PanoramaOptions & opt, const bool
     XRCCTRL(*this, "pano_text_hdrmerge", wxStaticText)->Enable(hdrMergeEnabled);
     XRCCTRL(*this, "pano_text_hdrmerge", wxStaticText)->Show(m_guiLevel>GUI_SIMPLE);
 
+    m_edgeFillChoice->Enable(m_guiLevel > GUI_SIMPLE);
+    m_edgeFillChoice->Show(m_guiLevel > GUI_SIMPLE);
+    XRCCTRL(*this, "pano_button_fill_opts", wxButton)->Enable(m_guiLevel > GUI_SIMPLE);
+    XRCCTRL(*this, "pano_button_fill_opts", wxButton)->Show(m_guiLevel > GUI_SIMPLE);
+    XRCCTRL(*this, "pano_text_edgefill", wxStaticText)->Enable(m_guiLevel > GUI_SIMPLE);
+    XRCCTRL(*this, "pano_text_edgefill", wxStaticText)->Show(m_guiLevel > GUI_SIMPLE);
+
     // output file mode
     bool ldr_pano_enabled = opt.outputLDRBlended ||
                             opt.outputLDRExposureBlended ||
@@ -567,7 +557,7 @@ void PanoPanel::UpdateDisplay(const HuginBase::PanoramaOptions & opt, const bool
         m_FileFormatOptionsLabel->SetLabel(_("Quality:"));
         m_FileFormatJPEGQualityText->Show();
         m_FileFormatTIFFCompChoice->Hide();
-        m_FileFormatJPEGQualityText->ChangeValue(wxString::Format(wxT("%d"), opt.quality));
+        m_FileFormatJPEGQualityText->ChangeValue(wxString::Format("%d", opt.quality));
     } else if (opt.outputImageType == "png") {
         m_FileFormatOptionsLabel->Hide();
         m_FileFormatJPEGQualityText->Hide();
@@ -580,7 +570,7 @@ void PanoPanel::UpdateDisplay(const HuginBase::PanoramaOptions & opt, const bool
         m_FileFormatTIFFCompChoice->Hide();
         i = 3;
     } else
-        wxLogError(wxT("INTERNAL error: unknown output image type"));
+        wxLogError("INTERNAL error: unknown output image type");
 
     m_FileFormatChoice->SetSelection(i);
 
@@ -614,7 +604,7 @@ void PanoPanel::UpdateDisplay(const HuginBase::PanoramaOptions & opt, const bool
             m_FileFormatHDRTIFFCompChoice->SetSelection(0);
         }
     } else
-        wxLogError(wxT("INTERNAL error: unknown hdr output image type"));
+        wxLogError("INTERNAL error: unknown hdr output image type");
 
     m_HDRFileFormatChoice->SetSelection(i);
 
@@ -652,7 +642,7 @@ void PanoPanel::HFOVChanged ( wxCommandEvent & e )
 
     wxString text = m_HFOVText->GetValue();
     DEBUG_INFO ("HFOV = " << text.mb_str(wxConvLocal) );
-    if (text == wxT("")) {
+    if (text == wxEmptyString) {
         return;
     }
 
@@ -683,7 +673,7 @@ void PanoPanel::VFOVChanged ( wxCommandEvent & e )
 
     wxString text = m_VFOVText->GetValue();
     DEBUG_INFO ("VFOV = " << text.mb_str(wxConvLocal) );
-    if (text == wxT("")) {
+    if (text == wxEmptyString) {
         return;
     }
 
@@ -838,7 +828,7 @@ void PanoPanel::OnRemapperOptions(wxCommandEvent & e)
     HuginBase::PanoramaOptions opt = pano->getOptions();
     if (opt.remapper == HuginBase::PanoramaOptions::NONA) {
         wxDialog dlg;
-        wxXmlResource::Get()->LoadDialog(&dlg, this, wxT("nona_options_dialog"));
+        wxXmlResource::Get()->LoadDialog(&dlg, this, "nona_options_dialog");
         wxChoice * interpol_choice = XRCCTRL(dlg, "nona_choice_interpolator", wxChoice);
         wxCheckBox * cropped_cb = XRCCTRL(dlg, "nona_save_cropped", wxCheckBox);
         interpol_choice->SetSelection(opt.interpolator);
@@ -875,10 +865,10 @@ void PanoPanel::OnBlenderOptions(wxCommandEvent & e)
     HuginBase::PanoramaOptions opt = pano->getOptions();
     if (opt.blendMode == HuginBase::PanoramaOptions::ENBLEND_BLEND) {
         wxDialog dlg;
-        wxXmlResource::Get()->LoadDialog(&dlg, this, wxT("enblend_options_dialog"));
+        wxXmlResource::Get()->LoadDialog(&dlg, this, "enblend_options_dialog");
         wxTextCtrl * enblend_opts_text = XRCCTRL(dlg, "blender_arguments_text", wxTextCtrl);
         enblend_opts_text->ChangeValue(wxString(opt.enblendOptions.c_str(), wxConvLocal));
-        dlg.Bind(wxEVT_COMMAND_BUTTON_CLICKED, [](wxCommandEvent &) {MainFrame::Get()->DisplayHelp(wxT("Enblend.html")); }, wxID_HELP);
+        dlg.Bind(wxEVT_COMMAND_BUTTON_CLICKED, [](wxCommandEvent &) {MainFrame::Get()->DisplayHelp("Enblend.html"); }, wxID_HELP);
         dlg.CentreOnParent();
 
         if (dlg.ShowModal() == wxID_OK) {
@@ -893,7 +883,7 @@ void PanoPanel::OnBlenderOptions(wxCommandEvent & e)
         if (opt.blendMode == HuginBase::PanoramaOptions::INTERNAL_BLEND)
         {
             wxDialog dlg;
-            wxXmlResource::Get()->LoadDialog(&dlg, this, wxT("verdandi_options_dialog"));
+            wxXmlResource::Get()->LoadDialog(&dlg, this, "verdandi_options_dialog");
             wxChoice * verdandiBlendModeChoice = XRCCTRL(dlg, "verdandi_blend_mode_choice", wxChoice);
             if (opt.verdandiOptions.find("--seam=blend")!=std::string::npos)
             {
@@ -944,7 +934,7 @@ void PanoPanel::OnEdgeFillOptions(wxCommandEvent& e)
 {
     HuginBase::PanoramaOptions opt = pano->getOptions();
     wxDialog dlg;
-    wxXmlResource::Get()->LoadDialog(&dlg, this, wxT("filledge_options_dialog"));
+    wxXmlResource::Get()->LoadDialog(&dlg, this, "filledge_options_dialog");
     wxCheckBox* keepUnfillVersion = XRCCTRL(dlg, "edgefill_save_input", wxCheckBox);
     keepUnfillVersion->SetValue(opt.keepEdgeFillInput);
     dlg.CentreOnParent();
@@ -966,10 +956,10 @@ void PanoPanel::OnFusionOptions(wxCommandEvent & e)
 {
     HuginBase::PanoramaOptions opt = pano->getOptions();
     wxDialog dlg;
-    wxXmlResource::Get()->LoadDialog(&dlg, this, wxT("enfuse_options_dialog"));
+    wxXmlResource::Get()->LoadDialog(&dlg, this, "enfuse_options_dialog");
     wxTextCtrl * enfuse_opts_text = XRCCTRL(dlg, "enfuse_arguments_text", wxTextCtrl);
     enfuse_opts_text->ChangeValue(wxString(opt.enfuseOptions.c_str(), wxConvLocal));
-    dlg.Bind(wxEVT_COMMAND_BUTTON_CLICKED, [](wxCommandEvent &) {MainFrame::Get()->DisplayHelp(wxT("Enfuse.html")); }, wxID_HELP);
+    dlg.Bind(wxEVT_COMMAND_BUTTON_CLICKED, [](wxCommandEvent &) {MainFrame::Get()->DisplayHelp("Enfuse.html"); }, wxID_HELP);
     dlg.CentreOnParent();
 
     if (dlg.ShowModal() == wxID_OK) {
@@ -1037,7 +1027,7 @@ void PanoPanel::DoCalcOptimalWidth(wxCommandEvent & e)
     double sizeFactor = 1.0;
     if (wxGetKeyState(WXK_COMMAND))
     {
-        wxConfigBase::Get()->Read(wxT("/Assistant/panoDownsizeFactor"), &sizeFactor, HUGIN_ASS_PANO_DOWNSIZE_FACTOR);
+        wxConfigBase::Get()->Read("/Assistant/panoDownsizeFactor", &sizeFactor, HUGIN_ASS_PANO_DOWNSIZE_FACTOR);
     };
 
     unsigned width = hugin_utils::roundi(HuginBase::CalculateOptimalScale::calcOptimalScale(*pano) * opt.getWidth() * sizeFactor);
@@ -1082,7 +1072,7 @@ void PanoPanel::DoCalcOptimalROI(wxCommandEvent & e)
     };
 };
 
-void PanoPanel::DoStitch(const wxString& userDefinedSetting)
+void PanoPanel::DoStitch(const wxString& userDefinedSetting, const bool readSetting)
 {
     if (pano->getNrOfImages() == 0) {
         return;
@@ -1100,14 +1090,13 @@ void PanoPanel::DoStitch(const wxString& userDefinedSetting)
 
     // save project
     // copy pto file to temporary file
-    wxString tempDir= wxConfigBase::Get()->Read(wxT("tempDir"),wxT(""));
+    wxString tempDir= wxConfigBase::Get()->Read("tempDir",wxEmptyString);
     if(!tempDir.IsEmpty())
         if(tempDir.Last()!=wxFileName::GetPathSeparator())
             tempDir.Append(wxFileName::GetPathSeparator());
-    wxString currentPTOfn = wxFileName::CreateTempFileName(tempDir+wxT("huginpto_"));
+    wxString currentPTOfn = wxFileName::CreateTempFileName(tempDir+"huginpto_");
     if(currentPTOfn.empty()) {
-        wxMessageBox(_("Could not create temporary project file"),_("Error"),
-                wxCANCEL | wxICON_ERROR,this);
+        hugin_utils::HuginMessageBox(_("Could not create temporary project file"), _("Hugin"), wxCANCEL | wxICON_ERROR, wxGetActiveWindow());
         return;
     }
     DEBUG_DEBUG("tmp PTO file: " << (const char *)currentPTOfn.mb_str(wxConvLocal));
@@ -1120,7 +1109,7 @@ void PanoPanel::DoStitch(const wxString& userDefinedSetting)
 #if defined __WXMAC__ && defined MAC_SELF_CONTAINED_BUNDLE
     // HuginStitchProject inside main bundle
     wxString hugin_stitch_project = MacGetPathToBundledAppMainExecutableFile(CFSTR("HuginStitchProject.app"));
-    if(hugin_stitch_project == wxT(""))
+    if(hugin_stitch_project == wxEmptyString)
     {
         DEBUG_ERROR("hugin_stitch_project could not be found in the bundle.");
         return;
@@ -1128,13 +1117,13 @@ void PanoPanel::DoStitch(const wxString& userDefinedSetting)
     hugin_stitch_project = hugin_utils::wxQuoteFilename(hugin_stitch_project);
 #elif defined __WXMAC__
     // HuginStitchProject installed in INSTALL_OSX_BUNDLE_DIR
-    wxFileName hugin_stitch_project_app(wxT(INSTALL_OSX_BUNDLE_DIR), wxEmptyString);
-    hugin_stitch_project_app.AppendDir(wxT("HuginStitchProject.app"));
+    wxFileName hugin_stitch_project_app(INSTALL_OSX_BUNDLE_DIR, wxEmptyString);
+    hugin_stitch_project_app.AppendDir("HuginStitchProject.app");
     CFStringRef stitchProjectAppPath = MacCreateCFStringWithWxString(hugin_stitch_project_app.GetFullPath());
     wxString hugin_stitch_project = MacGetPathToMainExecutableFileOfBundle(stitchProjectAppPath);
     CFRelease(stitchProjectAppPath);
 #else
-    wxString hugin_stitch_project = wxT("hugin_stitch_project");
+    wxString hugin_stitch_project = "hugin_stitch_project";
 #endif
 
     // Derive a default output prefix from the project filename if set, otherwise default project filename
@@ -1146,7 +1135,7 @@ void PanoPanel::DoStitch(const wxString& userDefinedSetting)
     // TODO: The following code is similar to stitchApp::OnInit in hugin_switch_project.cpp. Should be refactored.
     // TODO: We should save the output prefix somewhere, so we can recall it as the default if the user stitches this project again.
     wxFileDialog dlg(this,_("Specify output prefix"),
-                     outputPrefix.GetPath(), outputPrefix.GetName(), wxT(""),
+                     outputPrefix.GetPath(), outputPrefix.GetName(), wxEmptyString,
                      wxFD_SAVE, wxDefaultPosition);
     if (dlg.ShowModal() != wxID_OK)
     {
@@ -1163,13 +1152,8 @@ void PanoPanel::DoStitch(const wxString& userDefinedSetting)
     wxFileName prefix(dlg.GetPath());
     while (!prefix.IsDirWritable())
     {
-        wxMessageBox(wxString::Format(_("You have no permissions to write in folder \"%s\".\nPlease select another folder for the final output."), prefix.GetPath().c_str()),
-#ifdef __WXMSW__
-            wxT("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxOK | wxICON_INFORMATION);
+        hugin_utils::HuginMessageBox(wxString::Format(_("You have no permissions to write in folder \"%s\".\nPlease select another folder for the final output."), prefix.GetPath()),
+            _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
         if (dlg.ShowModal() != wxID_OK)
         {
             return;
@@ -1182,14 +1166,16 @@ void PanoPanel::DoStitch(const wxString& userDefinedSetting)
         return;
     };
 
-    wxString switches(wxT(" --delete -o "));
-    if(wxConfigBase::Get()->Read(wxT("/Processor/overwrite"), HUGIN_PROCESSOR_OVERWRITE) == 1)
-        switches=wxT(" --overwrite")+switches;
+    wxString switches(" --delete -o ");
+    if (readSetting && wxConfigBase::Get()->Read("/Processor/overwrite", HUGIN_PROCESSOR_OVERWRITE) == 1)
+    {
+        switches = " --overwrite" + switches;
+    };
     if (!userDefinedSetting.IsEmpty())
     {
         switches = " --user-defined-output=" + hugin_utils::wxQuoteFilename(userDefinedSetting) + " " + switches;
     };
-    wxString command = hugin_stitch_project + switches + hugin_utils::wxQuoteFilename(dlg.GetPath()) + wxT(" ") + hugin_utils::wxQuoteFilename(currentPTOfn);
+    wxString command = hugin_stitch_project + switches + hugin_utils::wxQuoteFilename(dlg.GetPath()) + " " + hugin_utils::wxQuoteFilename(currentPTOfn);
     
     wxConfigBase::Get()->Flush();
 #ifdef __WXGTK__
@@ -1225,18 +1211,18 @@ void PanoPanel::DoSendToBatch(const wxString& userDefinedSetting)
         return;
     };
 
-    wxString switches(wxT(" "));
-    if (wxConfigBase::Get()->Read(wxT("/Processor/start"), HUGIN_PROCESSOR_START) != 0)
+    wxString switches(" ");
+    if (wxConfigBase::Get()->Read("/Processor/start", HUGIN_PROCESSOR_START) != 0)
     {
-        switches += wxT("-b ");
+        switches += "-b ";
     };
-    if (wxConfigBase::Get()->Read(wxT("/Processor/overwrite"), HUGIN_PROCESSOR_OVERWRITE) != 0)
+    if (wxConfigBase::Get()->Read("/Processor/overwrite", HUGIN_PROCESSOR_OVERWRITE) != 0)
     {
-        switches += wxT("-o ");
+        switches += "-o ";
     };
-    if (wxConfigBase::Get()->Read(wxT("/Processor/verbose"), HUGIN_PROCESSOR_VERBOSE) != 0)
+    if (wxConfigBase::Get()->Read("/Processor/verbose", HUGIN_PROCESSOR_VERBOSE) != 0)
     {
-        switches += wxT("-v ");
+        switches += "-v ";
     };
     if (!userDefinedSetting.IsEmpty())
     {
@@ -1244,13 +1230,13 @@ void PanoPanel::DoSendToBatch(const wxString& userDefinedSetting)
     };
     if(pano->isDirty())
     {
-        bool showDlg=wxConfigBase::Get()->Read(wxT("ShowSaveMessage"), 1l)==1;
+        bool showDlg=wxConfigBase::Get()->Read("ShowSaveMessage", 1l)==1;
         if(showDlg)
         {
             // show information that project file needs to be saved first
             // and user has to give the output prefix afterwards
             wxDialog dlg;
-            wxXmlResource::Get()->LoadDialog(&dlg, this, wxT("stitch_message_dlg"));
+            wxXmlResource::Get()->LoadDialog(&dlg, this, "stitch_message_dlg");
             if (!(MainFrame::Get()->getProjectName().IsEmpty()))
             {
                 // project file was already saved with a name, adapt message text for this use case
@@ -1264,7 +1250,7 @@ void PanoPanel::DoSendToBatch(const wxString& userDefinedSetting)
             {
                 if(XRCCTRL(dlg, "stitch_dont_show_checkbox", wxCheckBox)->IsChecked())
                 {
-                    wxConfigBase::Get()->Write(wxT("ShowSaveMessage"), 0l);
+                    wxConfigBase::Get()->Write("ShowSaveMessage", 0l);
                 };
             };
         };
@@ -1285,7 +1271,7 @@ void PanoPanel::DoSendToBatch(const wxString& userDefinedSetting)
         // Show a file save dialog so user can confirm/change the prefix.
         // (We don't have to worry about overwriting existing files, since PTBatcherGUI checks this, or the overwrite flag was set.)
         wxFileDialog dlg(this,_("Specify output prefix"),
-                         outputPrefix.GetPath(), outputPrefix.GetName(), wxT(""),
+                         outputPrefix.GetPath(), outputPrefix.GetName(), wxEmptyString,
                          wxFD_SAVE, wxDefaultPosition);
         if (dlg.ShowModal() != wxID_OK)
         {
@@ -1302,13 +1288,8 @@ void PanoPanel::DoSendToBatch(const wxString& userDefinedSetting)
         wxFileName prefix(dlg.GetPath());
         while (!prefix.IsDirWritable())
         {
-            wxMessageBox(wxString::Format(_("You have no permissions to write in folder \"%s\".\nPlease select another folder for the final output."), prefix.GetPath().c_str()),
-#ifdef __WXMSW__
-                wxT("Hugin"),
-#else
-                wxT(""),
-#endif
-                wxOK | wxICON_INFORMATION);
+            hugin_utils::HuginMessageBox(wxString::Format(_("You have no permissions to write in folder \"%s\".\nPlease select another folder for the final output."), prefix.GetPath()),
+                _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
             if (dlg.ShowModal() != wxID_OK)
             {
                 return;
@@ -1323,25 +1304,25 @@ void PanoPanel::DoSendToBatch(const wxString& userDefinedSetting)
 
 #if defined __WXMAC__ && defined MAC_SELF_CONTAINED_BUNDLE
 		wxString cmd = MacGetPathToMainExecutableFileOfRegisteredBundle(CFSTR("net.sourceforge.hugin.PTBatcherGUI"));
-		if(cmd != wxT(""))
+		if(cmd != wxEmptyString)
 		{ 
 			//Found PTBatcherGui inside the (registered) PTBatcherGui bundle. Call it directly.
 			//We need to call the binary from it's own bundle and not from the hugin bundle otherwise we get no menu as OSX assumes that the hugin bundle
 			//will provide the menu
 			cmd = hugin_utils::wxQuoteString(cmd); 
-            cmd += wxT(" ") + switches + hugin_utils::wxQuoteFilename(projectFile) + wxT(" ") + hugin_utils::wxQuoteFilename(dlg.GetPath());
+            cmd += " " + switches + hugin_utils::wxQuoteFilename(projectFile) + " " + hugin_utils::wxQuoteFilename(dlg.GetPath());
 			wxExecute(cmd);
 		}
 		else
 		{ //Can't find PTBatcherGui.app bundle. Use the most straightforward call possible to the bundle but this should actually not work either.
-				wxMessageBox(wxString::Format(_("External program %s not found in the bundle, reverting to system path"), wxT("open")), _("Error"));
-                cmd = wxT("open -b net.sourceforge.hugin.PTBatcherGUI ")+hugin_utils::wxQuoteFilename(projectFile);
+            hugin_utils::HuginMessageBox(wxString::Format(_("External program %s not found in the bundle, reverting to system path"), "open"), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
+                cmd = "open -b net.sourceforge.hugin.PTBatcherGUI "+hugin_utils::wxQuoteFilename(projectFile);
 				wxExecute(cmd);
 		}
 		
 #else
         const wxFileName exePath(wxStandardPaths::Get().GetExecutablePath());
-        wxExecute(exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + wxT("PTBatcherGUI ") + switches + hugin_utils::wxQuoteFilename(projectFile) + wxT(" ") + hugin_utils::wxQuoteFilename(dlg.GetPath()));
+        wxExecute(exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + "PTBatcherGUI " + switches + hugin_utils::wxQuoteFilename(projectFile) + " " + hugin_utils::wxQuoteFilename(dlg.GetPath()));
 #endif
         HuginBase::LensDB::SaveLensDataFromPano(*pano);
     }
@@ -1369,16 +1350,16 @@ void PanoPanel::DoUserDefinedStitch(const wxString& settings)
     {
         // no filename given, ask user
         wxConfigBase* config = wxConfigBase::Get();
-        wxString path = config->Read(wxT("/userDefinedOutputPath"), MainFrame::Get()->GetDataPath());
+        wxString path = config->Read("/userDefinedOutputPath", MainFrame::Get()->GetDataPath());
         wxFileDialog userOutputDlg(this, _("Select user defined output"),
-            path, wxT(""), _("User defined output|*.executor"),
+            path, wxEmptyString, _("User defined output|*.executor"),
             wxFD_OPEN | wxFD_FILE_MUST_EXIST, wxDefaultPosition);
         if (userOutputDlg.ShowModal() != wxID_OK)
         {
             return;
         };
         // remember path for later
-        config->Write(wxT("/userDefinedOutputPath"), userOutputDlg.GetDirectory());
+        config->Write("/userDefinedOutputPath", userOutputDlg.GetDirectory());
         userOutputSequence = userOutputDlg.GetPath();
     }
     else
@@ -1387,7 +1368,7 @@ void PanoPanel::DoUserDefinedStitch(const wxString& settings)
         userOutputSequence = settings;
         if (!userOutputSequence.Exists())
         {
-            wxMessageBox(wxString::Format(wxT("User defined output %s not found.\nStopping processing."), userOutputSequence.GetFullPath()), _("Warning"), wxOK | wxICON_INFORMATION);
+            hugin_utils::HuginMessageBox(wxString::Format("User defined output %s not found.\nStopping processing.", userOutputSequence.GetFullPath()), _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
             return;
         };
     };
@@ -1397,13 +1378,15 @@ void PanoPanel::DoUserDefinedStitch(const wxString& settings)
 void PanoPanel::DoStitchOrSendBatch(const wxString& userDefinedSetting)
 {
     long t;
+    bool readSettings = true;
     if(wxGetKeyState(WXK_COMMAND))
     {
         t=1;
+        readSettings = false;
     }
     else
     {
-        wxConfigBase::Get()->Read(wxT("/Processor/gui"), &t, HUGIN_PROCESSOR_GUI);
+        wxConfigBase::Get()->Read("/Processor/gui", &t, HUGIN_PROCESSOR_GUI);
     };
     switch (t)
     {
@@ -1413,7 +1396,7 @@ void PanoPanel::DoStitchOrSendBatch(const wxString& userDefinedSetting)
             break;
         // hugin_stitch_project
         case 1:
-            DoStitch(userDefinedSetting);
+            DoStitch(userDefinedSetting, readSettings);
             break;
         // there is an error in the preferences
         default :
@@ -1583,14 +1566,9 @@ bool PanoPanel::CheckGoodSize()
         (cropped_region.width()>65500 || cropped_region.height()>65500)
         )
     {
-        wxMessageBox(
+        hugin_utils::HuginMessageBox(
             wxString::Format(_("The width and height of jpeg images has to be smaller than 65500 pixel. But you have requested a jpeg image with %dx%d pixel.\nThis is not supported by the jpeg file format.\nDecrease the canvas size on the stitch panel or select TIF or PNG as output format."), cropped_region.width(), cropped_region.height()),
-#ifdef _WIN32
-            _("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxICON_EXCLAMATION | wxOK);
+            _("Hugin"), wxICON_EXCLAMATION | wxOK, wxGetActiveWindow());
         return false;
     };
     wxString message;
@@ -1612,17 +1590,11 @@ bool PanoPanel::CheckGoodSize()
     {
         // Tell the user the stitch will be really big, and give them a
         // chance to reduce the size.
-        wxMessageDialog dialog(this,
-                _("Are you sure you want to stitch such a large panorama?"),
-#ifdef _WIN32
-                _("Hugin"),
-#else
-                wxT(""),
-#endif
-                wxICON_EXCLAMATION | wxYES_NO);
-        dialog.SetExtendedMessage(message);
-        dialog.SetYesNoLabels(_("Stitch anyway"), _("Let me fix that"));
-        switch (dialog.ShowModal())
+        hugin_utils::MessageDialog dialog = hugin_utils::GetMessageDialog(_("Are you sure you want to stitch such a large panorama?"),
+            _("Hugin"), wxICON_EXCLAMATION | wxYES_NO, wxGetActiveWindow());
+        dialog->SetExtendedMessage(message);
+        dialog->SetYesNoLabels(_("Stitch anyway"), _("Let me fix that"));
+        switch (dialog->ShowModal())
         {
             case wxID_OK:
             case wxID_YES:
@@ -1649,13 +1621,8 @@ bool PanoPanel::CheckHasImages()
     HuginBase::UIntSet images=getImagesinROI(*pano, pano->getActiveImages());
     if(images.empty())
     {
-        wxMessageBox(_("There are no active images in the output region.\nPlease check your settings, so that at least one image is in the output region."),
-#ifdef _WIN32
-            _("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxOK | wxICON_INFORMATION);
+        hugin_utils::HuginMessageBox(_("There are no active images in the output region.\nPlease check your settings, so that at least one image is in the output region."),
+            _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
     };
     return !images.empty();
 };
@@ -1668,16 +1635,10 @@ bool PanoPanel::CheckFreeSpace(const wxString& folder)
         // 4 channels, 16 bit per channel, assuming the we need the 10 fold space for all temporary space
         if (pano->getOptions().getROI().area() * 80 > freeSpace)
         {
-            wxMessageDialog dialog(this,
-                wxString::Format(_("The folder \"%s\" has only %.1f MiB free. This is not enough for stitching the current panorama. Decrease the output size or select another output folder.\nAre you sure that you still want to stitch it?"), folder.c_str(), freeSpace.ToDouble() / 1048576.0),
-#ifdef _WIN32
-                _("Hugin"),
-#else
-                wxT(""),
-#endif
-                wxICON_EXCLAMATION | wxYES_NO);
-            dialog.SetYesNoLabels(_("Stitch anyway"), _("Let me fix that"));
-            if (dialog.ShowModal() == wxID_NO)
+            hugin_utils::MessageDialog dialog = hugin_utils::GetMessageDialog(wxString::Format(_("The folder \"%s\" has only %.1f MiB free. This is not enough for stitching the current panorama. Decrease the output size or select another output folder.\nAre you sure that you still want to stitch it?"), folder.c_str(), freeSpace.ToDouble() / 1048576.0),
+                _("Hugin"), wxICON_EXCLAMATION | wxYES_NO, wxGetActiveWindow());
+            dialog->SetYesNoLabels(_("Stitch anyway"), _("Let me fix that"));
+            if (dialog->ShowModal() == wxID_NO)
             {
                 // bring the user towards the approptiate controls.
                 MainFrame* mainframe = MainFrame::Get();
@@ -1714,7 +1675,7 @@ wxObject *PanoPanelXmlHandler::DoCreateResource()
     cp->Create(m_parentAsWindow,
                    GetID(),
                    GetPosition(), GetSize(),
-                   GetStyle(wxT("style")),
+                   GetStyle("style"),
                    GetName());
 
     SetupWindow( cp);
@@ -1724,7 +1685,7 @@ wxObject *PanoPanelXmlHandler::DoCreateResource()
 
 bool PanoPanelXmlHandler::CanHandle(wxXmlNode *node)
 {
-    return IsOfClass(node, wxT("PanoPanel"));
+    return IsOfClass(node, "PanoPanel");
 }
 
 IMPLEMENT_DYNAMIC_CLASS(PanoPanelXmlHandler, wxXmlResourceHandler)

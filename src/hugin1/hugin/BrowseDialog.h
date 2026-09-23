@@ -29,7 +29,6 @@
 #include "wx/dialog.h"
 #include "wx/dirctrl.h"
 #include "wx/listctrl.h"
-#include "wx/imaglist.h"
 #include "wx/statbmp.h"
 #include "wx/stattext.h"
 #include "wx/splitter.h"
@@ -114,10 +113,6 @@ private:
     void FillPanoInfo(const PanoInfo& info, long index);
     /** update all item texts */
     void UpdateItemTexts(long newStyle);
-#if !wxCHECK_VERSION(3,1,6)
-    /** update the image indexes */
-    void UpdateImagesIndex();
-#endif
     /** generate preview for pto file with index */
     void GeneratePreview(int index);
     // access to some often needed GUI elements
@@ -141,7 +136,6 @@ private:
     /** critical section to synchronize with ThumbnailThread */
     wxCriticalSection m_ThreadCS;
     friend class ThumbnailThread;
-    DECLARE_EVENT_TABLE()
 };
 
 #endif //_BROWSEPTOFILESDIALOG_H

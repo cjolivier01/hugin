@@ -95,7 +95,7 @@ void rotate_erect( double x_dest, double y_dest, double* x_src, double* y_src, c
 void inv_radial( double x_dest, double y_dest, double* x_src, double* y_src, const _FuncParams &params)
 {
 	// params: double coefficients[5]
-	register double rs, rd, f, scale;
+	double rs, rd, f, scale;
 	int iter = 0;
 
 	rd	= (sqrt( x_dest*x_dest + y_dest*y_dest )) / params.var4; // Normalized
@@ -184,7 +184,7 @@ void vert( double x_dest, double y_dest, double* x_src, double* y_src, const _Fu
 void radial( double x_dest, double y_dest, double* x_src, double* y_src, const _FuncParams & params)
 {
 	// params: double coefficients[4], scale, correction_radius
-	register double r, scale;
+	double r, scale;
 
 	r = (sqrt( x_dest*x_dest + y_dest*y_dest )) / params.var4;
 	if( r < params.var5 )
@@ -237,7 +237,7 @@ static void deregister( double x_dest, double y_dest, double* x_src, double* y_s
 void persp_sphere( double x_dest,double  y_dest, double* x_src, double* y_src, const _FuncParams & params)
 {
 	// params :  double Matrix[3][3], double params.distance
-	register double theta,s,r;
+	double theta,s,r;
 	Vector3 v, v2;
 
 	r = sqrt( x_dest * x_dest + y_dest * y_dest );
@@ -298,7 +298,7 @@ static void pano_rect( double x_dest,double  y_dest, double* x_src, double* y_sr
 void rect_erect( double x_dest,double  y_dest, double* x_src, double* y_src, const _FuncParams & params)
 {	
 	// params: double params.distance
-	register double  phi, theta;
+	double  phi, theta;
 
 	phi 	= x_dest / params.distance;
 	theta 	=  - y_dest / params.distance  + PI / 2.0;
@@ -366,7 +366,7 @@ static void sphere_cp_erect( double x_dest,double  y_dest, double* x_src, double
 void sphere_tp_erect( double x_dest,double  y_dest, double* x_src, double* y_src, const _FuncParams & params)
 {
 	// params: double params.distance
-	register double phi, theta, r,s;
+	double phi, theta, r,s;
 	double v[3];
 	phi 	= x_dest / params.distance;
 	theta 	=  - y_dest / params.distance  + PI / 2;
@@ -407,7 +407,7 @@ static void erect_sphere_cp( double x_dest,double  y_dest, double* x_src, double
 void rect_sphere_tp( double x_dest,double  y_dest, double* x_src, double* y_src, const _FuncParams & params)
 {
 	// params: double params.distance
-	register double rho, theta,r;
+	double rho, theta,r;
 	r = sqrt( x_dest*x_dest + y_dest*y_dest );
 	theta 	= r / params.distance;
 
@@ -425,7 +425,7 @@ void rect_sphere_tp( double x_dest,double  y_dest, double* x_src, double* y_src,
 void sphere_tp_rect( double x_dest,double  y_dest, double* x_src, double* y_src, const _FuncParams & params)
 {	
 	// params: double params.distance
-	register double  theta, r;
+	double  theta, r;
 	r = sqrt(x_dest*x_dest + y_dest*y_dest) / params.distance;
 	if( r== 0.0 )
 		theta = 1.0;
@@ -439,7 +439,7 @@ void sphere_tp_rect( double x_dest,double  y_dest, double* x_src, double* y_src,
 void sphere_tp_pano( double x_dest,double  y_dest, double* x_src, double* y_src, const _FuncParams & params)
 {
 	// params: double params.distance
-	register double r, s, Phi, theta;
+	double r, s, Phi, theta;
 	Phi = x_dest / params.distance;
 	s =  params.distance * sin( Phi ) ;	//  y' -> x
 	r = sqrt( s*s + y_dest*y_dest );
@@ -452,7 +452,7 @@ void sphere_tp_pano( double x_dest,double  y_dest, double* x_src, double* y_src,
 void pano_sphere_tp( double x_dest,double  y_dest, double* x_src, double* y_src, const _FuncParams & params)
 {
 	// params: double params.distance
-	register double r,s, theta;
+	double r,s, theta;
 	double v[3];
 	r = sqrt( x_dest * x_dest + y_dest * y_dest );
 	theta = r / params.distance;
@@ -491,7 +491,7 @@ void erect_rect( double x_dest,double  y_dest, double* x_src, double* y_src, con
 void erect_sphere_tp( double x_dest,double  y_dest, double* x_src, double* y_src, const _FuncParams & params)
 {
 	// params: double params.distance
-	register double  theta,r,s;
+	double  theta,r,s;
 	double	v[3];
 	r = sqrt( x_dest * x_dest + y_dest * y_dest );
 	theta = r / params.distance;
@@ -896,7 +896,7 @@ static double CalcCorrectionRadius_copy(double *coeff )
 static void radial_shift( double x_dest, double y_dest, double* x_src, double* y_src, const _FuncParams & params)
 {
     // params: double coefficients[4], scale, correction_radius, shift_x, shift_y
-    register double r, scale;
+    double r, scale;
 
     r = (sqrt( x_dest*x_dest + y_dest*y_dest )) / params.var4;
     if( r < params.var5 )

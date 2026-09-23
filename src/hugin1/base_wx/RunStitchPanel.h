@@ -64,8 +64,6 @@ private:
     void OnProcessTerminate(wxProcessEvent & event);
 
     MyExecPanel * m_execPanel;
-
-    DECLARE_EVENT_TABLE()
 };
 
 #endif

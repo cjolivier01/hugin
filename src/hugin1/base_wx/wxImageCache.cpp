@@ -33,14 +33,15 @@ wxImage imageCacheEntry2wxImage(ImageCache::EntryPtr e)
     {
         // for float images we need to apply the mapping as selected by the user
         // in the preferences
-        const int mapping = wxConfigBase::Get()->Read(wxT("/ImageCache/Mapping"), HUGIN_IMGCACHE_MAPPING_FLOAT);
-        // find min/max
+        const int mapping = wxConfigBase::Get()->Read("/ImageCache/Mapping", HUGIN_IMGCACHE_MAPPING_FLOAT);
+        // find average and variance
         vigra::RGBToGrayAccessor<vigra::RGBValue<float> > ga;
-        vigra::FindMinMax<float> minmax;   // init functor
-        vigra::inspectImage(srcImageRange(*(e->imageFloat), ga), minmax);
+        vigra::FindAverageAndVariance<float> mean;   // init functor
+        vigra::inspectImage(srcImageRange(*(e->imageFloat), ga), mean);
         // create temporary image with remapped tone scale
         vigra::BRGBImage mappedImg(e->imageFloat->size());
-        vigra_ext::applyMapping(srcImageRange(*(e->imageFloat)), destImage(mappedImg), std::max(minmax.min, 1e-6f), minmax.max, mapping);
+        // scale image to (mean - 3 * std deviation) - (mean + 3 * std deviation), 
+        vigra_ext::applyMapping(srcImageRange(*(e->imageFloat)), destImage(mappedImg), std::max(mean.average() - 3 * sqrt(mean.variance()), 1e-6f), mean.average() + 3 * sqrt(mean.variance()), mapping);
         // convert to wxImage
         wxImage mappedwxImg(mappedImg.width(), mappedImg.height(), (unsigned char *)mappedImg.data(), true);
         return mappedwxImg.Copy();

@@ -45,17 +45,11 @@
 #include "hugin/ImagesTree.h"
 #include "hugin_base/panodata/OptimizerSwitches.h"
 #include "hugin/PanoOperation.h"
+#include "base_wx/wxutils.h"
 
 //============================================================================
 //============================================================================
 //============================================================================
-
-BEGIN_EVENT_TABLE(OptimizePhotometricPanel, wxPanel)
-    EVT_CLOSE(OptimizePhotometricPanel::OnClose)
-    EVT_BUTTON(XRCID("optimize_photo_panel_optimize"), OptimizePhotometricPanel::OnOptimizeButton)
-    EVT_BUTTON(XRCID("optimize_photo_panel_reset"), OptimizePhotometricPanel::OnReset)
-    EVT_CHECKBOX(XRCID("optimize_photo_panel_only_active_images"), OptimizePhotometricPanel::OnCheckOnlyActiveImages)
-END_EVENT_TABLE()
 
 OptimizePhotometricPanel::OptimizePhotometricPanel() : m_pano(0)
 {
@@ -70,7 +64,7 @@ bool OptimizePhotometricPanel::Create(wxWindow *parent, wxWindowID id, const wxP
         return false;
     }
 
-    wxXmlResource::Get()->LoadPanel(this, wxT("optimize_photo_panel"));
+    wxXmlResource::Get()->LoadPanel(this, "optimize_photo_panel");
     wxPanel * panel = XRCCTRL(*this, "optimize_photo_panel", wxPanel);
 
     wxBoxSizer *topsizer = new wxBoxSizer( wxVERTICAL );
@@ -79,6 +73,7 @@ bool OptimizePhotometricPanel::Create(wxWindow *parent, wxWindowID id, const wxP
 
     m_only_active_images_cb = XRCCTRL(*this, "optimize_photo_panel_only_active_images", wxCheckBox);
     DEBUG_ASSERT(m_only_active_images_cb);
+    m_only_active_images_cb->Bind(wxEVT_CHECKBOX, &OptimizePhotometricPanel::OnCheckOnlyActiveImages, this);
 
     m_images_tree = XRCCTRL(*this, "optimize_photo_panel_images", ImagesTreeCtrl);
     DEBUG_ASSERT(m_images_tree);
@@ -86,6 +81,10 @@ bool OptimizePhotometricPanel::Create(wxWindow *parent, wxWindowID id, const wxP
     DEBUG_ASSERT(m_lens_tree);
 
     XRCCTRL(*this, "optimize_photo_panel_splitter", wxSplitterWindow)->SetSashGravity(0.66);
+    // bind other events
+    Bind(wxEVT_CLOSE_WINDOW, &OptimizePhotometricPanel::OnClose, this);
+    Bind(wxEVT_BUTTON, &OptimizePhotometricPanel::OnOptimizeButton, this, XRCID("optimize_photo_panel_optimize"));
+    Bind(wxEVT_BUTTON, &OptimizePhotometricPanel::OnReset, this, XRCID("optimize_photo_panel_reset"));
 
     return true;
 }
@@ -135,10 +134,7 @@ void OptimizePhotometricPanel::SetOnlyActiveImages(const bool onlyActive)
 void OptimizePhotometricPanel::OnOptimizeButton(wxCommandEvent & e)
 {
     DEBUG_TRACE("");
-    // disable window so that user can't click optimize button twice
-    wxWindowDisabler winDisable;
     // run optimizer
-
     HuginBase::UIntSet imgs;
     if (m_only_active_images_cb->IsChecked() || m_pano->getPhotometricOptimizerSwitch()!=0)
     {
@@ -146,13 +142,8 @@ void OptimizePhotometricPanel::OnOptimizeButton(wxCommandEvent & e)
         imgs = m_pano->getActiveImages();
         if (imgs.size() < 2)
         {
-            wxMessageBox(_("The project does not contain any active images.\nPlease activate at least 2 images in the (fast) preview window.\nOptimization canceled."),
-#ifdef _WIN32
-                _("Hugin"),
-#else
-                wxT(""),
-#endif
-                wxICON_ERROR | wxOK);
+            hugin_utils::HuginMessageBox(_("The project does not contain any active images.\nPlease activate at least 2 images in the (fast) preview window.\nOptimization canceled."),
+                _("Hugin"), wxICON_ERROR | wxOK, wxGetActiveWindow());
             return;
         } 
     }
@@ -179,7 +170,9 @@ void OptimizePhotometricPanel::panoramaImagesChanged(HuginBase::Panorama &pano,
 void OptimizePhotometricPanel::runOptimizer(const HuginBase::UIntSet & imgs)
 {
     DEBUG_TRACE("");
-    int mode = m_pano->getPhotometricOptimizerSwitch();
+    const int mode = m_pano->getPhotometricOptimizerSwitch();
+    // disable optimize button, so user can't click twice
+    hugin_utils::DisableWindow disableButton(XRCCTRL(*this, "optimize_photo_panel_optimize", wxButton));
 
     // check if vignetting and response are linked, display a warning if they are not
     // The variables to check:
@@ -212,8 +205,8 @@ void OptimizePhotometricPanel::runOptimizer(const HuginBase::UIntSet & imgs)
     }
     // if the list of commands is empty, all is good and we don't need a warning.
     if (!commands.empty()) {
-        int ok = wxMessageBox(_("The same vignetting and response parameters should\nbe applied for all images of a lens.\nCurrently each image can have different parameters.\nLink parameters?"), _("Link parameters"), wxYES_NO | wxICON_INFORMATION);
-        if (ok == wxYES)
+        if (hugin_utils::HuginMessageBox(_("The same vignetting and response parameters should\nbe applied for all images of a lens.\nCurrently each image can have different parameters.\nLink parameters?"),
+            _("Hugin"), wxYES_NO | wxICON_INFORMATION, wxGetActiveWindow()) == wxYES)
         {
             // perform all the commands we stocked up earilier using a CombinedPanoCommand, so only
             // one command is in the history stack.
@@ -247,7 +240,7 @@ void OptimizePhotometricPanel::runOptimizer(const HuginBase::UIntSet & imgs)
         };
         if(!valid)
         {
-            wxMessageBox(_("You selected no parameters to optimize.\nTherefore optimization will be canceled."), _("Exposure optimization"), wxOK | wxICON_INFORMATION);
+            hugin_utils::HuginMessageBox(_("You selected no parameters to optimize.\nTherefore optimization will be canceled."), _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
             return;
         };
     };
@@ -256,7 +249,7 @@ void OptimizePhotometricPanel::runOptimizer(const HuginBase::UIntSet & imgs)
     {
         std::vector<vigra_ext::PointPairRGB> points;
         long nPoints = 200;
-        wxConfigBase::Get()->Read(wxT("/OptimizePhotometric/nRandomPointsPerImage"), &nPoints , HUGIN_PHOTOMETRIC_OPTIMIZER_NRPOINTS);
+        wxConfigBase::Get()->Read("/OptimizePhotometric/nRandomPointsPerImage", &nPoints , HUGIN_PHOTOMETRIC_OPTIMIZER_NRPOINTS);
 
         ProgressReporterDialog progress(optPano.getNrOfImages()+2, _("Photometric alignment"), _("Loading images"), this);
         progress.Show();
@@ -271,7 +264,7 @@ void OptimizePhotometricPanel::runOptimizer(const HuginBase::UIntSet & imgs)
             ImageCache::EntryPtr e = ImageCache::getInstance().getSmallImage(optPano.getImage(i).getFilename());
             if (!e)
             {
-                wxMessageBox(_("Error: could not load all images"), _("Error"));
+                hugin_utils::HuginMessageBox(_("Error: could not load all images"), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
                 return;
             }
             HuginBase::LimitIntensity limit;
@@ -330,7 +323,7 @@ void OptimizePhotometricPanel::runOptimizer(const HuginBase::UIntSet & imgs)
         };
         if (points.empty())
         {
-            wxMessageBox(_("Error: no overlapping points found, Photometric optimization aborted"), _("Error"));
+            hugin_utils::HuginMessageBox(_("Error: no overlapping points found, Photometric optimization aborted"), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
             return;
         }
 
@@ -381,17 +374,15 @@ void OptimizePhotometricPanel::runOptimizer(const HuginBase::UIntSet & imgs)
         }
         catch (std::exception & error)
         {
-            wxMessageBox(_("Internal error during photometric optimization:\n") + wxString(error.what(), wxConvLocal), _("Internal error"));
+            hugin_utils::HuginMessageBox(_("Internal error during photometric optimization:\n") + wxString(error.what(), wxConvLocal), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
             return;
         }
     }
     wxYield();
 
     // display information about the estimation process:
-    int ret = wxMessageBox(wxString::Format(_("Photometric optimization results:\nAverage difference (RMSE) between overlapping pixels: %.2f gray values (0..255)\n\nApply results?"), error*255),
-                           _("Photometric optimization finished"), wxYES_NO | wxICON_INFORMATION,this);
-
-    if (ret == wxYES)
+    if (hugin_utils::HuginMessageBox(wxString::Format(_("Photometric optimization results:\nAverage difference (RMSE) between overlapping pixels: %.2f gray values (0..255)\n\nApply results?"), error * 255),
+        _("Hugin"), wxYES_NO | wxICON_INFORMATION, wxGetActiveWindow()) == wxYES)
     {
         DEBUG_DEBUG("Applying vignetting corr");
         // TODO: merge into a single update command
@@ -448,7 +439,7 @@ wxObject *OptimizePhotometricPanelXmlHandler::DoCreateResource()
     cp->Create(m_parentAsWindow,
                    GetID(),
                    GetPosition(), GetSize(),
-                   GetStyle(wxT("style")),
+                   GetStyle("style"),
                    GetName());
 
     SetupWindow( cp);
@@ -458,7 +449,7 @@ wxObject *OptimizePhotometricPanelXmlHandler::DoCreateResource()
 
 bool OptimizePhotometricPanelXmlHandler::CanHandle(wxXmlNode *node)
 {
-    return IsOfClass(node, wxT("OptimizePhotometricPanel"));
+    return IsOfClass(node, "OptimizePhotometricPanel");
 }
 
 IMPLEMENT_DYNAMIC_CLASS(OptimizePhotometricPanelXmlHandler, wxXmlResourceHandler)

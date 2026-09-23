@@ -12,7 +12,7 @@ IF(APPLE)
   set( MACOSX_BUNDLE_LONG_VERSION_STRING "Version ${MACOSX_BUNDLE_BUNDLE_VERSION}" )
   set( MACOSX_BUNDLE_INFO_STRING "Hugin ${MACOSX_BUNDLE_BUNDLE_VERSION}" )
   set( MACOSX_BUNDLE_BUNDLE_NAME "Hugin" )
-  set( MACOSX_BUNDLE_COPYRIGHT "Copyright 2024 Pablo d'Angelo" )
+  set( MACOSX_BUNDLE_COPYRIGHT "Copyright 2025 Pablo d'Angelo" )
 
 ELSE(APPLE)
   set( PROGNAME hugin )
@@ -20,7 +20,7 @@ ENDIF(APPLE)
 
 # sources
 set(hugin_SOURCES
-huginApp.cpp ImagesList.cpp MainFrame.cpp CPImageCtrl.cpp CPImagesComboBox.cpp CPEditorPanel.cpp CPDetectorDialog.cpp  
+huginApp.cpp MainFrame.cpp CPImageCtrl.cpp CPImagesComboBox.cpp CPEditorPanel.cpp CPDetectorDialog.cpp  
 ImagesPanel.cpp PanoPanel.cpp HDRMergeOptionDialog.cpp
 PreviewFrame.cpp PreviewPanel.cpp GLPreviewFrame.cpp GLViewer.cpp GLRenderer.cpp 
 OptimizePhotometricPanel.cpp OptimizePanel.cpp CPListFrame.cpp
@@ -37,7 +37,7 @@ GuiLevel.cpp ImageVariableDialog.cpp PreviewEditCPTool.cpp PapywizardImport.cpp 
 RawImport.cpp EditOutputIniDialog.cpp SelectCropAspectRatioDialog.cpp BrowseDialog.cpp GenerateThumbnail.cpp)
 
 set(hugin_HEADERS
-huginApp.h ImagesList.h MainFrame.h CPImageCtrl.h CPImagesComboBox.h CPEditorPanel.h CPDetectorDialog.h 
+huginApp.h MainFrame.h CPImageCtrl.h CPImagesComboBox.h CPEditorPanel.h CPDetectorDialog.h 
 ImagesPanel.h PanoPanel.h HDRMergeOptionDialog.h
 PreviewFrame.h PreviewPanel.h GLPreviewFrame.h GLViewer.h GLRenderer.h 
 OptimizePhotometricPanel.h OptimizePanel.h CPListFrame.h
@@ -119,6 +119,7 @@ IF(APPLE)
                                 ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.ico
                                 ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.jpg
                                 ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.png
+                                ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.svg
                                 ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.txt
                                 ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.pl )
 

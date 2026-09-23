@@ -29,19 +29,10 @@
 #include <wx/stdpaths.h>
 #include <wx/wfstream.h>
 #include "base_wx/Executor.h"
+#include "base_wx/wxutils.h"
 #if defined __WXMAC__ && defined MAC_SELF_CONTAINED_BUNDLE
 #include "base_wx/platform.h"
 #endif
-
-BEGIN_EVENT_TABLE(ChangeUserDefinedSequenceDialog,wxDialog)
-    EVT_RADIOBUTTON(XRCID("radio_default_sequence"), ChangeUserDefinedSequenceDialog::UpdateStatus)
-    EVT_RADIOBUTTON(XRCID("radio_user_defined"), ChangeUserDefinedSequenceDialog::UpdateStatus)
-    EVT_RADIOBUTTON(XRCID("radio_external_sequence"), ChangeUserDefinedSequenceDialog::UpdateStatus)
-    EVT_CHOICE(XRCID("choice_user_defined"), ChangeUserDefinedSequenceDialog::OnChangeUserDefinedChoice)
-    EVT_BUTTON(XRCID("button_external_file"), ChangeUserDefinedSequenceDialog::OnChooseFilename)
-    EVT_BUTTON(wxID_OK, ChangeUserDefinedSequenceDialog::OnOk)
-END_EVENT_TABLE()
-
 
 ChangeUserDefinedSequenceDialog::ChangeUserDefinedSequenceDialog(wxWindow* parent, wxString xrcPrefix, wxString userDefinedSequence, bool assistantUserDefined)
 {
@@ -49,23 +40,20 @@ ChangeUserDefinedSequenceDialog::ChangeUserDefinedSequenceDialog(wxWindow* paren
     // initialization. this will be done later.
     wxXmlResource::Get()->LoadDialog(this, parent, "change_user_defined_dialog");
 
-#ifdef __WXMSW__
-    wxIconBundle myIcons(xrcPrefix+ "data/ptbatcher.ico",wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(xrcPrefix + "data/ptbatcher.png",wxBITMAP_TYPE_PNG);
-    SetIcon(myIcon);
-#endif
-
     m_radio_default = XRCCTRL(*this, "radio_default_sequence", wxRadioButton);
+    m_radio_default->Bind(wxEVT_RADIOBUTTON, &ChangeUserDefinedSequenceDialog::UpdateStatus, this);
     m_radio_user_sequence = XRCCTRL(*this, "radio_user_defined", wxRadioButton);
+    m_radio_user_sequence->Bind(wxEVT_RADIOBUTTON, &ChangeUserDefinedSequenceDialog::UpdateStatus, this);
     m_choice_user_define=XRCCTRL(*this, "choice_user_defined", wxChoice);
+    m_choice_user_define->Bind(wxEVT_CHOICE, &ChangeUserDefinedSequenceDialog::OnChangeUserDefinedChoice, this);
     m_label_user_define = XRCCTRL(*this, "label_user_defined", wxStaticText);
     m_label_user_define_filename = XRCCTRL(*this, "label_user_defined_filename", wxStaticText);
     m_radio_external = XRCCTRL(*this, "radio_external_sequence", wxRadioButton);
+    m_radio_external->Bind(wxEVT_RADIOBUTTON, &ChangeUserDefinedSequenceDialog::UpdateStatus, this);
     m_text_external_file = XRCCTRL(*this, "text_external_file", wxTextCtrl);
     m_text_external_file->AutoCompleteFileNames();
     m_button_external_file = XRCCTRL(*this, "button_external_file", wxButton);
+    m_button_external_file->Bind(wxEVT_BUTTON, &ChangeUserDefinedSequenceDialog::OnChooseFilename, this);
 
     m_isAssistantUserDefined = assistantUserDefined;
     if (m_isAssistantUserDefined)
@@ -127,6 +115,7 @@ ChangeUserDefinedSequenceDialog::ChangeUserDefinedSequenceDialog(wxWindow* paren
     {
         this->Move(0, 44);
     }
+    Bind(wxEVT_BUTTON, &ChangeUserDefinedSequenceDialog::OnOk, this, wxID_OK);
 }
 
 ChangeUserDefinedSequenceDialog::~ChangeUserDefinedSequenceDialog()
@@ -179,24 +168,13 @@ void ChangeUserDefinedSequenceDialog::OnOk(wxCommandEvent& e)
         wxString filename = m_text_external_file->GetValue();
         if (filename.IsEmpty())
         {
-            wxMessageBox(_("Please provide a filename to the user defined sequence."),
-#ifdef __WXMSW__
-                "PTBatcherGUI",
-#else
-                wxEmptyString,
-#endif
-                wxOK | wxOK_DEFAULT | wxICON_WARNING);
+            hugin_utils::HuginMessageBox(_("Please provide a filename to the user defined sequence."), _("PTBatcherGUI"), wxOK | wxOK_DEFAULT | wxICON_WARNING, this);
                 return;
         };
         if (!wxFileName::FileExists(filename))
         {
-            wxMessageBox(wxString::Format(_("The file \"%s\" does not exists.\nPlease provide an existing file to the user defined sequence."), filename.c_str()),
-#ifdef __WXMSW__
-                "PTBatcherGUI",
-#else
-                wxEmptyString,
-#endif
-                wxOK | wxOK_DEFAULT | wxICON_WARNING);
+            hugin_utils::HuginMessageBox(wxString::Format(_("The file \"%s\" does not exists.\nPlease provide an existing file to the user defined sequence."), filename),
+                _("PTBatcherGUI"), wxOK | wxOK_DEFAULT | wxICON_WARNING, this);
             return;
         };
     }
@@ -237,7 +215,7 @@ wxString GetDataPath()
         wxString thePath = MacGetPathToBundledResourceFile(CFSTR("xrc"));
         if (thePath.IsEmpty())
         {
-            wxMessageBox(_("xrc directory not found in bundle"), _("Fatal Error"));
+            hugin_utils::HuginMessageBox(_("xrc directory not found in bundle"), _("PTBatcherGUI"), wxOK|wxICON_ERROR, wxGetActiveWindow());
             return wxEmptyString;
         }
         return thePath + "/";
@@ -246,7 +224,6 @@ wxString GetDataPath()
     // initialize paths
     {
         wxFileName exePath(wxStandardPaths::Get().GetExecutablePath());
-        m_utilsBinDir = exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR);
         exePath.RemoveLastDir();
         const wxString huginRoot = exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR);
         return huginRoot + "share/hugin/data/";

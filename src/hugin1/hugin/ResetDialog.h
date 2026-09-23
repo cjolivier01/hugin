@@ -86,9 +86,6 @@ protected:
 	void OnSelectColor(wxCommandEvent & e);
 	/** Saves current state of all checkboxes when closing dialog with Ok */
 	void OnOk(wxCommandEvent & e);
-
-private:
-    DECLARE_EVENT_TABLE()
 };
 
 #endif //_RESETDIALOG_H

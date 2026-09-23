@@ -64,11 +64,6 @@
 
 wxDEFINE_EVENT(EVT_QUEUE_PROGRESS, wxCommandEvent);
 
-BEGIN_EVENT_TABLE(MyExecPanel, wxPanel)
-    EVT_TIMER(wxID_ANY, MyExecPanel::OnTimer)
-END_EVENT_TABLE()
-
-
 // ============================================================================
 // implementation
 // ============================================================================
@@ -77,7 +72,7 @@ END_EVENT_TABLE()
 // frame constructor
 MyExecPanel::MyExecPanel(wxWindow * parent)
        : wxPanel(parent),
-       m_timerIdleWakeUp(this), m_queue(NULL), m_queueLength(0), m_checkReturnCode(true)
+       m_timerIdleWakeUp(this), m_queue(nullptr), m_queueLength(0), m_checkReturnCode(true)
 {
     m_pidLast = 0;
 
@@ -93,6 +88,8 @@ MyExecPanel::MyExecPanel(wxWindow * parent)
 
     topsizer->Add(m_textctrl, 1, wxEXPAND | wxALL, 10);
     SetSizer( topsizer );
+    Bind(wxEVT_TIMER, &MyExecPanel::OnTimer, this);
+    m_stopWatch.Start();
 }
 
 void MyExecPanel::KillProcess()
@@ -245,7 +242,7 @@ int MyExecPanel::ExecWithRedirect(wxString cmd)
 int MyExecPanel::ExecQueue(HuginQueue::CommandQueue* queue)
 {
     wxConfigBase* config = wxConfigBase::Get();
-    const long threads = config->Read(wxT("/output/NumberOfThreads"), 0l);
+    const long threads = config->Read("/output/NumberOfThreads", 0l);
     // read all current environment variables
     wxGetEnvMap(&m_executeEnv.env);
     // now modify some variables before passing them to wxExecute
@@ -256,7 +253,7 @@ int MyExecPanel::ExecQueue(HuginQueue::CommandQueue* queue)
         m_executeEnv.env["OMP_NUM_THREADS"] = s;
     };
     // set temp dir
-    wxString tempDir = config->Read(wxT("tempDir"), wxT(""));
+    wxString tempDir = config->Read("tempDir", wxEmptyString);
     if (!tempDir.IsEmpty())
     {
 #ifdef UNIX_LIKE
@@ -502,6 +499,15 @@ void MyExecPanel::OnProcessTerminated(MyPipedProcess *process, int pid, int stat
 MyExecPanel::~MyExecPanel()
 {
     delete m_textctrl;
+    if (m_queue)
+    {
+        while (!m_queue->empty())
+        {
+            delete m_queue->back();
+            m_queue->pop_back();
+        };
+        delete m_queue;
+    }; 
 }
 
 bool MyExecPanel::SaveLog(const wxString &filename)
@@ -524,10 +530,17 @@ void MyExecPanel::AddString(const wxString& s)
 {
     if (!s.IsEmpty())
     {
-        m_textctrl->AppendText(s + wxT("\n"));
+        m_textctrl->AppendText(s + "\n");
         m_lastLineStart = m_textctrl->GetLastPosition();
     };
 };
+
+void MyExecPanel::ClearOutput()
+{
+    m_textctrl->Clear();
+    m_lastLineStart = 0;
+    m_stopWatch.Start();
+}
 
 // ----------------------------------------------------------------------------
 // MyPipedProcess
@@ -544,12 +557,6 @@ void MyPipedProcess::OnTerminate(int pid, int status)
 
 // ==============================================================================
 // MyExecDialog
-
-BEGIN_EVENT_TABLE(MyExecDialog, wxDialog)
-    EVT_BUTTON(wxID_CANCEL,  MyExecDialog::OnCancel)
-    EVT_END_PROCESS(wxID_ANY, MyExecDialog::OnProcessTerminate)
-END_EVENT_TABLE()
-
 MyExecDialog::MyExecDialog(wxWindow * parent, const wxString& title, const wxPoint& pos, const wxSize& size)
     : wxDialog(parent, wxID_ANY, title, pos, size, wxRESIZE_BORDER | wxCAPTION | wxCLOSE_BOX | wxSYSTEM_MENU)
 {
@@ -563,18 +570,16 @@ MyExecDialog::MyExecDialog(wxWindow * parent, const wxString& title, const wxPoi
     topsizer->Add( new wxButton(this, wxID_CANCEL, _("Cancel")),
                    0, wxALL | wxALIGN_RIGHT, 10);
 
-#ifdef __WXMSW__
-    // wxFrame does have a strange background color on Windows..
-    this->SetBackgroundColour(m_execPanel->GetBackgroundColour());
-#endif
     SetSizer( topsizer );
 //    topsizer->SetSizeHints( this );
+    Bind(wxEVT_BUTTON, &MyExecDialog::OnCancel, this, wxID_CANCEL);
+    Bind(wxEVT_END_PROCESS, &MyExecDialog::OnProcessTerminate, this);
 }
 
 void MyExecDialog::OnProcessTerminate(wxProcessEvent & event)
 {
     DEBUG_DEBUG("Process terminated with return code: " << event.GetExitCode());
-    if(wxConfigBase::Get()->Read(wxT("CopyLogToClipboard"), 0l)==1l)
+    if(wxConfigBase::Get()->Read("CopyLogToClipboard", 0l)==1l)
     {
         m_execPanel->CopyLogToClipboard();
     };
@@ -627,7 +632,7 @@ int MyExecuteCommandOnDialog(wxString command, wxString args, wxWindow* parent,
     {
         command = hugin_utils::wxQuoteFilename(command);
     };
-    wxString cmdline = command + wxT(" ") + args;
+    wxString cmdline = command + " " + args;
     MyExecDialog dlg(parent, title,
                      wxDefaultPosition, wxSize(640, 400));
 #ifdef __WXMAC__
@@ -647,12 +652,6 @@ int MyExecuteCommandQueue(HuginQueue::CommandQueue* queue, wxWindow* parent, con
         dlg.AddString(comment);
     };
     int returnValue = dlg.ExecQueue(queue);
-    while (!queue->empty())
-    {
-        delete queue->back();
-        queue->pop_back();
-    };
-    delete queue;
     return returnValue;
 };
 

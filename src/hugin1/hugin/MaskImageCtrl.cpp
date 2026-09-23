@@ -28,6 +28,7 @@
 
 #include "panoinc_WX.h"
 #include "panoinc.h"
+#include <wx/dcbuffer.h>
 #include "base_wx/platform.h"
 #include "base_wx/wxcms.h"
 #include "hugin/MainFrame.h"
@@ -44,24 +45,6 @@ const int polygonPointSize=3;
 const int maxSelectionDistance = 10;
 
 // our image control
-
-BEGIN_EVENT_TABLE(MaskImageCtrl, wxScrolledWindow)
-    EVT_SIZE(MaskImageCtrl::OnSize)
-    EVT_MOTION(MaskImageCtrl::OnMouseMove)
-    EVT_LEFT_DOWN(MaskImageCtrl::OnLeftMouseDown)
-    EVT_LEFT_UP(MaskImageCtrl::OnLeftMouseUp)
-    EVT_LEFT_DCLICK(MaskImageCtrl::OnLeftMouseDblClick)
-    EVT_RIGHT_DOWN(MaskImageCtrl::OnRightMouseDown)
-    EVT_RIGHT_UP(MaskImageCtrl::OnRightMouseUp)
-    EVT_MIDDLE_DOWN(MaskImageCtrl::OnMiddleMouseDown)
-    EVT_MIDDLE_UP(MaskImageCtrl::OnMiddleMouseUp)
-    EVT_KEY_UP(MaskImageCtrl::OnKeyUp)
-    EVT_CHAR(MaskImageCtrl::OnChar)
-    EVT_MOUSE_CAPTURE_LOST(MaskImageCtrl::OnCaptureLost)
-    EVT_KILL_FOCUS(MaskImageCtrl::OnKillFocus)
-    EVT_SCROLLWIN(MaskImageCtrl::OnScroll)
-END_EVENT_TABLE()
-
 bool MaskImageCtrl::Create(wxWindow * parent, wxWindowID id,
                          const wxPoint& pos,
                          const wxSize& size,
@@ -80,6 +63,30 @@ bool MaskImageCtrl::Create(wxWindow * parent, wxWindowID id,
     m_oldScrollPosX = -1;
     m_oldScrollPosY = -1;
     m_middleMouseScroll = false;
+    SetBackgroundStyle(wxBG_STYLE_PAINT);
+    // bind event handler
+    Bind(wxEVT_SIZE, &MaskImageCtrl::OnSize, this);
+    Bind(wxEVT_MOTION, &MaskImageCtrl::OnMouseMove, this);
+    Bind(wxEVT_LEFT_DOWN, &MaskImageCtrl::OnLeftMouseDown, this);
+    Bind(wxEVT_LEFT_UP, &MaskImageCtrl::OnLeftMouseUp, this);
+    Bind(wxEVT_LEFT_DCLICK, &MaskImageCtrl::OnLeftMouseDblClick, this);
+    Bind(wxEVT_RIGHT_DOWN, &MaskImageCtrl::OnRightMouseDown, this);
+    Bind(wxEVT_RIGHT_UP, &MaskImageCtrl::OnRightMouseUp, this);
+    Bind(wxEVT_MIDDLE_DOWN, &MaskImageCtrl::OnMiddleMouseDown, this);
+    Bind(wxEVT_MIDDLE_UP, &MaskImageCtrl::OnMiddleMouseUp, this);
+    Bind(wxEVT_KEY_UP, &MaskImageCtrl::OnKeyUp, this);
+    Bind(wxEVT_CHAR, &MaskImageCtrl::OnChar, this);
+    Bind(wxEVT_MOUSE_CAPTURE_LOST, &MaskImageCtrl::OnCaptureLost, this);
+    Bind(wxEVT_KILL_FOCUS, &MaskImageCtrl::OnKillFocus, this);
+    Bind(wxEVT_SCROLLWIN_TOP, &MaskImageCtrl::OnScroll, this);
+    Bind(wxEVT_SCROLLWIN_BOTTOM, &MaskImageCtrl::OnScroll, this);
+    Bind(wxEVT_SCROLLWIN_LINEUP, &MaskImageCtrl::OnScroll, this);
+    Bind(wxEVT_SCROLLWIN_LINEDOWN, &MaskImageCtrl::OnScroll, this);
+    Bind(wxEVT_SCROLLWIN_PAGEUP, &MaskImageCtrl::OnScroll, this);
+    Bind(wxEVT_SCROLLWIN_PAGEDOWN, &MaskImageCtrl::OnScroll, this);
+    Bind(wxEVT_SCROLLWIN_THUMBTRACK, &MaskImageCtrl::OnScroll, this);
+    Bind(wxEVT_SCROLLWIN_THUMBRELEASE, &MaskImageCtrl::OnScroll, this);
+    Bind(wxEVT_PAINT, &MaskImageCtrl::OnPaint, this);
 
     return true;
 }
@@ -109,7 +116,7 @@ void MaskImageCtrl::SetMaskMode(bool newMaskMode)
         };
     };
     m_overlay.Reset();
-    update();
+    Refresh();
 };
 
 void MaskImageCtrl::setImage(const std::string & file, HuginBase::MaskPolygonVector newMask, HuginBase::MaskPolygonVector masksToDraw, ImageRotation rot)
@@ -157,7 +164,7 @@ void MaskImageCtrl::setImage(const std::string & file, HuginBase::MaskPolygonVec
         m_imgRotation=rot;
         setActiveMask(UINT_MAX,false);
         rescaleImage();
-        update();
+        Refresh();
         Scroll(m_oldScrollPosX, m_oldScrollPosY);
     }
     else
@@ -502,7 +509,7 @@ void MaskImageCtrl::OnMouseMove(wxMouseEvent& mouse)
         case CROP_CIRCLE_SCALING:
             UpdateCrop(currentPos);
             m_currentPos=mpos;
-            DrawCrop();
+            Refresh(false);
             m_editPanel->UpdateCropFromImage();
             break;
         case NO_IMAGE:
@@ -514,7 +521,7 @@ void MaskImageCtrl::OnMouseMove(wxMouseEvent& mouse)
             break;
     };
     if(doUpdate)
-        update();
+        Refresh(false);
 }
 
 void MaskImageCtrl::OnLeftMouseDown(wxMouseEvent& mouse)
@@ -699,6 +706,7 @@ void MaskImageCtrl::OnLeftMouseUp(wxMouseEvent& mouse)
             if(HasCapture())
                 ReleaseMouse();
             m_overlay.Reset();
+            doUpdate = true;
             m_currentPos=mpos;
             m_maskEditState=NO_SELECTION;
             {
@@ -771,7 +779,7 @@ void MaskImageCtrl::OnLeftMouseUp(wxMouseEvent& mouse)
                 ReleaseMouse();
     };
     if(doUpdate)
-        update();
+        Refresh(false);
 }
 
 void MaskImageCtrl::OnLeftMouseDblClick(wxMouseEvent &mouse)
@@ -786,7 +794,7 @@ void MaskImageCtrl::OnLeftMouseDblClick(wxMouseEvent &mouse)
                 HuginBase::MaskPolygon mask;
                 m_editingMask=mask;
                 m_selectedPoints.clear();
-                MainFrame::Get()->SetStatusText(wxT(""),0);
+                MainFrame::Get()->SetStatusText(wxEmptyString,0);
                 break;
             };
         case NEW_POLYGON_CREATING:
@@ -807,9 +815,9 @@ void MaskImageCtrl::OnLeftMouseDblClick(wxMouseEvent &mouse)
                     HuginBase::MaskPolygon mask;
                     m_editingMask=mask;
                     m_selectedPoints.clear();
-                    update();
+                    Refresh();
                 };
-                MainFrame::Get()->SetStatusText(wxT(""),0);
+                MainFrame::Get()->SetStatusText(wxEmptyString,0);
                 break;
             };
         default:
@@ -841,7 +849,7 @@ void MaskImageCtrl::OnRightMouseDown(wxMouseEvent& mouse)
             {
                 fill_set(m_selectedPoints,0,m_editingMask.getMaskPolygon().size()-1);
                 m_maskEditState=POINTS_MOVING;
-                update();
+                Refresh();
             };
         };
     };
@@ -865,7 +873,7 @@ void MaskImageCtrl::OnRightMouseUp(wxMouseEvent& mouse)
                 HuginBase::MaskPolygon mask;
                 m_editingMask=mask;
                 m_selectedPoints.clear();
-                MainFrame::Get()->SetStatusText(wxT(""),0);
+                MainFrame::Get()->SetStatusText(wxEmptyString,0);
                 break;
             };
         case NEW_POLYGON_CREATING:
@@ -884,9 +892,9 @@ void MaskImageCtrl::OnRightMouseUp(wxMouseEvent& mouse)
                     HuginBase::MaskPolygon mask;
                     m_editingMask=mask;
                     m_selectedPoints.clear();
-                    update();
+                    Refresh();
                 };
-                MainFrame::Get()->SetStatusText(wxT(""),0);
+                MainFrame::Get()->SetStatusText(wxEmptyString,0);
                 break;
             };
         case POINTS_DELETING:
@@ -929,6 +937,8 @@ void MaskImageCtrl::OnRightMouseUp(wxMouseEvent& mouse)
                     m_maskEditState=NO_SELECTION;
                 else
                     m_maskEditState=POINTS_SELECTED;
+                m_overlay.Reset();
+                Refresh();
                 break;
             };
         case POINTS_MOVING:
@@ -1123,7 +1133,7 @@ void MaskImageCtrl::OnKillFocus(wxFocusEvent &e)
         HuginBase::MaskPolygon mask;
         m_editingMask=mask;
         m_selectedPoints.clear();
-        update();
+        Refresh();
     };
 };
 
@@ -1138,13 +1148,6 @@ void MaskImageCtrl::startNewPolygon()
 wxSize MaskImageCtrl::DoGetBestSize() const
 {
     return wxSize(m_imageSize.GetWidth(),m_imageSize.GetHeight());
-};
-
-void MaskImageCtrl::update()
-{
-    wxClientDC dc(this);
-    PrepareDC(dc);
-    OnDraw(dc);
 };
 
 void MaskImageCtrl::DrawPolygon(wxDC &dc, HuginBase::MaskPolygon poly, bool isSelected, bool drawMarker)
@@ -1202,14 +1205,6 @@ void MaskImageCtrl::DrawPolygon(wxDC &dc, HuginBase::MaskPolygon poly, bool isSe
     delete []polygonPoints;
 };
 
-void MaskImageCtrl::DrawCrop()
-{
-    wxClientDC dc(this);
-    PrepareDC(dc);
-    DrawImageBitmap(dc, scale(HuginBase::maskOffset));
-    DrawCrop(dc);
-};
-
 void MaskImageCtrl::DrawCrop(wxDC & dc)
 {
     // draw crop rectangle/circle
@@ -1235,38 +1230,16 @@ void MaskImageCtrl::DrawCrop(wxDC & dc)
     };
 };
 
-void MaskImageCtrl::DrawImageBitmap(wxDC& dc, int offset)
+void MaskImageCtrl::OnPaint(wxPaintEvent& e)
 {
-    //draw border around image to allow drawing mask over boudaries of image
-    //don't draw as one complete rectangle to prevent flickering
-    dc.SetPen(wxPen(GetBackgroundColour(), 1, wxPENSTYLE_SOLID));
-    dc.SetBrush(wxBrush(GetBackgroundColour(), wxBRUSHSTYLE_SOLID));
-    dc.DrawRectangle(0, 0, offset, m_bitmap.GetHeight() + 2 * offset);
-    dc.DrawRectangle(0, 0, m_bitmap.GetWidth() + 2 * offset, offset);
-    dc.DrawRectangle(m_bitmap.GetWidth() + offset, 0, m_bitmap.GetWidth() + 2 * offset, m_bitmap.GetHeight() + 2 * offset);
-    dc.DrawRectangle(0, m_bitmap.GetHeight() + offset, m_bitmap.GetWidth() + 2 * offset, m_bitmap.GetHeight() + 2 * offset);
-    dc.DrawBitmap(m_bitmap, offset, offset);
-}
-
-void MaskImageCtrl::OnDraw(wxDC & dc)
-{
+    wxAutoBufferedPaintDC dc(this);
+    PrepareDC(dc);
+    dc.SetBackground(GetBackgroundColour());
+    dc.Clear();
     if(m_maskEditState!=NO_IMAGE && m_bitmap.IsOk())
     {
         const int offset=scale(HuginBase::maskOffset);
-        DrawImageBitmap(dc, offset);
-        if(m_fitToWindow)
-        {
-            //draw border when image is fit to window, otherwise the border (without image) is not updated
-            wxSize clientSize=GetClientSize();
-            if(m_bitmap.GetWidth()+2*offset<clientSize.GetWidth())
-            {
-                dc.DrawRectangle(m_bitmap.GetWidth()+2*offset,0,clientSize.GetWidth()-m_bitmap.GetWidth()+2*offset,clientSize.GetHeight());
-            };
-            if(m_bitmap.GetHeight()+2*offset<clientSize.GetHeight())
-            {
-                dc.DrawRectangle(0,m_bitmap.GetHeight()+2*offset,clientSize.GetWidth(),clientSize.GetHeight()-m_bitmap.GetHeight()+2*offset);
-            };
-        };
+        dc.DrawBitmap(m_bitmap, offset, offset);
         if (m_maskMode && m_showActiveMasks && (m_cropMode != HuginBase::SrcPanoImage::NO_CROP || !m_masksToDraw.empty()))
         {
             //whole image, we need it several times
@@ -1357,15 +1330,8 @@ void MaskImageCtrl::OnDraw(wxDC & dc)
         //and now the actual polygon
         if(m_maskEditState==POINTS_ADDING || m_maskEditState==POINTS_MOVING || m_maskEditState==NEW_POLYGON_CREATING)
             DrawPolygon(dc,m_editingMask,true,true);
-    }
-    else
-    {
-        // clear the rectangle and exit
-        dc.SetPen(wxPen(GetBackgroundColour(), 1, wxPENSTYLE_SOLID));
-        dc.SetBrush(wxBrush(GetBackgroundColour(), wxBRUSHSTYLE_SOLID));
-        dc.Clear();
-        return;
     };
+
 }
 
 void MaskImageCtrl::OnSize(wxSizeEvent &e)
@@ -1478,10 +1444,16 @@ void MaskImageCtrl::rescaleImage()
 
 void MaskImageCtrl::DrawSelectionRectangle()
 {
+#if wxCHECK_VERSION(3,3,0)
+    wxOverlayDC dc(m_overlay, this);
+    PrepareDC(dc);
+    dc.Clear();
+#else
     wxClientDC dc(this);
     PrepareDC(dc);
     wxDCOverlay overlayDC(m_overlay, &dc);
     overlayDC.Clear();
+#endif
     dc.SetPen(wxPen(m_color_selection, 2, wxPENSTYLE_LONG_DASH));
     dc.SetBrush(*wxTRANSPARENT_BRUSH);
     dc.DrawRectangle(m_dragStartPos.x,m_dragStartPos.y,
@@ -1574,7 +1546,7 @@ double MaskImageCtrl::getScaleFactor() const
 void MaskImageCtrl::setDrawingActiveMasks(bool newDrawActiveMasks)
 {
     m_showActiveMasks=newDrawActiveMasks;
-    update();
+    Refresh();
 };
 
 IMPLEMENT_DYNAMIC_CLASS(MaskImageCtrl, wxScrolledWindow)
@@ -1592,7 +1564,7 @@ wxObject *MaskImageCtrlXmlHandler::DoCreateResource()
     cp->Create(m_parentAsWindow,
                    GetID(),
                    GetPosition(), GetSize(),
-                   GetStyle(wxT("style")),
+                   GetStyle("style"),
                    GetName());
 
     SetupWindow(cp);
@@ -1602,7 +1574,7 @@ wxObject *MaskImageCtrlXmlHandler::DoCreateResource()
 
 bool MaskImageCtrlXmlHandler::CanHandle(wxXmlNode *node)
 {
-    return IsOfClass(node, wxT("MaskImageCtrl"));
+    return IsOfClass(node, "MaskImageCtrl");
 };
 
 IMPLEMENT_DYNAMIC_CLASS(MaskImageCtrlXmlHandler, wxXmlResourceHandler)

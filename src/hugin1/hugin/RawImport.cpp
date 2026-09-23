@@ -28,6 +28,7 @@
 #include "panoinc.h"
 #include "base_wx/platform.h"
 #include "base_wx/MyExternalCmdExecDialog.h"
+#include "base_wx/wxutils.h"
 #include "hugin/huginApp.h"
 #include "base_wx/CommandHistory.h"
 #include "base_wx/wxPanoCommand.h"
@@ -69,13 +70,8 @@ public:
             }
             else
             {
-                wxMessageBox(wxString::Format(_("Executable \"%s\" not found.\nPlease specify a valid executable in preferences."), exePath.GetFullPath()),
-#ifdef _WIN32
-                    _("Hugin"),
-#else
-                    wxT(""),
-#endif
-                    wxOK | wxICON_INFORMATION, dlg);
+                hugin_utils::HuginMessageBox(wxString::Format(_("Executable \"%s\" not found.\nPlease specify a valid executable in preferences."), exePath.GetFullPath()),
+                    _("Hugin"), wxOK | wxICON_INFORMATION, dlg);
                 return false;
             };
         };
@@ -83,17 +79,12 @@ public:
 #ifdef __WXMSW__
         pathlist.Add(huginApp::Get()->GetUtilsBinDir());
 #endif
-        pathlist.AddEnvList(wxT("PATH"));
+        pathlist.AddEnvList("PATH");
         m_exe = pathlist.FindAbsoluteValidPath(exePath.GetFullPath());
         if (m_exe.IsEmpty())
         {
-            wxMessageBox(wxString::Format(_("Executable \"%s\" not found in PATH.\nPlease specify a valid executable in preferences."), exePath.GetFullPath()),
-#ifdef _WIN32
-                _("Hugin"),
-#else
-                wxT(""),
-#endif
-                wxOK | wxICON_INFORMATION, dlg);
+            hugin_utils::HuginMessageBox(wxString::Format(_("Executable \"%s\" not found in PATH.\nPlease specify a valid executable in preferences."), exePath.GetFullPath()),
+                _("Hugin"), wxOK | wxICON_INFORMATION, dlg);
             return false;
         };
         return true;
@@ -213,13 +204,8 @@ public:
         m_processingProfile = XRCCTRL(*dlg, "raw_rt_processing_profile", wxTextCtrl)->GetValue().Trim(true).Trim(false);
         if (!m_processingProfile.IsEmpty() && !wxFileName::FileExists(m_processingProfile))
         {
-            wxMessageBox(wxString::Format(_("Processing profile \"%s\" not found.\nPlease specify a valid file or leave field empty for default settings."), m_processingProfile),
-#ifdef _WIN32
-                _("Hugin"),
-#else
-                wxT(""),
-#endif
-                wxOK | wxICON_INFORMATION, dlg);
+            hugin_utils::HuginMessageBox(wxString::Format(_("Processing profile \"%s\" not found.\nPlease specify a valid file or leave field empty for default settings."), m_processingProfile),
+                _("Hugin"), wxOK | wxICON_INFORMATION, dlg);
             return false;
         }
         return true;
@@ -275,7 +261,7 @@ protected:
         // works only with RT 5.5 and above
         wxRegKey regkey(wxRegKey::HKLM, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\rawtherapee-cli.exe");
         wxString prog;
-        if (regkey.HasValue(wxT("")) && regkey.QueryRawValue(wxT(""), prog))
+        if (regkey.HasValue(wxEmptyString) && regkey.QueryRawValue(wxEmptyString, prog))
         {
             if (wxFileName::FileExists(prog))
             {
@@ -287,7 +273,7 @@ protected:
             // now check if installed for current user only
             wxRegKey regkeyUser(wxRegKey::HKCU, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\rawtherapee-cli.exe");
             wxString prog;
-            if (regkeyUser.HasValue(wxT("")) && regkeyUser.QueryRawValue(wxT(""), prog))
+            if (regkeyUser.HasValue(wxEmptyString) && regkeyUser.QueryRawValue(wxEmptyString, prog))
             {
                 if (wxFileName::FileExists(prog))
                 {
@@ -420,7 +406,7 @@ protected:
         // try reading installed version from registry
         wxRegKey regkey(wxRegKey::HKLM, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\darktable-cli.exe");
         wxString prog;
-        if (regkey.HasValue(wxT("")) && regkey.QueryRawValue(wxT(""), prog))
+        if (regkey.HasValue(wxEmptyString) && regkey.QueryRawValue(wxEmptyString, prog))
         {
             if (wxFileName::FileExists(prog))
             {
@@ -432,7 +418,7 @@ protected:
             // now check if installed for current user only
             wxRegKey regkeyUser(wxRegKey::HKCU, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\darktable-cli.exe");
             wxString prog;
-            if (regkeyUser.HasValue(wxT("")) && regkeyUser.QueryRawValue(wxT(""), prog))
+            if (regkeyUser.HasValue(wxEmptyString) && regkeyUser.QueryRawValue(wxEmptyString, prog))
             {
                 if (wxFileName::FileExists(prog))
                 {
@@ -477,28 +463,20 @@ public:
         topsizer->Add(m_progressPanel, 1, wxEXPAND | wxALL, 2);
 
         wxBoxSizer* bottomsizer = new wxBoxSizer(wxHORIZONTAL);
-#if wxCHECK_VERSION(3,1,0)
         m_progress = new wxGauge(this, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL | wxGA_PROGRESS);
-#else
-        m_progress = new wxGauge(this, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL);
-#endif
         bottomsizer->Add(m_progress, 1, wxEXPAND | wxALL, 10);
         m_cancelButton = new wxButton(this, wxID_CANCEL, _("Cancel"));
         bottomsizer->Add(m_cancelButton, 0, wxALL, 10);
         m_cancelButton->Bind(wxEVT_BUTTON, &RawImportProgress::OnCancel, this);
         topsizer->Add(bottomsizer, 0, wxEXPAND);
-#ifdef __WXMSW__
-        // wxFrame does have a strange background color on Windows..
-        this->SetBackgroundColour(m_progressPanel->GetBackgroundColour());
-#endif
         SetSizer(topsizer);
-        RestoreFramePosition(this, "RawImportProgress");
+        hugin_utils::RestoreFramePosition(this, "RawImportProgress");
         Bind(EVT_QUEUE_PROGRESS, &RawImportProgress::OnProgress, this);
         Bind(wxEVT_INIT_DIALOG, &RawImportProgress::OnInitDialog, this);
     };
     virtual ~RawImportProgress()
     {
-        StoreFramePosition(this, "RawImportProgress");
+        hugin_utils::StoreFramePosition(this, "RawImportProgress");
     }
 
 protected:
@@ -508,13 +486,8 @@ protected:
         {
             if (!m_converter->ProcessReferenceOutput(m_progressPanel->GetLogAsArrayString()))
             {
-                wxMessageBox(_("Could not process the output of reference image.\nFurther processed images will not have a consistent white balance."),
-#ifdef _WIN32
-                    _("Hugin"),
-#else
-                    wxT(""),
-#endif
-                    wxOK | wxICON_INFORMATION, this);
+                hugin_utils::HuginMessageBox(_("Could not process the output of reference image.\nFurther processed images will not have a consistent white balance."),
+                    _("Hugin"), wxOK | wxICON_INFORMATION, this);
 
             };
             Unbind(wxEVT_END_PROCESS, &RawImportProgress::OnProcessReferenceTerminate, this);
@@ -524,7 +497,7 @@ protected:
             if (rawFiles.IsEmpty())
             {
                 // copy log to clipboard if preference is set
-                if (wxConfigBase::Get()->Read(wxT("CopyLogToClipboard"), 0l) == 1l)
+                if (wxConfigBase::Get()->Read("CopyLogToClipboard", 0l) == 1l)
                 {
                     m_progressPanel->CopyLogToClipboard();
                 };
@@ -549,7 +522,7 @@ protected:
         if (e.GetExitCode() == 0)
         {
             // copy log to clipboard if preference is set
-            if (wxConfigBase::Get()->Read(wxT("CopyLogToClipboard"), 0l) == 1l)
+            if (wxConfigBase::Get()->Read("CopyLogToClipboard", 0l) == 1l)
             {
                 m_progressPanel->CopyLogToClipboard();
             };
@@ -597,29 +570,13 @@ private:
     MyExecPanel * m_progressPanel;
 };
 
-BEGIN_EVENT_TABLE(RawImportDialog, wxDialog)
-    EVT_BUTTON(XRCID("raw_rt_processing_profile_select"), RawImportDialog::OnSelectRTProcessingProfile)
-    EVT_BUTTON(wxID_OK, RawImportDialog::OnOk)
-    EVT_RADIOBUTTON(XRCID("raw_rb_dcraw"), RawImportDialog::OnRawConverterSelected)
-    EVT_RADIOBUTTON(XRCID("raw_rb_rt"), RawImportDialog::OnRawConverterSelected)
-    EVT_RADIOBUTTON(XRCID("raw_rb_darktable"), RawImportDialog::OnRawConverterSelected)
-END_EVENT_TABLE()
-
 RawImportDialog::RawImportDialog(wxWindow *parent, HuginBase::Panorama* pano, std::vector<std::string>& rawFiles)
 {
     // load our children. some children might need special
     // initialization. this will be done later.
-    wxXmlResource::Get()->LoadDialog(this, parent, wxT("import_raw_dialog"));
+    wxXmlResource::Get()->LoadDialog(this, parent, "import_raw_dialog");
 
-#ifdef __WXMSW__
-    wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + wxT("data/hugin.ico"),wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(huginApp::Get()->GetXRCPath() + wxT("data/hugin.png"),wxBITMAP_TYPE_PNG);
-    SetIcon(myIcon);
-#endif
-
-    RestoreFramePosition(this, "RawImportDialog");
+    hugin_utils::RestoreFramePosition(this, "RawImportDialog");
     wxConfigBase* config = wxConfig::Get();
     // dcraw
     wxString s = config->Read("/RawImportDialog/dcrawParameter", "");
@@ -653,11 +610,16 @@ RawImportDialog::RawImportDialog(wxWindow *parent, HuginBase::Panorama* pano, st
     {
         m_rawImages.Add(wxString(file.c_str(), HUGIN_CONV_FILENAME));
     };
+    Bind(wxEVT_BUTTON, &RawImportDialog::OnSelectRTProcessingProfile, this, XRCID("raw_rt_processing_profile_select"));
+    Bind(wxEVT_RADIOBUTTON, &RawImportDialog::OnRawConverterSelected, this, XRCID("raw_rb_dcraw"));
+    Bind(wxEVT_RADIOBUTTON, &RawImportDialog::OnRawConverterSelected, this, XRCID("raw_rb_rt"));
+    Bind(wxEVT_RADIOBUTTON, &RawImportDialog::OnRawConverterSelected, this, XRCID("raw_rb_darktable"));
+    Bind(wxEVT_BUTTON, &RawImportDialog::OnOk, this, wxID_OK);
 };
 
 RawImportDialog::~RawImportDialog()
 {
-    StoreFramePosition(this, "RawImportDialog");
+    hugin_utils::StoreFramePosition(this, "RawImportDialog");
 }
 
 PanoCommand::PanoCommand * RawImportDialog::GetPanoCommand()
@@ -737,7 +699,7 @@ bool RawImportDialog::CheckRawFiles()
     if (!errorReadingFile.IsEmpty())
     {
         wxDialog dlg;
-        wxXmlResource::Get()->LoadDialog(&dlg, this, wxT("dlg_warning_filename"));
+        wxXmlResource::Get()->LoadDialog(&dlg, this, "dlg_warning_filename");
         dlg.SetLabel(_("Warning: Read error"));
         XRCCTRL(dlg, "dlg_warning_text", wxStaticText)->SetLabel(_("The following files will be skipped because the metadata of these files could not read."));
         XRCCTRL(dlg, "dlg_warning_list", wxListBox)->Append(errorReadingFile);
@@ -761,7 +723,7 @@ bool RawImportDialog::CheckRawFiles()
     else
     {
         wxDialog dlg;
-        wxXmlResource::Get()->LoadDialog(&dlg, this, wxT("dlg_warning_filename"));
+        wxXmlResource::Get()->LoadDialog(&dlg, this, "dlg_warning_filename");
         dlg.SetLabel(_("Warning: raw images from different cameras"));
         XRCCTRL(dlg, "dlg_warning_text", wxStaticText)->SetLabel(_("The following images were shot with different camera than the other one.\nThe raw import works only for images from the same cam."));
         XRCCTRL(dlg, "dlg_warning_list", wxListBox)->Append(differentCam);
@@ -821,7 +783,7 @@ void RawImportDialog::OnOk(wxCommandEvent & e)
         if (!existingImages.IsEmpty())
         {
             wxDialog dlg;
-            wxXmlResource::Get()->LoadDialog(&dlg, this, wxT("dlg_warning_overwrite"));
+            wxXmlResource::Get()->LoadDialog(&dlg, this, "dlg_warning_overwrite");
             XRCCTRL(dlg, "dlg_overwrite_list", wxListBox)->Append(existingImages);
             dlg.Fit();
             dlg.CenterOnScreen();
@@ -865,13 +827,8 @@ void RawImportDialog::OnOk(wxCommandEvent & e)
         };
         if (missingFiles || files.empty())
         {
-            wxMessageBox(_("At least one raw images was not successfully converted.\nThis image(s) will be skipped"),
-#ifdef _WIN32
-                _("Hugin"),
-#else
-                wxT(""),
-#endif
-                wxOK | wxICON_INFORMATION, this);
+            hugin_utils::HuginMessageBox(_("At least one raw images was not successfully converted.\nThis image(s) will be skipped"),
+                _("Hugin"), wxOK | wxICON_INFORMATION, this);
         };
         if (files.empty())
         {

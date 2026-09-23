@@ -26,6 +26,7 @@
 #include "panoinc_WX.h"
 #include "GraphTools.h"
 #include "panotools/PanoToolsInterface.h"
+#include "base_wx/wxutils.h"
 
 namespace wxGraphTools
 {
@@ -34,8 +35,8 @@ IMPLEMENT_CLASS(GraphPopupWindow, wxPopupTransientWindow)
 GraphPopupWindow::GraphPopupWindow(wxWindow* parent, wxBitmap bitmap) : wxPopupTransientWindow(parent)
 {
     m_bitmapControl = new wxStaticBitmap(this, wxID_ANY, bitmap);
-    m_bitmapControl->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(GraphPopupWindow::OnLeftDown), NULL, this);
-    m_bitmapControl->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(GraphPopupWindow::OnRightDown), NULL, this);
+    m_bitmapControl->Bind(wxEVT_LEFT_DOWN, &GraphPopupWindow::OnLeftDown, this);
+    m_bitmapControl->Bind(wxEVT_RIGHT_DOWN, &GraphPopupWindow::OnRightDown, this);
     wxBoxSizer* topsizer = new wxBoxSizer(wxHORIZONTAL);
     topsizer->Add(m_bitmapControl, wxEXPAND);
     SetSizerAndFit(topsizer);
@@ -49,37 +50,35 @@ void GraphPopupWindow::OnLeftDown(wxMouseEvent &e)
 void GraphPopupWindow::OnRightDown(wxMouseEvent &e)
 {
     wxConfigBase* config = wxConfigBase::Get();
-    wxFileDialog dlg(this,
+    wxFileDialog dlg(GetParent(),
         _("Save graph"),
-        config->Read(wxT("/actualPath"), wxT("")), wxT(""),
+        config->Read("/actualPath", wxEmptyString), wxEmptyString,
         _("Bitmap (*.bmp)|*.bmp|PNG-File (*.png)|*.png"),
         wxFD_SAVE | wxFD_OVERWRITE_PROMPT, wxDefaultPosition);
-    dlg.SetDirectory(config->Read(wxT("/actualPath"), wxT("")));
-    dlg.SetFilterIndex(config->Read(wxT("/lastImageTypeIndex"), 0l));
+    dlg.SetDirectory(config->Read("/actualPath", wxEmptyString));
+    dlg.SetFilterIndex(config->Read("/lastImageTypeIndex", 0l));
     if (dlg.ShowModal() == wxID_OK)
     {
-        config->Write(wxT("/actualPath"), dlg.GetDirectory());  // remember for later
+        config->Write("/actualPath", dlg.GetDirectory());  // remember for later
         wxFileName filename(dlg.GetPath());
         int imageType = dlg.GetFilterIndex();
-        config->Write(wxT("/lastImageTypeIndex"), imageType);
+        config->Write("/lastImageTypeIndex", imageType);
         if (!filename.HasExt())
         {
             switch (imageType)
             {
                 case 1:
-                    filename.SetExt(wxT("png"));
+                    filename.SetExt("png");
                     break;
                 case 0:
                 default:
-                    filename.SetExt(wxT("bmp"));
+                    filename.SetExt("bmp");
                     break;
             };
         };
         if (filename.FileExists())
         {
-            int d = wxMessageBox(wxString::Format(_("File %s exists. Overwrite?"), filename.GetFullPath().c_str()),
-                _("Save image"), wxYES_NO | wxICON_QUESTION);
-            if (d != wxYES)
+            if (!hugin_utils::AskUserOverwrite(filename.GetFullPath(), _("Hugin"), GetParent()))
             {
                 return;
             }

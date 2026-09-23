@@ -71,7 +71,6 @@ private:
     wxCheckBox *m_option_khan_ag;
     wxCheckBox *m_option_khan_am;
     wxString m_cmd;
-    DECLARE_EVENT_TABLE()
 };
 
 #endif //_HDRMERGEOPTIONDIALOG_H

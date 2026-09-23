@@ -46,6 +46,7 @@
 #include "algorithms/basic/CalculateOptimalScale.h"
 #include "base_wx/PTWXDlg.h"
 #include "base_wx/wxPlatform.h"
+#include "base_wx/wxutils.h"
 
 // more standard includes if needed
 #include <algorithm>
@@ -62,50 +63,12 @@
 // Celeste header
 #include "Celeste.h"
 
-BEGIN_EVENT_TABLE(CPEditorPanel, wxPanel)
-    EVT_CPEVENT(CPEditorPanel::OnCPEvent)
-    EVT_COMBOBOX(XRCID("cp_editor_left_choice"), CPEditorPanel::OnLeftChoiceChange )
-    EVT_COMBOBOX(XRCID("cp_editor_right_choice"), CPEditorPanel::OnRightChoiceChange )
-    EVT_LIST_ITEM_SELECTED(XRCID("cp_editor_cp_list"), CPEditorPanel::OnCPListSelect)
-    EVT_LIST_ITEM_DESELECTED(XRCID("cp_editor_cp_list"), CPEditorPanel::OnCPListDeselect)
-    EVT_LIST_COL_END_DRAG(XRCID("cp_editor_cp_list"), CPEditorPanel::OnColumnWidthChange)
-    EVT_LIST_COL_CLICK(XRCID("cp_editor_cp_list"), CPEditorPanel::OnColumnHeaderClick)
-    EVT_CHOICE(XRCID("cp_editor_choice_zoom"), CPEditorPanel::OnZoom)
-    EVT_TEXT_ENTER(XRCID("cp_editor_x1"), CPEditorPanel::OnTextPointChange )
-    EVT_TEXT_ENTER(XRCID("cp_editor_y1"), CPEditorPanel::OnTextPointChange )
-    EVT_TEXT_ENTER(XRCID("cp_editor_x2"), CPEditorPanel::OnTextPointChange )
-    EVT_TEXT_ENTER(XRCID("cp_editor_y2"), CPEditorPanel::OnTextPointChange )
-    EVT_CHOICE(XRCID("cp_editor_mode"), CPEditorPanel::OnTextPointChange )
-    EVT_CHAR(CPEditorPanel::OnKey)
-    EVT_BUTTON(XRCID("cp_editor_delete"), CPEditorPanel::OnDeleteButton)
-    EVT_BUTTON(XRCID("cp_editor_add"), CPEditorPanel::OnAddButton)
-    EVT_BUTTON(XRCID("cp_editor_previous_img"), CPEditorPanel::OnPrevImg)
-    EVT_BUTTON(XRCID("cp_editor_next_img"), CPEditorPanel::OnNextImg)
-    EVT_BUTTON(XRCID("cp_editor_finetune_button"), CPEditorPanel::OnFineTuneButton)
-    EVT_BUTTON(XRCID("cp_editor_action_button"), CPEditorPanel::OnActionButton)
-    EVT_MENU(XRCID("cp_menu_create_cp"), CPEditorPanel::OnActionSelectCreate)
-    EVT_MENU(XRCID("cp_menu_celeste"), CPEditorPanel::OnActionSelectCeleste)
-    EVT_MENU(XRCID("cp_menu_clean_cp"), CPEditorPanel::OnActionSelectCleanCP)
-    EVT_CHECKBOX(XRCID("cp_editor_show_lines"), CPEditorPanel::OnShowLinesCheckbox)
-END_EVENT_TABLE()
-
 CPEditorPanel::CPEditorPanel()
 {
     DEBUG_TRACE("**********************");
     m_pano = 0;
     m_countCP = 0;
 }
-
-#if !wxCHECK_VERSION(3,1,6)
-// helper function to set image in header
-void SetColumnImage(wxListCtrl* list, int col, int image)
-{
-    wxListItem item;
-    item.SetMask(wxLIST_MASK_IMAGE);
-    item.SetImage(image);
-    list->SetColumn(col, item);
-}
-#endif
 
 bool CPEditorPanel::Create(wxWindow* parent, wxWindowID id,
                     const wxPoint& pos,
@@ -129,13 +92,14 @@ bool CPEditorPanel::Create(wxWindow* parent, wxWindowID id,
     m_scrollHint = CP_SCROLL_BOTH;
 
     DEBUG_TRACE("");
-    wxXmlResource::Get()->LoadPanel(this, wxT("cp_editor_panel"));
+    wxXmlResource::Get()->LoadPanel(this, "cp_editor_panel");
     wxPanel * panel = XRCCTRL(*this, "cp_editor_panel", wxPanel);
 
     wxBoxSizer *topsizer = new wxBoxSizer( wxVERTICAL );
     topsizer->Add(panel, 1, wxEXPAND, 0);
 
-    m_leftChoice = XRCCTRL(*this, "cp_editor_left_choice", CPImagesComboBox); 
+    m_leftChoice = XRCCTRL(*this, "cp_editor_left_choice", CPImagesComboBox);
+    m_leftChoice->Bind(wxEVT_COMBOBOX, &CPEditorPanel::OnLeftChoiceChange, this);
     m_leftImg = XRCCTRL(*this, "cp_editor_left_img", CPImageCtrl);
     assert(m_leftImg);
     m_leftImg->Init(this);
@@ -144,6 +108,7 @@ bool CPEditorPanel::Create(wxWindow* parent, wxWindowID id,
 
     // right image
     m_rightChoice = XRCCTRL(*this, "cp_editor_right_choice", CPImagesComboBox);
+    m_rightChoice->Bind(wxEVT_COMBOBOX, &CPEditorPanel::OnRightChoiceChange, this);
     m_rightImg = XRCCTRL(*this, "cp_editor_right_img", CPImageCtrl);
     assert(m_rightImg);
     m_rightImg->Init(this);
@@ -152,7 +117,6 @@ bool CPEditorPanel::Create(wxWindow* parent, wxWindowID id,
 
     // setup list view
     m_cpList = XRCCTRL(*this, "cp_editor_cp_list", wxListCtrl);
-    m_cpList->Connect(wxEVT_CHAR,wxKeyEventHandler(CPEditorPanel::OnKey),NULL,this);
     m_cpList->InsertColumn( 0, _("#"), wxLIST_FORMAT_RIGHT, 35);
     m_cpList->InsertColumn( 1, _("left x"), wxLIST_FORMAT_RIGHT, 65);
     m_cpList->InsertColumn( 2, _("left y"), wxLIST_FORMAT_RIGHT, 65);
@@ -160,72 +124,48 @@ bool CPEditorPanel::Create(wxWindow* parent, wxWindowID id,
     m_cpList->InsertColumn( 4, _("right y"), wxLIST_FORMAT_RIGHT, 65);
     m_cpList->InsertColumn( 5, _("Alignment"), wxLIST_FORMAT_LEFT,110 );
     m_cpList->InsertColumn( 6, _("Distance"), wxLIST_FORMAT_RIGHT, 110);
+    m_cpList->Bind(wxEVT_CHAR, &CPEditorPanel::OnKey, this);
+    m_cpList->Bind(wxEVT_LIST_ITEM_SELECTED, &CPEditorPanel::OnCPListSelect, this);
+    m_cpList->Bind(wxEVT_LIST_ITEM_DESELECTED, &CPEditorPanel::OnCPListDeselect, this);
+    m_cpList->Bind(wxEVT_LIST_COL_END_DRAG, &CPEditorPanel::OnColumnWidthChange, this);
+    m_cpList->Bind(wxEVT_LIST_COL_CLICK, &CPEditorPanel::OnColumnHeaderClick, this);
 
     //get saved width
     wxConfigBase* config = wxConfig::Get();
     for ( int j=0; j < m_cpList->GetColumnCount() ; j++ )
     {
         // -1 is auto
-        int width = config->Read(wxString::Format( wxT("/CPEditorPanel/ColumnWidth%d"), j ), -1);
+        int width = config->Read(wxString::Format( "/CPEditorPanel/ColumnWidth%d", j ), -1);
         if(width != -1)
             m_cpList->SetColumnWidth(j, width);
     }
-    m_sortCol = config->Read(wxT("/CPEditorPanel/SortColumn"), -1);
-    m_sortAscending = config->Read(wxT("/CPEditorPanel/SortAscending"), 1) == 1 ? true : false;
+    m_sortCol = config->Read("/CPEditorPanel/SortColumn", -1);
+    m_sortAscending = config->Read("/CPEditorPanel/SortAscending", 1) == 1 ? true : false;
     if (m_sortCol != -1)
     {
-#if wxCHECK_VERSION(3,1,6)
         m_cpList->ShowSortIndicator(m_sortCol, m_sortAscending);
-#else
-        SetColumnImage(m_cpList, m_sortCol, m_sortAscending ? 0 : 1);
-#endif
     };
-
-#if !wxCHECK_VERSION(3,1,6)
-    // creating bitmaps for indicating sorting order
-    wxMemoryDC memDC;
-    memDC.SetFont(GetFont());
-    wxSize fontSize = memDC.GetTextExtent(wxT("\u25b3"));
-    wxCoord charSize = std::max(fontSize.GetWidth(), fontSize.GetHeight());
-    wxImageList* sortIcons = new wxImageList(charSize, charSize, true, 0);
-    {
-        wxBitmap bmp(charSize, charSize);
-        wxMemoryDC dc(bmp);
-        dc.SetBackgroundMode(wxPENSTYLE_TRANSPARENT);
-        dc.SetBackground(GetBackgroundColour());
-        dc.Clear();
-        dc.SetFont(GetFont());
-        dc.DrawText(wxT("\u25b3"), (charSize - fontSize.GetWidth()) / 2, (charSize - fontSize.GetHeight()) / 2);
-        dc.SelectObject(wxNullBitmap);
-        sortIcons->Add(bmp, GetBackgroundColour());
-    };
-    {
-        wxBitmap bmp(charSize, charSize);
-        wxMemoryDC dc(bmp);
-        dc.SetBackgroundMode(wxPENSTYLE_TRANSPARENT);
-        dc.SetBackground(GetBackgroundColour());
-        dc.Clear();
-        dc.SetFont(GetFont());
-        dc.DrawText(wxT("\u25bd"), (charSize - fontSize.GetWidth()) / 2, (charSize - fontSize.GetHeight()) / 2);
-        dc.SelectObject(wxNullBitmap);
-        sortIcons->Add(bmp, GetBackgroundColour());
-    };
-    m_cpList->AssignImageList(sortIcons, wxIMAGE_LIST_SMALL);
-#endif
 
     // other controls
     m_x1Text = XRCCTRL(*this,"cp_editor_x1", wxTextCtrl);
     m_x1Text->PushEventHandler(new TextKillFocusHandler(this));
+    m_x1Text->Bind(wxEVT_TEXT_ENTER, &CPEditorPanel::OnTextPointChange, this);
     m_y1Text = XRCCTRL(*this,"cp_editor_y1", wxTextCtrl);
     m_y1Text->PushEventHandler(new TextKillFocusHandler(this));
+    m_y1Text->Bind(wxEVT_TEXT_ENTER, &CPEditorPanel::OnTextPointChange, this);
     m_x2Text = XRCCTRL(*this,"cp_editor_x2", wxTextCtrl);
     m_x2Text->PushEventHandler(new TextKillFocusHandler(this));
+    m_x2Text->Bind(wxEVT_TEXT_ENTER, &CPEditorPanel::OnTextPointChange, this);
     m_y2Text = XRCCTRL(*this,"cp_editor_y2", wxTextCtrl);
     m_y2Text->PushEventHandler(new TextKillFocusHandler(this));
+    m_y2Text->Bind(wxEVT_TEXT_ENTER, &CPEditorPanel::OnTextPointChange, this);
 
     m_cpModeChoice = XRCCTRL(*this, "cp_editor_mode", wxChoice);
+    m_cpModeChoice->Bind(wxEVT_CHOICE, &CPEditorPanel::OnTextPointChange, this);
     m_addButton = XRCCTRL(*this, "cp_editor_add", wxButton);
+    m_addButton->Bind(wxEVT_BUTTON, &CPEditorPanel::OnAddButton, this);
     m_delButton = XRCCTRL(*this, "cp_editor_delete", wxButton);
+    m_delButton->Bind(wxEVT_BUTTON, &CPEditorPanel::OnDeleteButton, this);
 
     m_autoAddCB = XRCCTRL(*this,"cp_editor_auto_add", wxCheckBox);
     DEBUG_ASSERT(m_autoAddCB);
@@ -237,18 +177,30 @@ bool CPEditorPanel::Create(wxWindow* parent, wxWindowID id,
 
     m_showLinesCB = XRCCTRL(*this, "cp_editor_show_lines", wxCheckBox);
     DEBUG_ASSERT(m_showLinesCB);
+    m_showLinesCB->Bind(wxEVT_CHECKBOX, &CPEditorPanel::OnShowLinesCheckbox, this);
+
+    m_finetuneButton = XRCCTRL(*this, "cp_editor_finetune_button", wxButton);
+    m_finetuneButton->Bind(wxEVT_BUTTON, &CPEditorPanel::OnFineTuneButton, this);
+    m_prevImgButton = XRCCTRL(*this, "cp_editor_previous_img", wxButton);
+    m_prevImgButton->Bind(wxEVT_BUTTON, &CPEditorPanel::OnPrevImg, this);
+    m_nextImgButton = XRCCTRL(*this, "cp_editor_next_img", wxButton);
+    m_nextImgButton->Bind(wxEVT_BUTTON, &CPEditorPanel::OnNextImg, this);
 
     m_actionButton = XRCCTRL(*this, "cp_editor_action_button", wxButton);
-    m_actionButton->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(CPEditorPanel::OnActionContextMenu), NULL, this);
-    m_cpActionContextMenu = wxXmlResource::Get()->LoadMenu(wxT("cp_menu_action"));
+    m_actionButton->Bind(wxEVT_CONTEXT_MENU, &CPEditorPanel::OnActionContextMenu, this);
+    m_actionButton->Bind(wxEVT_BUTTON, &CPEditorPanel::OnActionButton, this);
+    m_cpActionContextMenu = wxXmlResource::Get()->LoadMenu("cp_menu_action");
     // setup scroll window for the controls under the images
     m_cp_ctrls = XRCCTRL(*this, "cp_controls_panel", wxPanel);
     DEBUG_ASSERT(m_cp_ctrls);
 
-    m_autoAddCB->SetValue(config->Read(wxT("/CPEditorPanel/autoAdd"),0l) != 0 );
-    m_fineTuneCB->SetValue(config->Read(wxT("/CPEditorPanel/autoFineTune"),1l) != 0 );
-    m_estimateCB->SetValue(config->Read(wxT("/CPEditorPanel/autoEstimate"),1l) != 0 );
-    m_showLinesCB->SetValue(config->Read(wxT("/CPEditorPanel/showLines"), 1l) != 0);
+    m_zoomChoice = XRCCTRL(*this, "cp_editor_choice_zoom", wxChoice);
+    m_zoomChoice->Bind(wxEVT_CHOICE, &CPEditorPanel::OnZoom, this);
+
+    m_autoAddCB->SetValue(config->Read("/CPEditorPanel/autoAdd",0l) != 0 );
+    m_fineTuneCB->SetValue(config->Read("/CPEditorPanel/autoFineTune",1l) != 0 );
+    m_estimateCB->SetValue(config->Read("/CPEditorPanel/autoEstimate",1l) != 0 );
+    m_showLinesCB->SetValue(config->Read("/CPEditorPanel/showLines", 1l) != 0);
     m_leftImg->ShowLines(m_showLinesCB->IsChecked());
     m_rightImg->ShowLines(m_showLinesCB->IsChecked());
 
@@ -260,22 +212,22 @@ bool CPEditorPanel::Create(wxWindow* parent, wxWindowID id,
     m_fineTuneCB->Disable();
     m_estimateCB->Disable();
     m_showLinesCB->Disable();
-    XRCCTRL(*this, "cp_editor_finetune_button", wxButton)->Disable();
+    m_finetuneButton->Disable();
     m_actionButton->Disable();
-    XRCCTRL(*this, "cp_editor_choice_zoom", wxChoice)->Disable();
-    XRCCTRL(*this, "cp_editor_previous_img", wxButton)->Disable();
-    XRCCTRL(*this, "cp_editor_next_img", wxButton)->Disable();
+    m_zoomChoice->Disable();
+    m_prevImgButton->Disable();
+    m_nextImgButton->Disable();
     m_leftChoice->Disable();
     m_rightChoice->Disable();
 
     // apply zoom specified in xrc file
     wxCommandEvent dummy;
-    dummy.SetInt(XRCCTRL(*this,"cp_editor_choice_zoom",wxChoice)->GetSelection());
+    dummy.SetInt(m_zoomChoice->GetSelection());
     OnZoom(dummy);
 
     SetSizer( topsizer );
     // read last used action setting
-    m_cpActionButtonMode = static_cast<CPTabActionButtonMode>(config->Read(wxT("/CPEditorPanel/ActionMode"), 1l));
+    m_cpActionButtonMode = static_cast<CPTabActionButtonMode>(config->Read("/CPEditorPanel/ActionMode", 1l));
     switch (m_cpActionButtonMode)
     {
         case CPTAB_ACTION_CREATE_CP:
@@ -301,6 +253,11 @@ bool CPEditorPanel::Create(wxWindow* parent, wxWindowID id,
             };
             break;
     };
+    Bind(EVT_CPEVENT, &CPEditorPanel::OnCPEvent, this);
+    Bind(wxEVT_CHAR, &CPEditorPanel::OnKey, this);
+    Bind(wxEVT_MENU, &CPEditorPanel::OnActionSelectCreate, this, XRCID("cp_menu_create_cp"));
+    Bind(wxEVT_MENU, &CPEditorPanel::OnActionSelectCeleste, this, XRCID("cp_menu_celeste"));
+    Bind(wxEVT_MENU, &CPEditorPanel::OnActionSelectCleanCP, this, XRCID("cp_menu_clean_cp"));
 
     return true;
 }
@@ -322,12 +279,12 @@ CPEditorPanel::~CPEditorPanel()
     m_y2Text->PopEventHandler(true);
 
     wxConfigBase* config = wxConfig::Get();
-    config->Write(wxT("/CPEditorPanel/autoAdd"), m_autoAddCB->IsChecked() ? 1 : 0);
-    config->Write(wxT("/CPEditorPanel/autoFineTune"), m_fineTuneCB->IsChecked() ? 1 : 0);
-    config->Write(wxT("/CPEditorPanel/autoEstimate"), m_estimateCB->IsChecked() ? 1 : 0);
-    config->Write(wxT("/CPEditorPanel/showLines"), m_showLinesCB->IsChecked() ? 1 : 0);
-    config->Write(wxT("/CPEditorPanel/SortColumn"), m_sortCol);
-    config->Write(wxT("/CPEditorPanel/SortAscending"), m_sortAscending ? 1 : 0);
+    config->Write("/CPEditorPanel/autoAdd", m_autoAddCB->IsChecked() ? 1 : 0);
+    config->Write("/CPEditorPanel/autoFineTune", m_fineTuneCB->IsChecked() ? 1 : 0);
+    config->Write("/CPEditorPanel/autoEstimate", m_estimateCB->IsChecked() ? 1 : 0);
+    config->Write("/CPEditorPanel/showLines", m_showLinesCB->IsChecked() ? 1 : 0);
+    config->Write("/CPEditorPanel/SortColumn", m_sortCol);
+    config->Write("/CPEditorPanel/SortAscending", m_sortAscending ? 1 : 0);
     config->Flush();
 
     m_pano->removeObserver(this);
@@ -422,6 +379,8 @@ void CPEditorPanel::UpdateTransforms()
         img.setX(0);
         img.setY(0);
         img.setZ(0);
+        img.setTranslationPlaneYaw(0);
+        img.setTranslationPlanePitch(0);
         // calculate optimal scale factor
         const double scale = 2.0 * HuginBase::CalculateOptimalScale::calcOptimalPanoScale(img, opts);
         HuginBase::PanoramaOptions scaledOpts(opts);
@@ -441,6 +400,8 @@ void CPEditorPanel::UpdateTransforms()
         img.setX(0);
         img.setY(0);
         img.setZ(0);
+        img.setTranslationPlaneYaw(0);
+        img.setTranslationPlanePitch(0);
         // calculate optimal scale factor
         const double scale = 2.0 * HuginBase::CalculateOptimalScale::calcOptimalPanoScale(img, opts);
         HuginBase::PanoramaOptions scaledOpts(opts);
@@ -604,7 +565,7 @@ void CPEditorPanel::OnCPEvent( CPEvent&  ev)
 
     switch (ev.getMode()) {
     case CPEvent::NONE:
-        text = wxT("NONE");
+        text = "NONE";
         break;
     case CPEvent::NEW_POINT_CHANGED:
         NewPointChange(ev.getPoint(),left);
@@ -755,8 +716,8 @@ void CPEditorPanel::OnCPEvent( CPEvent&  ev)
             break;
         }
     } //end switch
-    m_leftImg->update();
-    m_rightImg->update();
+    m_leftImg->Refresh();
+    m_rightImg->Refresh();
 }
 
 
@@ -869,10 +830,10 @@ void CPEditorPanel::SelectLocalPoint(unsigned int LVpointNr, bool scrollLeft, bo
     m_selectedPoint = LVpointNr;
 
     const HuginBase::ControlPoint & p = currentPoints[LVpointNr].second;
-    m_x1Text->SetValue(wxString::Format(wxT("%.2f"),p.x1));
-    m_y1Text->SetValue(wxString::Format(wxT("%.2f"),p.y1));
-    m_x2Text->SetValue(wxString::Format(wxT("%.2f"),p.x2));
-    m_y2Text->SetValue(wxString::Format(wxT("%.2f"),p.y2));
+    m_x1Text->SetValue(wxString::Format("%.2f",p.x1));
+    m_y1Text->SetValue(wxString::Format("%.2f",p.y1));
+    m_x2Text->SetValue(wxString::Format("%.2f",p.x2));
+    m_y2Text->SetValue(wxString::Format("%.2f",p.y2));
     m_cpModeChoice->SetSelection(p.mode);
     m_leftImg->selectPoint(LVpointNr, scrollLeft);
     m_rightImg->selectPoint(LVpointNr, scrollRight);
@@ -947,9 +908,9 @@ void CPEditorPanel::estimateAndAddOtherPoint(const hugin_utils::FDiff2D & p,
             MainFrame::Get()->SetStatusText(_("searching similar points..."),0);
             hugin_utils::FDiff2D newPoint = otherImg->getNewPoint();
 
-            long templWidth = wxConfigBase::Get()->Read(wxT("/Finetune/TemplateSize"), HUGIN_FT_TEMPLATE_SIZE);
+            long templWidth = wxConfigBase::Get()->Read("/Finetune/TemplateSize", HUGIN_FT_TEMPLATE_SIZE);
             const HuginBase::SrcPanoImage & img = m_pano->getImage(thisImgNr);
-            double sAreaPercent = wxConfigBase::Get()->Read(wxT("/Finetune/SearchAreaPercent"),HUGIN_FT_SEARCH_AREA_PERCENT);
+            double sAreaPercent = wxConfigBase::Get()->Read("/Finetune/SearchAreaPercent",HUGIN_FT_SEARCH_AREA_PERCENT);
             int sWidth = std::min((int)(img.getWidth() * sAreaPercent / 100.0), 500);
             vigra_ext::CorrelationResult corrPoint;
             bool corrOk=false;
@@ -963,7 +924,7 @@ void CPEditorPanel::estimateAndAddOtherPoint(const hugin_utils::FDiff2D & p,
                                       sWidth,
                                       corrPoint);
             } catch (std::exception & e) {
-                wxMessageBox(wxString (e.what(), wxConvLocal), _("Error during Fine-tune"));
+                hugin_utils::HuginMessageBox(wxString::Format(_("Error during Fine-tune (%s)"), wxString(e.what(), wxConvLocal)), _("Hugin"), wxOK, this);
             }
             if (! corrOk) {
                 // just set point, PointFineTune already complained
@@ -985,7 +946,7 @@ void CPEditorPanel::estimateAndAddOtherPoint(const hugin_utils::FDiff2D & p,
                     s1.Printf(_("Point fine-tuned, angle: %.0f deg, correlation coefficient: %0.3f, curvature: %0.3f %0.3f"),
                               corrPoint.maxAngle, corrPoint.maxi, corrPoint.curv.x, corrPoint.curv.y );
                     
-                    wxString s2 = s1 + wxT(" -- ") + wxString(_("change points, or press right mouse button to add the pair"));
+                    wxString s2 = s1 + " -- " + wxString(_("change points, or press right mouse button to add the pair"));
                     MainFrame::Get()->SetStatusText(s2,0);
                 } else {
                     // add point
@@ -1086,9 +1047,9 @@ void CPEditorPanel::NewPointChange(hugin_utils::FDiff2D p, bool left)
 
                 hugin_utils::FDiff2D newPoint = otherImg->getNewPoint();
 
-                long templWidth = wxConfigBase::Get()->Read(wxT("/Finetune/TemplateSize"),HUGIN_FT_TEMPLATE_SIZE);
+                long templWidth = wxConfigBase::Get()->Read("/Finetune/TemplateSize",HUGIN_FT_TEMPLATE_SIZE);
                 const HuginBase::SrcPanoImage & img = m_pano->getImage(thisImgNr);
-                double sAreaPercent = wxConfigBase::Get()->Read(wxT("/Finetune/SearchAreaPercent"),
+                double sAreaPercent = wxConfigBase::Get()->Read("/Finetune/SearchAreaPercent",
                                                                 HUGIN_FT_SEARCH_AREA_PERCENT);
                 int sWidth = std::min((int) (img.getWidth() * sAreaPercent / 100.0), 500);
                 bool corrOk = false;
@@ -1103,7 +1064,7 @@ void CPEditorPanel::NewPointChange(hugin_utils::FDiff2D p, bool left)
                                            sWidth,
                                            corrRes);
                 } catch (std::exception & e) {
-                    wxMessageBox(wxString (e.what(), wxConvLocal), _("Error during Fine-tune"));
+                    hugin_utils::HuginMessageBox(wxString::Format(_("Error during Fine-tune (%s)"), wxString(e.what(), wxConvLocal)), _("Hugin"), wxOK, this);
                 }
 
                 if (! corrOk) {
@@ -1114,7 +1075,7 @@ void CPEditorPanel::NewPointChange(hugin_utils::FDiff2D p, bool left)
                     {
                         thisImg->setScale(m_detailZoomFactor);
                         thisImg->setNewPoint(corrRes.maxi > -1 ? corrRes.maxpos : p);
-                        thisImg->update();
+                        thisImg->Refresh();
                         otherImg->setNewPoint(corrRes.maxi > -1 ? corrRes.corrPos : newPoint);
                         changeState(BOTH_POINTS_SELECTED);
                     };
@@ -1130,7 +1091,7 @@ void CPEditorPanel::NewPointChange(hugin_utils::FDiff2D p, bool left)
                     s1.Printf(_("Point fine-tuned, angle: %.0f deg, correlation coefficient: %0.3f, curvature: %0.3f %0.3f"),
                               corrRes.maxAngle, corrRes.maxi, corrRes.curv.x, corrRes.curv.y );
                     
-                    corrMsg = s1 + wxT(" -- ") +  wxString(_("change points, or press right mouse button to add the pair"));
+                    corrMsg = s1 + " -- " +  wxString(_("change points, or press right mouse button to add the pair"));
                     MainFrame::Get()->SetStatusText(corrMsg,0);
                     
                 }
@@ -1163,7 +1124,7 @@ void CPEditorPanel::NewPointChange(hugin_utils::FDiff2D p, bool left)
             // keep both point floating around, until they are
             // added with a right mouse click or the add button
             changeState(BOTH_POINTS_SELECTED);
-            if (corrMsg != wxT("")) {
+            if (corrMsg != wxEmptyString) {
                 MainFrame::Get()->SetStatusText(corrMsg,0);
             }
         }
@@ -1269,14 +1230,14 @@ vigra_ext::CorrelationResult PointFineTuneProjectionAware(const HuginBase::SrcPa
     wxBusyCursor busy;
     // read settings
     wxConfigBase *cfg = wxConfigBase::Get();
-    bool rotatingFinetune = cfg->Read(wxT("/Finetune/RotationSearch"), HUGIN_FT_ROTATION_SEARCH) == 1;
+    bool rotatingFinetune = cfg->Read("/Finetune/RotationSearch", HUGIN_FT_ROTATION_SEARCH) == 1;
     double startAngle = HUGIN_FT_ROTATION_START_ANGLE;
-    cfg->Read(wxT("/Finetune/RotationStartAngle"), &startAngle, HUGIN_FT_ROTATION_START_ANGLE);
+    cfg->Read("/Finetune/RotationStartAngle", &startAngle, HUGIN_FT_ROTATION_START_ANGLE);
     startAngle = DEG_TO_RAD(startAngle);
     double stopAngle = HUGIN_FT_ROTATION_STOP_ANGLE;
-    cfg->Read(wxT("/Finetune/RotationStopAngle"), &stopAngle, HUGIN_FT_ROTATION_STOP_ANGLE);
+    cfg->Read("/Finetune/RotationStopAngle", &stopAngle, HUGIN_FT_ROTATION_STOP_ANGLE);
     stopAngle = DEG_TO_RAD(stopAngle);
-    int nSteps = cfg->Read(wxT("/Finetune/RotationSteps"), HUGIN_FT_ROTATION_STEPS);
+    int nSteps = cfg->Read("/Finetune/RotationSteps", HUGIN_FT_ROTATION_STEPS);
     // if both images have the same projection and the angle does not differ to much use normal point fine-tune
     if (templ.getProjection() == search.getProjection()
         && templ.getHFOV() < 65 && search.getHFOV() < 65
@@ -1397,14 +1358,14 @@ bool CPEditorPanel::PointFineTune(unsigned int tmplImgNr,
     MainFrame::Get()->SetStatusText(_("searching similar points..."),0);
 
     double corrThresh=HUGIN_FT_CORR_THRESHOLD;
-    wxConfigBase::Get()->Read(wxT("/Finetune/CorrThreshold"),&corrThresh,
+    wxConfigBase::Get()->Read("/Finetune/CorrThreshold",&corrThresh,
                               HUGIN_FT_CORR_THRESHOLD);
 
     double curvThresh = HUGIN_FT_CURV_THRESHOLD;
     // use default curvature threshold for line control points
     if (tmplImgNr != subjImgNr)
     {
-        wxConfigBase::Get()->Read(wxT("/Finetune/CurvThreshold"), &curvThresh, HUGIN_FT_CURV_THRESHOLD);
+        wxConfigBase::Get()->Read("/Finetune/CurvThreshold", &curvThresh, HUGIN_FT_CURV_THRESHOLD);
     };
 
     // fixme: just cutout suitable gray 
@@ -1425,32 +1386,18 @@ bool CPEditorPanel::PointFineTune(unsigned int tmplImgNr,
     if (res.corrPos.x < 0 || res.corrPos.y < 0 || res.maxpos.x < 0 || res.maxpos.y < 0)
     {
         // invalid transformation in fine tune
-        wxMessageDialog dlg(this,
-            _("No similar point found."),
-#ifdef _WIN32
-            _("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxICON_ERROR | wxOK);
-        dlg.SetExtendedMessage(_("An internal transformation went wrong.\nCheck that the point is inside the image."));
-        dlg.ShowModal();
+        hugin_utils::MessageDialog dlg=hugin_utils::GetMessageDialog(_("No similar point found."), _("Hugin"), wxICON_ERROR | wxOK, this);
+        dlg->SetExtendedMessage(_("An internal transformation went wrong.\nCheck that the point is inside the image."));
+        dlg->ShowModal();
         return false;
     }
     if (res.maxi < corrThresh || res.curv.x < curvThresh || res.curv.y < curvThresh )
     {
         // Bad correlation result.
-        wxMessageDialog dlg(this,
-            _("No similar point found."),
-#ifdef _WIN32
-            _("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxICON_ERROR | wxOK);
-        dlg.SetExtendedMessage(wxString::Format(_("Check the similarity visually.\nCorrelation coefficient (%.3f) is lower than the threshold set in the preferences."),
+        hugin_utils::MessageDialog dlg=hugin_utils::GetMessageDialog(_("No similar point found."), _("Hugin"), wxICON_ERROR | wxOK, this);
+        dlg->SetExtendedMessage(wxString::Format(_("Check the similarity visually.\nCorrelation coefficient (%.3f) is lower than the threshold set in the preferences."),
                              res.maxi));
-        dlg.ShowModal();
+        dlg->ShowModal();
         return false;
     }
 
@@ -1506,6 +1453,10 @@ void CPEditorPanel::panoramaChanged(HuginBase::Panorama &pano)
         }
         m_cpList->SetColumn(6, item);
     };
+    m_leftChoice->CalcCPDistance(m_pano);
+    m_leftChoice->Refresh();
+    m_rightChoice->CalcCPDistance(m_pano);
+    m_rightChoice->Refresh();
 
     DEBUG_TRACE("");
 }
@@ -1531,11 +1482,11 @@ void CPEditorPanel::panoramaImagesChanged(HuginBase::Panorama &pano, const Hugin
         m_fineTuneCB->Disable();
         m_estimateCB->Disable();
         m_showLinesCB->Disable();
-        XRCCTRL(*this, "cp_editor_finetune_button", wxButton)->Disable();
+        m_finetuneButton->Disable();
         m_actionButton->Disable();
-        XRCCTRL(*this, "cp_editor_choice_zoom", wxChoice)->Disable();
-        XRCCTRL(*this, "cp_editor_previous_img", wxButton)->Disable();
-        XRCCTRL(*this, "cp_editor_next_img", wxButton)->Disable();
+        m_zoomChoice->Disable();
+        m_prevImgButton->Disable();
+        m_nextImgButton->Disable();
         m_leftChoice->Disable();
         m_rightChoice->Disable();
     }
@@ -1547,11 +1498,11 @@ void CPEditorPanel::panoramaImagesChanged(HuginBase::Panorama &pano, const Hugin
         m_fineTuneCB->Enable();
         m_estimateCB->Enable();
         m_showLinesCB->Enable();
-        XRCCTRL(*this, "cp_editor_finetune_button", wxButton)->Enable();
+        m_finetuneButton->Enable();
         m_actionButton->Enable();
-        XRCCTRL(*this, "cp_editor_choice_zoom", wxChoice)->Enable();
-        XRCCTRL(*this, "cp_editor_previous_img", wxButton)->Enable();
-        XRCCTRL(*this, "cp_editor_next_img", wxButton)->Enable();
+        m_zoomChoice->Enable();
+        m_prevImgButton->Enable();
+        m_nextImgButton->Enable();
         m_leftChoice->Enable();
         m_rightChoice->Enable();
 
@@ -1561,8 +1512,8 @@ void CPEditorPanel::panoramaImagesChanged(HuginBase::Panorama &pano, const Hugin
         m_rightChoice->Freeze();
         for (unsigned int i=0; i < ((nrTabs < nrImages)? nrTabs: nrImages); i++) {
             wxFileName fileName(wxString (pano.getImage(i).getFilename().c_str(), HUGIN_CONV_FILENAME));
-            m_leftChoice->SetString(i, wxString::Format(wxT("%d"), i) + wxT(". - ") + fileName.GetFullName());
-            m_rightChoice->SetString(i, wxString::Format(wxT("%d"), i) + wxT(". - ") + fileName.GetFullName());
+            m_leftChoice->SetString(i, wxString::Format("%d", i) + ". - " + fileName.GetFullName());
+            m_rightChoice->SetString(i, wxString::Format("%d", i) + ". - " + fileName.GetFullName());
         }
         // wxChoice on windows looses the selection when setting new labels. Restore selection
 #ifdef __WXMSW__
@@ -1575,8 +1526,8 @@ void CPEditorPanel::panoramaImagesChanged(HuginBase::Panorama &pano, const Hugin
             for (unsigned int i=nrTabs; i < nrImages; i++)
             {
                 wxFileName fileName(wxString (pano.getImage(i).getFilename().c_str(), HUGIN_CONV_FILENAME));
-                m_leftChoice->Append(wxString::Format(wxT("%d"), i) + wxT(". - ") + fileName.GetFullName());
-                m_rightChoice->Append(wxString::Format(wxT("%d"), i) + wxT(". - ") + fileName.GetFullName());
+                m_leftChoice->Append(wxString::Format("%d", i) + ". - " + fileName.GetFullName());
+                m_rightChoice->Append(wxString::Format("%d", i) + ". - " + fileName.GetFullName());
             }
         }
         m_leftChoice->Thaw();
@@ -1738,8 +1689,8 @@ void CPEditorPanel::UpdateDisplay(bool newPair)
             i++;
         }
     }
-    m_leftImg->update();
-    m_rightImg->update();
+    m_leftImg->Refresh();
+    m_rightImg->Refresh();
 
     // put these control points into our listview.
     unsigned int selectedItem = UINT_MAX;
@@ -1759,13 +1710,13 @@ void CPEditorPanel::UpdateDisplay(bool newPair)
     for (unsigned int i=0; i < currentPoints.size(); ++i) {
         const HuginBase::ControlPoint & p(currentPoints[i].second);
         DEBUG_DEBUG("inserting LVItem " << i);
-        long item = m_cpList->InsertItem(i, wxString::Format(wxT("%d"), i), -1);
+        long item = m_cpList->InsertItem(i, wxString::Format("%d", i), -1);
         // store index in list data field
         m_cpList->SetItemData(item, i);
-        m_cpList->SetItem(i,1,wxString::Format(wxT("%.2f"),p.x1));
-        m_cpList->SetItem(i,2,wxString::Format(wxT("%.2f"),p.y1));
-        m_cpList->SetItem(i,3,wxString::Format(wxT("%.2f"),p.x2));
-        m_cpList->SetItem(i,4,wxString::Format(wxT("%.2f"),p.y2));
+        m_cpList->SetItem(i,1,wxString::Format("%.2f",p.x1));
+        m_cpList->SetItem(i,2,wxString::Format("%.2f",p.y1));
+        m_cpList->SetItem(i,3,wxString::Format("%.2f",p.x2));
+        m_cpList->SetItem(i,4,wxString::Format("%.2f",p.y2));
         wxString mode;
         switch (p.mode) {
         case HuginBase::ControlPoint::X_Y:
@@ -1782,7 +1733,7 @@ void CPEditorPanel::UpdateDisplay(bool newPair)
             break;
         }
         m_cpList->SetItem(i,5,mode);
-        m_cpList->SetItem(i,6,wxString::Format(wxT("%.2f"),p.error));
+        m_cpList->SetItem(i,6,wxString::Format("%.2f",p.error));
     }
     SortList();
 
@@ -1813,10 +1764,10 @@ void CPEditorPanel::UpdateDisplay(bool newPair)
         EnablePointEdit(true);
 
         const HuginBase::ControlPoint & p = currentPoints[m_selectedPoint].second;
-        m_x1Text->SetValue(wxString::Format(wxT("%.2f"),p.x1));
-        m_y1Text->SetValue(wxString::Format(wxT("%.2f"),p.y1));
-        m_x2Text->SetValue(wxString::Format(wxT("%.2f"),p.x2));
-        m_y2Text->SetValue(wxString::Format(wxT("%.2f"),p.y2));
+        m_x1Text->SetValue(wxString::Format("%.2f",p.x1));
+        m_y1Text->SetValue(wxString::Format("%.2f",p.y1));
+        m_x2Text->SetValue(wxString::Format("%.2f",p.x2));
+        m_y2Text->SetValue(wxString::Format("%.2f",p.y2));
         m_cpModeChoice->SetSelection(p.mode);
         m_leftImg->selectPoint(m_selectedPoint);
         m_rightImg->selectPoint(m_selectedPoint);
@@ -1830,7 +1781,7 @@ void CPEditorPanel::UpdateDisplay(bool newPair)
     {
         //get saved width
         // -1 is auto
-        int width = wxConfigBase::Get()->Read(wxString::Format( wxT("/CPEditorPanel/ColumnWidth%d"), j ), -1);
+        int width = wxConfigBase::Get()->Read(wxString::Format( "/CPEditorPanel/ColumnWidth%d", j ), -1);
         if(width != -1)
             m_cpList->SetColumnWidth(j, width);
     }
@@ -1841,7 +1792,7 @@ void CPEditorPanel::UpdateDisplay(bool newPair)
 void CPEditorPanel::EnablePointEdit(bool state)
 {
     m_delButton->Enable(state);
-    XRCCTRL(*this, "cp_editor_finetune_button", wxButton)->Enable(state);
+    m_finetuneButton->Enable(state);
     m_x1Text->Enable(state);
     m_y1Text->Enable(state);
     m_x2Text->Enable(state);
@@ -2060,17 +2011,17 @@ void CPEditorPanel::OnKey(wxKeyEvent & e)
         wxCommandEvent dummy;
         dummy.SetInt(1);
         OnZoom(dummy);
-        XRCCTRL(*this,"cp_editor_choice_zoom",wxChoice)->SetSelection(1);
+        m_zoomChoice->SetSelection(1);
     } else if (e.m_keyCode == '1') {
         wxCommandEvent dummy;
         dummy.SetInt(0);
         OnZoom(dummy);
-        XRCCTRL(*this,"cp_editor_choice_zoom",wxChoice)->SetSelection(0);
+        m_zoomChoice->SetSelection(0);
     } else if (e.m_keyCode == '2') {
         wxCommandEvent dummy;
         dummy.SetInt(2);
         OnZoom(dummy);
-        XRCCTRL(*this,"cp_editor_choice_zoom",wxChoice)->SetSelection(2);
+        m_zoomChoice->SetSelection(2);
     } else if (e.CmdDown() && e.GetKeyCode() == WXK_LEFT) {
         // move to previous
         wxCommandEvent dummy;
@@ -2181,7 +2132,7 @@ void CPEditorPanel::changeState(CPCreationState newState)
         if (cpCreationState != NO_POINT) {
             // reset zoom to previous setting
             wxCommandEvent tmpEvt;
-            tmpEvt.SetInt(XRCCTRL(*this,"cp_editor_choice_zoom",wxChoice)->GetSelection());
+            tmpEvt.SetInt(m_zoomChoice->GetSelection());
             OnZoom(tmpEvt);
             m_leftImg->clearNewPoint();
             m_rightImg->clearNewPoint();
@@ -2319,11 +2270,11 @@ void CPEditorPanel::OnCreateCPButton(wxCommandEvent& e)
         // with default parameters
         CPDetectorSetting linefindSetting;
 #ifdef __WXMSW__
-        linefindSetting.SetProg(wxT("linefind.exe"));
+        linefindSetting.SetProg("linefind.exe");
 #else
-        linefindSetting.SetProg(wxT("linefind"));
+        linefindSetting.SetProg("linefind");
 #endif
-        linefindSetting.SetArgs(wxT("-o %o %s"));
+        linefindSetting.SetArgs("-o %o %s");
         HuginBase::UIntSet imgs;
         imgs.insert(m_leftImageNr);
         MainFrame::Get()->RunCPGenerator(linefindSetting, imgs);
@@ -2341,7 +2292,7 @@ void CPEditorPanel::OnCelesteButton(wxCommandEvent & e)
 {
     if (currentPoints.empty())
     {
-        wxMessageBox(_("Cannot run celeste without at least one control point connecting the two images"),_("Error"));
+        hugin_utils::HuginMessageBox(_("Cannot run celeste without at least one control point connecting the two images"), _("Hugin"), wxOK | wxICON_INFORMATION, this);
         std::cout << "Cannot run celeste without at least one control point connecting the two images" << std::endl;
     }
     else
@@ -2359,10 +2310,10 @@ void CPEditorPanel::OnCelesteButton(wxCommandEvent & e)
         wxConfigBase *cfg = wxConfigBase::Get();
         // SVM threshold
         double threshold = HUGIN_CELESTE_THRESHOLD;
-        cfg->Read(wxT("/Celeste/Threshold"), &threshold, HUGIN_CELESTE_THRESHOLD);
+        cfg->Read("/Celeste/Threshold", &threshold, HUGIN_CELESTE_THRESHOLD);
 
         // Mask resolution - 1 sets it to fine
-        bool t = (cfg->Read(wxT("/Celeste/Filter"), HUGIN_CELESTE_FILTER) == 0);
+        bool t = (cfg->Read("/Celeste/Filter", HUGIN_CELESTE_FILTER) == 0);
         int radius=(t)?10:20;
         DEBUG_TRACE("Running Celeste");
 
@@ -2408,7 +2359,7 @@ void CPEditorPanel::OnCelesteButton(wxCommandEvent & e)
         };
 
         progress.updateDisplayValue();
-        wxMessageBox(wxString::Format(_("Removed %lu control points"), static_cast<unsigned long int>(cloudCP.size())), _("Celeste result"), wxOK | wxICON_INFORMATION, this);
+        hugin_utils::HuginMessageBox(wxString::Format(_("Removed %lu control points"), static_cast<unsigned long int>(cloudCP.size())), _("Hugin"), wxOK | wxICON_INFORMATION, this);
         DEBUG_TRACE("Finished running Celeste");
     }
 }
@@ -2444,7 +2395,7 @@ void CPEditorPanel::OnCleanCPButton(wxCommandEvent& e)
     };
     if (!removedCPs.empty())
     {
-        wxMessageBox(wxString::Format(_("Removed %lu control points"), (unsigned long int)removedCPs.size()), _("Cleaning"), wxOK | wxICON_INFORMATION, this);
+        hugin_utils::HuginMessageBox(wxString::Format(_("Removed %lu control points"), (unsigned long int)removedCPs.size()), _("Hugin"), wxOK | wxICON_INFORMATION, this);
         PanoCommand::GlobalCmdHist::getInstance().addCommand(new PanoCommand::RemoveCtrlPointsCmd(*m_pano, removedCPs));
     }
     else
@@ -2457,33 +2408,33 @@ void CPEditorPanel::OnActionSelectCreate(wxCommandEvent& e)
 {
     m_cpActionButtonMode = CPTAB_ACTION_CREATE_CP;
     wxString s(_("Create cp"));
-    s.Append(wxT("\u25bc"));
+    s.Append(wxUniChar(0x25bc));
     m_actionButton->SetLabel(s);
     m_actionButton->SetToolTip(_("Create control points for image pair with currently selected control point detector on photos tab."));
     Layout();
-    wxConfig::Get()->Write(wxT("/CPEditorPanel/ActionMode"), static_cast<long>(m_cpActionButtonMode));
+    wxConfig::Get()->Write("/CPEditorPanel/ActionMode", static_cast<long>(m_cpActionButtonMode));
 };
 
 void CPEditorPanel::OnActionSelectCeleste(wxCommandEvent& e)
 {
     m_cpActionButtonMode = CPTAB_ACTION_CELESTE;
     wxString s(_("Celeste"));
-    s.Append(wxT("\u25bc"));
+    s.Append(wxUniChar(0x25bc));
     m_actionButton->SetLabel(s);
     m_actionButton->SetToolTip(_("Tries to remove control points from clouds"));
     Layout();
-    wxConfig::Get()->Write(wxT("/CPEditorPanel/ActionMode"), static_cast<long>(m_cpActionButtonMode));
+    wxConfig::Get()->Write("/CPEditorPanel/ActionMode", static_cast<long>(m_cpActionButtonMode));
 };
 
 void CPEditorPanel::OnActionSelectCleanCP(wxCommandEvent& e)
 {
     m_cpActionButtonMode = CPTAB_ACTION_CLEAN_CP;
     wxString s(_("Clean cp"));
-    s.Append(wxT("\u25bc"));
+    s.Append(wxUniChar(0x25bc));
     m_actionButton->SetLabel(s);
     m_actionButton->SetToolTip(_("Remove outlying control points by statistical method"));
     Layout();
-    wxConfig::Get()->Write(wxT("/CPEditorPanel/ActionMode"), static_cast<long>(m_cpActionButtonMode));
+    wxConfig::Get()->Write("/CPEditorPanel/ActionMode", static_cast<long>(m_cpActionButtonMode));
 };
 
 hugin_utils::FDiff2D CPEditorPanel::LocalFineTunePoint(unsigned int srcNr,
@@ -2492,8 +2443,8 @@ hugin_utils::FDiff2D CPEditorPanel::LocalFineTunePoint(unsigned int srcNr,
                                           unsigned int moveNr,
                                           const hugin_utils::FDiff2D & movePnt)
 {
-    long templWidth = wxConfigBase::Get()->Read(wxT("/Finetune/TemplateSize"),HUGIN_FT_TEMPLATE_SIZE);
-    long sWidth = templWidth + wxConfigBase::Get()->Read(wxT("/Finetune/LocalSearchWidth"),HUGIN_FT_LOCAL_SEARCH_WIDTH);
+    long templWidth = wxConfigBase::Get()->Read("/Finetune/TemplateSize",HUGIN_FT_TEMPLATE_SIZE);
+    long sWidth = templWidth + wxConfigBase::Get()->Read("/Finetune/LocalSearchWidth",HUGIN_FT_LOCAL_SEARCH_WIDTH);
     vigra_ext::CorrelationResult result;
     if (!PointFineTune(srcNr, srcPnt, templWidth, moveNr, movePnt, sWidth, result))
     {
@@ -2590,15 +2541,15 @@ void CPEditorPanel::FineTuneNewPoint(bool left)
     };
     if (left) {
         m_leftImg->setNewPoint(result);
-        m_leftImg->update();
+        m_leftImg->Refresh();
         m_rightImg->setNewPoint(movedSrcPnt);
-        m_rightImg->update();
+        m_rightImg->Refresh();
 
     } else {
         m_rightImg->setNewPoint(result);
-        m_rightImg->update();
+        m_rightImg->Refresh();
         m_leftImg->setNewPoint(movedSrcPnt);
-        m_leftImg->update();
+        m_leftImg->Refresh();
     }
 }
 
@@ -2692,13 +2643,12 @@ hugin_utils::FDiff2D CPEditorPanel::EstimatePoint(const hugin_utils::FDiff2D & p
 void CPEditorPanel::OnColumnWidthChange( wxListEvent & e )
 {
     int colNum = e.GetColumn();
-    wxConfigBase::Get()->Write( wxString::Format(wxT("/CPEditorPanel/ColumnWidth%d"),colNum), m_cpList->GetColumnWidth(colNum) );
+    wxConfigBase::Get()->Write( wxString::Format("/CPEditorPanel/ColumnWidth%d",colNum), m_cpList->GetColumnWidth(colNum) );
 }
 
 void CPEditorPanel::OnColumnHeaderClick(wxListEvent & e)
 {
     const int newCol = e.GetColumn();
-#if wxCHECK_VERSION(3,1,6)
     if (m_sortCol == newCol)
     {
         m_sortAscending = !m_sortAscending;
@@ -2709,23 +2659,6 @@ void CPEditorPanel::OnColumnHeaderClick(wxListEvent & e)
         m_sortAscending = true;
     };
     m_cpList->ShowSortIndicator(m_sortCol, m_sortAscending);
-#else
-    if (m_sortCol == newCol)
-    {
-        m_sortAscending = !m_sortAscending;
-        SetColumnImage(m_cpList, m_sortCol, m_sortAscending ? 0 : 1);
-    }
-    else
-    {
-        if (m_sortCol != -1)
-        {
-            SetColumnImage(m_cpList, m_sortCol, -1);
-        };
-        m_sortCol = newCol;
-        SetColumnImage(m_cpList, m_sortCol, 0);
-        m_sortAscending = true;
-    };
-#endif
     SortList();
     Refresh();
 }
@@ -2748,7 +2681,7 @@ CPImageCtrl::ImageRotation CPEditorPanel::GetRot(double yaw, double pitch, doubl
     while (pitch < -180) pitch += 360;
     bool headOver = (pitch > 90 || pitch < -90);
 
-    if (wxConfig::Get()->Read(wxT("/CPEditorPanel/AutoRot"),1L)) {
+    if (wxConfig::Get()->Read("/CPEditorPanel/AutoRot",1L)) {
         if (roll >= 315 || roll < 45) {
             rot = headOver ? CPImageCtrl::ROT180 : CPImageCtrl::ROT0;
         } else if (roll >= 45 && roll < 135) {
@@ -2777,7 +2710,7 @@ wxObject *CPEditorPanelXmlHandler::DoCreateResource()
     cp->Create(m_parentAsWindow,
                    GetID(),
                    GetPosition(), GetSize(),
-                   GetStyle(wxT("style")),
+                   GetStyle("style"),
                    GetName());
 
     SetupWindow( cp);
@@ -2787,7 +2720,7 @@ wxObject *CPEditorPanelXmlHandler::DoCreateResource()
 
 bool CPEditorPanelXmlHandler::CanHandle(wxXmlNode *node)
 {
-    return IsOfClass(node, wxT("CPEditorPanel"));
+    return IsOfClass(node, "CPEditorPanel");
 }
 
 IMPLEMENT_DYNAMIC_CLASS(CPEditorPanelXmlHandler, wxXmlResourceHandler)

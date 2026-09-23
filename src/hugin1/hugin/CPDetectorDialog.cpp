@@ -33,6 +33,7 @@
 #include "hugin/CPDetectorDialog.h"
 #include "hugin_config.h"
 #include "base_wx/huginConfig.h"
+#include "base_wx/wxutils.h"
 #include "hugin/config_defaults.h"
 #include "hugin/huginApp.h"
 
@@ -43,31 +44,12 @@
 #endif
 
 // dialog for showing settings of one autopano setting
-
-BEGIN_EVENT_TABLE(CPDetectorDialog,wxDialog)
-    EVT_BUTTON(wxID_OK, CPDetectorDialog::OnOk)
-    EVT_BUTTON(XRCID("prefs_cpdetector_program_select"),CPDetectorDialog::OnSelectPath)
-    EVT_BUTTON(XRCID("prefs_cpdetector_program_descriptor_select"),CPDetectorDialog::OnSelectPathDescriptor)
-    EVT_BUTTON(XRCID("prefs_cpdetector_program_matcher_select"),CPDetectorDialog::OnSelectPathMatcher)
-    EVT_BUTTON(XRCID("prefs_cpdetector_program_stack_select"),CPDetectorDialog::OnSelectPathStack)
-    EVT_CHOICE(XRCID("prefs_cpdetector_type"),CPDetectorDialog::OnTypeChange)
-    EVT_CHOICEBOOK_PAGE_CHANGING(XRCID("choicebook_steps"),CPDetectorDialog::OnStepChanging)
-END_EVENT_TABLE()
-
 CPDetectorDialog::CPDetectorDialog(wxWindow* parent)
 {
-    wxXmlResource::Get()->LoadDialog(this, parent, wxT("cpdetector_dialog"));
-#ifdef __WXMSW__
-    wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + wxT("data/hugin.ico"),wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(huginApp::Get()->GetXRCPath() + wxT("data/hugin.png"),wxBITMAP_TYPE_PNG);
-    SetIcon(myIcon);
-#endif
-
+    wxXmlResource::Get()->LoadDialog(this, parent, "cpdetector_dialog");
 
     //restore frame position and size
-    RestoreFramePosition(this,wxT("CPDetectorDialog"));
+    hugin_utils::RestoreFramePosition(this,"CPDetectorDialog");
 
     m_edit_desc = XRCCTRL(*this, "prefs_cpdetector_desc", wxTextCtrl);
     m_edit_prog = XRCCTRL(*this, "prefs_cpdetector_program", wxTextCtrl);
@@ -90,11 +72,19 @@ CPDetectorDialog::CPDetectorDialog(wxWindow* parent)
     m_edit_prog_stack->AutoCompleteFileNames();
     m_cpdetector_type->SetSelection(1);
     ChangeType();
+    // bind events
+    m_cpdetector_type->Bind(wxEVT_CHOICE, &CPDetectorDialog::OnTypeChange, this);
+    m_choice_step->Bind(wxEVT_CHOICEBOOK_PAGE_CHANGING, &CPDetectorDialog::OnStepChanging, this);
+    Bind(wxEVT_BUTTON, &CPDetectorDialog::OnSelectPath, this, XRCID("prefs_cpdetector_program_select"));
+    Bind(wxEVT_BUTTON, &CPDetectorDialog::OnSelectPathDescriptor, this, XRCID("prefs_cpdetector_program_descriptor_select"));
+    Bind(wxEVT_BUTTON, &CPDetectorDialog::OnSelectPathMatcher, this, XRCID("prefs_cpdetector_program_matcher_select"));
+    Bind(wxEVT_BUTTON, &CPDetectorDialog::OnSelectPathStack, this, XRCID("prefs_cpdetector_program_stack_select"));
+    Bind(wxEVT_BUTTON, &CPDetectorDialog::OnOk, this, wxID_OK);
 };
 
 CPDetectorDialog::~CPDetectorDialog()
 {
-    StoreFramePosition(this,wxT("CPDetectorDialog"));
+    hugin_utils::StoreFramePosition(this,"CPDetectorDialog");
 };
 
 void CPDetectorDialog::OnOk(wxCommandEvent & e)
@@ -102,8 +92,8 @@ void CPDetectorDialog::OnOk(wxCommandEvent & e)
 #ifdef __WXMAC__
     if(m_cpdetector_type->GetSelection()==0)
     {
-        wxMessageBox(_("Autopano from http://autopano.kolor.com is not available for OS X"), 
-                     _("Using Autopano-Sift instead"),wxOK|wxICON_EXCLAMATION, this); 
+        hugin_utils::HuginMessageBox(_("Autopano from http://autopano.kolor.com is not available for OS X"), 
+                     _("Hugin"),wxOK|wxICON_EXCLAMATION, this); 
         m_cpdetector_type->SetSelection(1);
     };
 #endif
@@ -126,11 +116,11 @@ void CPDetectorDialog::OnOk(wxCommandEvent & e)
     if(CPDetectorSetting::ContainsStacks((CPDetectorType)(m_cpdetector_type->GetSelection())))
         if(m_edit_prog_stack->GetValue().Trim().Len()>0)
             valid=valid && (m_edit_args_stack->GetValue().Trim().Len()>0);
-    if(valid)        
+    if (valid)
         this->EndModal(wxOK);
     else
-        wxMessageBox(_("At least one input field is empty.\nPlease check your inputs."),
-            _("Warning"),wxOK | wxICON_ERROR,this);
+        hugin_utils::HuginMessageBox(_("At least one input field is empty.\nPlease check your inputs."),
+            _("Hugin"), wxOK | wxICON_ERROR, this);
 };
 
 void CPDetectorDialog::UpdateFields(CPDetectorConfig* cpdet_config,int index)
@@ -268,7 +258,7 @@ bool CPDetectorDialog::ShowFileDialog(wxString & prog)
 #ifdef __WXMSW__
             _("Executables (*.exe,*.vbs,*.cmd, *.bat)|*.exe;*.vbs;*.cmd;*.bat"),
 #else
-            wxT(""),
+            wxEmptyString,
 #endif
             wxFD_OPEN, wxDefaultPosition);
     if (dlg.ShowModal() == wxID_OK)

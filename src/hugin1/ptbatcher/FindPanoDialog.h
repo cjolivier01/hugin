@@ -107,7 +107,6 @@ private:
     void EnableButtons(const bool state);
     void SearchInDir(wxString dirstring, const bool includeSubdir, const bool loadDistortion, const bool loadVignetting, const size_t minNumberImages, const size_t maxTimeDiff);
     void CleanUpPanolist();
-    DECLARE_EVENT_TABLE()
 };
 
 struct SortFilename

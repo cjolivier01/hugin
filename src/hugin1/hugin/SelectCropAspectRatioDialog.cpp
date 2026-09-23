@@ -28,19 +28,13 @@
 #include "panoinc_WX.h"
 #include "hugin/huginApp.h"
 #include <wx/textfile.h>
+#include "base_wx/wxutils.h"
 
 static const wxString separator = "@@@";
 
 SelectAspectRatioDialog::SelectAspectRatioDialog(wxWindow* parent)
 {
     wxXmlResource::Get()->LoadDialog(this, parent, "choice_aspect_dlg");
-#ifdef __WXMSW__
-    wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + "data/hugin.ico", wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(huginApp::Get()->GetXRCPath() + "data/hugin.png", wxBITMAP_TYPE_PNG);
-    SetIcon(myIcon);
-#endif
     m_aspectList = XRCCTRL(*this, "aspect_listbox", wxListBox);
     FillListBox();
     XRCCTRL(*this, "wxID_OK", wxButton)->Bind(wxEVT_BUTTON, &SelectAspectRatioDialog::OnOk, this);
@@ -49,13 +43,13 @@ SelectAspectRatioDialog::SelectAspectRatioDialog(wxWindow* parent)
     m_aspectList->Bind(wxEVT_LISTBOX, &SelectAspectRatioDialog::OnListBoxSelect, this);
     ListBoxSelectionChanged();
     m_aspectList->SendSelectionChangedEvent(wxEVT_LISTBOX);
-    RestoreFramePosition(this, "SelectCropAspectRatioDialog");
+    hugin_utils::RestoreFramePosition(this, "SelectCropAspectRatioDialog");
 }
 
 SelectAspectRatioDialog::~SelectAspectRatioDialog()
 {
     // store frame position
-    StoreFramePosition(this, "SelectCropAspectRatioDialog");
+    hugin_utils::StoreFramePosition(this, "SelectCropAspectRatioDialog");
     // store list of aspect ratios
     SaveAspectRatios();
 }
@@ -87,7 +81,7 @@ bool CheckInputs(wxWindow* parent, wxTextCtrl* labelCtrl, wxTextCtrl* aspectRati
     if (label.IsEmpty() || label.Find(separator) != wxNOT_FOUND)
     {
         // empty label or label contains our separator
-        wxMessageBox(_("You must provide a valid label."), _("Warning"), wxOK | wxICON_ERROR, parent);
+        hugin_utils::HuginMessageBox(_("You must provide a valid label."), _("Hugin"), wxOK | wxICON_ERROR, parent);
         return false;
     };
     // check if it is a simple number
@@ -110,7 +104,8 @@ bool CheckInputs(wxWindow* parent, wxTextCtrl* labelCtrl, wxTextCtrl* aspectRati
                     }
                     else
                     {
-                        wxMessageBox(wxString::Format(_("The aspect ratio \"%s\" is not in the valid range."), aspectRatioCtrl->GetValue().c_str()), _("Warning"), wxOK | wxICON_ERROR, parent);
+                        hugin_utils::HuginMessageBox(wxString::Format(_("The aspect ratio \"%s\" is not in the valid range."), aspectRatioCtrl->GetValue()), 
+                            _("Hugin"), wxOK | wxICON_ERROR, parent);
                         return false;
                     };
                 };
@@ -128,13 +123,13 @@ bool CheckInputs(wxWindow* parent, wxTextCtrl* labelCtrl, wxTextCtrl* aspectRati
             }
             else
             {
-                wxMessageBox(wxString::Format(_("The aspect ratio \"%s\" is not in the valid range."), aspectRatioCtrl->GetValue().c_str()), _("Warning"), wxOK | wxICON_ERROR, parent);
+                hugin_utils::HuginMessageBox(wxString::Format(_("The aspect ratio \"%s\" is not in the valid range."), aspectRatioCtrl->GetValue()), _("Hugin"), wxOK | wxICON_ERROR, parent);
                 return false;
             };
         };
     };
     // not a valid input, issue warning
-    wxMessageBox(wxString::Format(_("The input \"%s\" is not a valid number."), aspectRatioCtrl->GetValue().c_str()), _("Warning"), wxOK | wxICON_ERROR, parent);
+    hugin_utils::HuginMessageBox(wxString::Format(_("The input \"%s\" is not a valid number."), aspectRatioCtrl->GetValue()), _("Hugin"), wxOK | wxICON_ERROR, parent);
     return false;
 }
 

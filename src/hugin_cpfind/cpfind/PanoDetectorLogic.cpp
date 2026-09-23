@@ -297,12 +297,13 @@ bool PanoDetector::AnalyzeImage(ImgData& ioImgInfo, const PanoDetector& iPanoDet
             // adopt range
             double minVal = 0;
             double maxVal;
-            if (aImageInfo.getPixelType() == std::string("FLOAT") || aImageInfo.getPixelType() == std::string("DOUBLE"))
+            if (aImageInfo.getPixelType() == std::string("FLOAT") || aImageInfo.getPixelType() == std::string("DOUBLE") ||
+                aImageInfo.getPixelType() == std::string("UINT32") || aImageInfo.getPixelType() == std::string("INT32"))
             {
-                vigra::FindMinMax<float> minmax;   // init functor
-                vigra::inspectImage(vigra::srcImageRange(*image), minmax);
-                minVal = minmax.min;
-                maxVal = minmax.max;
+                vigra::FindAverageAndVariance<float> mean;   // init functor
+                vigra::inspectImage(vigra::srcImageRange(*image), mean);
+                minVal = std::max(mean.average() - 3 * sqrt(mean.variance()), 1e-6f);
+                maxVal = mean.average() + 3 * sqrt(mean.variance());;
             }
             else
             {
@@ -553,13 +554,14 @@ bool PanoDetector::AnalyzeImage(ImgData& ioImgInfo, const PanoDetector& iPanoDet
                             // range adaption
                             double minVal = 0;
                             double maxVal;
-                            const bool isDouble = aImageInfo.getPixelType() == std::string("FLOAT") || aImageInfo.getPixelType() == std::string("DOUBLE");
+                            const bool isDouble = aImageInfo.getPixelType() == std::string("FLOAT") || aImageInfo.getPixelType() == std::string("DOUBLE") ||
+                                aImageInfo.getPixelType() == std::string("UINT32") || aImageInfo.getPixelType() == std::string("INT32");
                             if (isDouble)
                             {
-                                vigra::FindMinMax<float> minmax;   // init functor
-                                vigra::inspectImage(vigra::srcImageRange(*rgbImage, vigra::RGBToGrayAccessor<vigra::RGBValue<double> >()), minmax);
-                                minVal = minmax.min;
-                                maxVal = minmax.max;
+                                vigra::FindAverageAndVariance<float> mean;   // init functor
+                                vigra::inspectImage(vigra::srcImageRange(*rgbImage, vigra::RGBToGrayAccessor<vigra::RGBValue<double> >()), mean);
+                                minVal = std::max(mean.average() - 3 * sqrt(mean.variance()), 1e-6f);
+                                maxVal = mean.average() + 3 * sqrt(mean.variance());;
                             }
                             else
                             {

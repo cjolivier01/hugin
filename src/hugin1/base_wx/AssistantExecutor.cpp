@@ -43,14 +43,14 @@ namespace HuginQueue
 
         //read main settings
         wxConfigBase* config = wxConfigBase::Get();
-        const bool runCeleste = config->Read(wxT("/Celeste/Auto"), HUGIN_CELESTE_AUTO) != 0;
+        const bool runCeleste = config->Read("/Celeste/Auto", HUGIN_CELESTE_AUTO) != 0;
         double celesteThreshold;
-        config->Read(wxT("/Celeste/Threshold"), &celesteThreshold, HUGIN_CELESTE_THRESHOLD);
-        const bool celesteSmallRadius = config->Read(wxT("/Celeste/Filter"), HUGIN_CELESTE_FILTER) == 0;
-        const bool runLinefind = (pano.getNrOfImages()==1) ? true : (config->Read(wxT("/Assistant/Linefind"), HUGIN_ASS_LINEFIND) != 0);
-        const bool runCPClean = config->Read(wxT("/Assistant/AutoCPClean"), HUGIN_ASS_AUTO_CPCLEAN) != 0;
+        config->Read("/Celeste/Threshold", &celesteThreshold, HUGIN_CELESTE_THRESHOLD);
+        const bool celesteSmallRadius = config->Read("/Celeste/Filter", HUGIN_CELESTE_FILTER) == 0;
+        const bool runLinefind = (pano.getNrOfImages()==1) ? true : (config->Read("/Assistant/Linefind", HUGIN_ASS_LINEFIND) != 0);
+        const bool runCPClean = config->Read("/Assistant/AutoCPClean", HUGIN_ASS_AUTO_CPCLEAN) != 0;
         double scale;
-        config->Read(wxT("/Assistant/panoDownsizeFactor"), &scale, HUGIN_ASS_PANO_DOWNSIZE_FACTOR);
+        config->Read("/Assistant/panoDownsizeFactor", &scale, HUGIN_ASS_PANO_DOWNSIZE_FACTOR);
         bool hasUserDefinedOutputIni = (config->Read("/Assistant/UserDefinedOutputOption", 0l) == 1l);
         if (hasUserDefinedOutputIni)
         {
@@ -71,26 +71,26 @@ namespace HuginQueue
         if (runicp && pano.getNrOfImages() > 1)
         {
             //create cp find
-            commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("icpfind")),
-                wxT("-o ") + quotedProject + wxT(" ") + quotedProject, _("Searching for control points...")));
+            commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "icpfind"),
+                "-o " + quotedProject + " " + quotedProject, _("Searching for control points...")));
             //building celeste command
             if (runCeleste)
             {
                 wxString args;
-                args << wxT("-t ") << wxStringFromCDouble(celesteThreshold) << wxT(" ");
+                args << "-t " << wxStringFromCDouble(celesteThreshold) << " ";
                 if (celesteSmallRadius)
                 {
-                    args.Append(wxT("-r 1 "));
+                    args.Append("-r 1 ");
                 }
-                args.Append(wxT("-o ") + quotedProject + wxT(" ") + quotedProject);
-                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("celeste_standalone")),
+                args.Append("-o " + quotedProject + " " + quotedProject);
+                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "celeste_standalone"),
                     args, _("Removing control points in clouds...")));
             };
             //building cpclean command
             if (runCPClean)
             {
-                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("cpclean")),
-                    wxT("-o ") + quotedProject + wxT(" ") + quotedProject, _("Statistically cleaning of control points...")));
+                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "cpclean"),
+                    "-o " + quotedProject + " " + quotedProject, _("Statistically cleaning of control points...")));
             };
         };
         //vertical line detector
@@ -107,28 +107,28 @@ namespace HuginQueue
             };
             if (!hasVerticalLines)
             {
-                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("linefind")),
-                    wxT("--output=") + quotedProject + wxT(" ") + quotedProject, _("Searching for vertical lines...")));
+                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "linefind"),
+                    "--output=" + quotedProject + " " + quotedProject, _("Searching for vertical lines...")));
             };
         };
         //now optimise all
-        commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("checkpto")), quotedProject));
+        commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "checkpto"), quotedProject));
         if (pano.getNrOfImages() == 1)
         {
-            commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("autooptimiser")),
-                (hasUserDefinedOutputIni ? wxT("-a -o ") : wxT("-a -s -o ")) + quotedProject + wxT(" ") + quotedProject, _("Optimizing...")));
+            commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "autooptimiser"),
+                (hasUserDefinedOutputIni ? "-a -o " : "-a -s -o ") + quotedProject + " " + quotedProject, _("Optimizing...")));
         }
         else
         {
-            commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("autooptimiser")),
-                (hasUserDefinedOutputIni ? wxT("-a -m -l -o ") : wxT("-a -m -l -s -o ")) + quotedProject + wxT(" ") + quotedProject, _("Optimizing...")));
+            commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "autooptimiser"),
+                (hasUserDefinedOutputIni ? "-a -m -l -o " : "-a -m -l -s -o ") + quotedProject + " " + quotedProject, _("Optimizing...")));
         };
         wxString panoModifyArgs;
         wxString label(_("Searching for best crop..."));
         if(hasUserDefinedOutputIni)
         {
             const wxFileName iniFilename(hugin_utils::GetUserAppDataDir(), "output.ini");
-            panoModifyArgs << wxT("--ini=") << wxEscapeFilename(iniFilename.GetFullPath()) << wxT(" ");
+            panoModifyArgs << "--ini=" << wxEscapeFilename(iniFilename.GetFullPath()) << " ";
             label = wxString::Format("Setting options from %s", iniFilename.GetFullName().c_str());
         }
         else
@@ -136,12 +136,12 @@ namespace HuginQueue
             // if necessary scale down final pano
             if (scale <= 1.0)
             {
-                panoModifyArgs << wxT("--canvas=") << hugin_utils::roundi(scale * 100) << wxT("% ");
+                panoModifyArgs << "--canvas=" << hugin_utils::roundi(scale * 100) << "% ";
             };
-            panoModifyArgs.Append(wxT("--crop=AUTO "));
+            panoModifyArgs.Append("--crop=AUTO ");
         };
-        panoModifyArgs.Append(wxT("--output=") + quotedProject + wxT(" ") + quotedProject);
-        commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("pano_modify")), panoModifyArgs, label));
+        panoModifyArgs.Append("--output=" + quotedProject + " " + quotedProject);
+        commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "pano_modify"), panoModifyArgs, label));
         return commands;
     }
     
@@ -164,7 +164,7 @@ namespace HuginQueue
         }
         wxFileConfig settings(input);
         long stepCount;
-        settings.Read(wxT("/General/StepCount"), &stepCount, 0);
+        settings.Read("/General/StepCount", &stepCount, 0);
         if (stepCount == 0)
         {
             errStream << "ERROR: User-setting does not define any assistant steps." << std::endl;
@@ -193,7 +193,7 @@ namespace HuginQueue
 
         for (size_t i = 0; i < stepCount; ++i)
         {
-            wxString stepString(wxT("/Step"));
+            wxString stepString("/Step");
             stepString << i;
             if (!settings.HasGroup(stepString))
             {
@@ -221,7 +221,7 @@ namespace HuginQueue
                 continue;
             };
             // read program name
-            const wxString progName = GetSettingString(&settings, wxT("Program"));
+            const wxString progName = GetSettingString(&settings, "Program");
             if (progName.IsEmpty())
             {
                 errStream << "ERROR: Step " << i << " has no program name specified." << std::endl;
@@ -237,7 +237,7 @@ namespace HuginQueue
 #else
             const wxString prog = progName;
 #endif
-            wxString args = GetSettingString(&settings, wxT("Arguments"));
+            wxString args = GetSettingString(&settings, "Arguments");
             if (args.IsEmpty())
             {
                 errStream << "ERROR: Step " << i << " has no arguments given." << std::endl;
@@ -249,7 +249,7 @@ namespace HuginQueue
             // build image list file if needed
             if (imageListFile.IsEmpty() && args.Find("%imagelist%") != wxNOT_FOUND)
             {
-                wxFileName tempImageList(wxFileName::CreateTempFileName(GetConfigTempDir(wxConfig::Get()) + wxT("hi")));
+                wxFileName tempImageList(wxFileName::CreateTempFileName(GetConfigTempDir(wxConfig::Get()) + "hi"));
                 imageListFile = tempImageList.GetFullPath();
                 tempFilesDelete.Add(imageListFile);
                 wxFFileOutputStream outputStream(imageListFile);
@@ -265,7 +265,7 @@ namespace HuginQueue
             {
                 args.Replace("%imagelist%", wxEscapeFilename(imageListFile));
             };
-            const wxString description = GetSettingStringTranslated(&settings, wxT("Description"));
+            const wxString description = GetSettingStringTranslated(&settings, "Description");
             commands->push_back(new NormalCommand(prog, args, description));
         }
         return commands;

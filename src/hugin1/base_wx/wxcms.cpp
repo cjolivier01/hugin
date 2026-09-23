@@ -185,7 +185,7 @@ namespace HuginBase
                 else
                 {
                     CFRetain(urlstr);
-                    profileName = wxCFStringRef(urlstr).AsString(wxLocale::GetSystemEncoding());
+                    profileName = wxCFStringRef(urlstr).AsString();
                     profile = cmsOpenProfileFromFile(profileName.c_str(), "r");
                     DEBUG_INFO("Found profile: " << profileName.c_str());
                 };

@@ -44,7 +44,7 @@ public:
         : m_maskEditState(NO_IMAGE), m_scaleFactor(1), m_fitToWindow(false), m_middleMouseScroll(false)
         { }
 
-    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxT("panel"));
+    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = "panel");
 
     void Init(MaskEditorPanel * parent);
 
@@ -122,8 +122,6 @@ public:
 
     /** set if active masks should be drawn */
     void setDrawingActiveMasks(bool newDrawActiveMasks);
-    /** initiate redraw */
-    void update();
 
     /** sets the colour for different parts */
     void SetUserColourPolygonNegative(wxColour newColour) { m_colour_polygon_negative=newColour; };
@@ -132,7 +130,7 @@ public:
     void SetUserColourPointUnselected(wxColour newColour) { m_colour_point_unselected=newColour; };
 
     /** drawing routine */
-    virtual void OnDraw(wxDC& dc) wxOVERRIDE;
+    void OnPaint(wxPaintEvent& e);
 protected:
     /** handler called when size of control was changed */
     void OnSize(wxSizeEvent & e);
@@ -251,15 +249,12 @@ protected:
         }
     }
 
-    // draws the wxBitmap with the necessary borders with offset
-    void DrawImageBitmap(wxDC& dc, int offset);
     //draw the given polygon
     void DrawPolygon(wxDC &dc, HuginBase::MaskPolygon poly, bool isSelected, bool drawMarker);
     //draw a selection rectange, when called the second time the rectangle is deleted
     void DrawSelectionRectangle();
     // draws the crop rectangle and/or circle
     void DrawCrop(wxDC & dc);
-    void DrawCrop();
     // find the polygon for which the point p is inside the polygon
     void FindPolygon(hugin_utils::FDiff2D p);
     // returns a set of points which are in the selection rectangle 
@@ -330,7 +325,6 @@ protected:
     wxOverlay m_overlay;
     int m_oldScrollPosX, m_oldScrollPosY;
 
-    DECLARE_EVENT_TABLE();
     DECLARE_DYNAMIC_CLASS(MaskImageCtrl)
 };
 

@@ -87,7 +87,6 @@ private:
     std::vector<CPListItem> m_internalCPList;
     std::map<std::string, int> m_localIds;
 
-    DECLARE_EVENT_TABLE()
     DECLARE_DYNAMIC_CLASS(CPListCtrl)
 };
 
@@ -105,12 +104,12 @@ public:
     virtual bool CanHandle(wxXmlNode *node);
 };
 
-class CPListFrame : public wxFrame
+class CPListFrame : public wxDialog
 {
 public:
     /** ctor.
      */
-    CPListFrame(wxFrame* parent, HuginBase::Panorama & pano);
+    CPListFrame(wxWindow* parent, HuginBase::Panorama & pano);
 	
     /** dtor.
      */
@@ -123,8 +122,6 @@ protected:
 private:
     CPListCtrl* m_list;
     HuginBase::Panorama& m_pano;
-    // needed for receiving events.
-    DECLARE_EVENT_TABLE();
 };
 
 

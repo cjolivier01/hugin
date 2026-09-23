@@ -40,6 +40,7 @@
 
 #include "base_wx/platform.h"
 #include "base_wx/wxPlatform.h"
+#include "base_wx/wxutils.h"
 
 #include "RunStitchPanel.h"
 
@@ -54,11 +55,6 @@ enum
     ID_Quit = 1,
     ID_About   
 };
-
-
-BEGIN_EVENT_TABLE(RunStitchPanel, wxPanel)
-    EVT_END_PROCESS(-1, RunStitchPanel::OnProcessTerminate)
-END_EVENT_TABLE()
 
 RunStitchPanel::RunStitchPanel(wxWindow * parent)
     : wxPanel(parent)
@@ -83,13 +79,10 @@ RunStitchPanel::RunStitchPanel(wxWindow * parent)
     wxBoxSizer * topsizer = new wxBoxSizer( wxVERTICAL );
     m_execPanel = new MyExecPanel(this);
 
-#ifdef __WXMSW__
-    // wxFrame does have a strange background color on Windows, copy color from a child widget
-    this->SetBackgroundColour(m_execPanel->GetBackgroundColour());
-#endif
     topsizer->Add(m_execPanel, 1, wxEXPAND, 0);
     SetSizer( topsizer );
 //    topsizer->SetSizeHints( this );   // set size hints to honour minimum size
+    Bind(wxEVT_END_PROCESS, &RunStitchPanel::OnProcessTerminate, this);
 }
 
 bool RunStitchPanel::StitchProject(const wxString& scriptFile, const wxString& outname, const wxString& userDefinedOutput)
@@ -124,13 +117,13 @@ bool RunStitchPanel::StitchProject(const wxString& scriptFile, const wxString& o
         if (ptoVersion < 2) {
             // no options stored in file, use default arguments in config
 			
-			wxConfig* config = new wxConfig(wxT("hugin"));  //needed for PTBatcher console application
+			wxConfig* config = new wxConfig("hugin");  //needed for PTBatcher console application
 			wxConfigBase::Set(config);                      //
-			opts.enblendOptions = wxConfigBase::Get()->Read(wxT("/Enblend/Args"), wxT(HUGIN_ENBLEND_ARGS)).mb_str(wxConvLocal);
-			opts.enfuseOptions = wxConfigBase::Get()->Read(wxT("/Enfuse/Args"), wxT(HUGIN_ENFUSE_ARGS)).mb_str(wxConvLocal);
+			opts.enblendOptions = wxConfigBase::Get()->Read("/Enblend/Args", HUGIN_ENBLEND_ARGS).mb_str(wxConvLocal);
+			opts.enfuseOptions = wxConfigBase::Get()->Read("/Enfuse/Args", HUGIN_ENFUSE_ARGS).mb_str(wxConvLocal);
 
         }
-        opts.remapUsingGPU = wxConfigBase::Get()->Read(wxT("/Nona/UseGPU"), HUGIN_NONA_USEGPU) == 1;
+        opts.remapUsingGPU = wxConfigBase::Get()->Read("/Nona/UseGPU", HUGIN_NONA_USEGPU) == 1;
         pano.setOptions(opts);
     } else {
         wxLogError( wxString::Format(_("error while parsing panotools script: %s"), scriptFile.c_str()) );
@@ -149,7 +142,7 @@ bool RunStitchPanel::StitchProject(const wxString& scriptFile, const wxString& o
         wxFileConfig settings(input);
         // disable cropped output if user defined setting is requesting
         long supportsCroppedOutput;
-        settings.Read(wxT("/General/SupportsCroppedTIFF"), &supportsCroppedOutput, 1l);
+        settings.Read("/General/SupportsCroppedTIFF", &supportsCroppedOutput, 1l);
         if (supportsCroppedOutput != 1)
         {
             opts.tiff_saveROI = false;
@@ -158,7 +151,7 @@ bool RunStitchPanel::StitchProject(const wxString& scriptFile, const wxString& o
     opts.outputFormat = HuginBase::PanoramaOptions::TIFF_m;
     if (opts.enblendOptions.length() == 0) {
         // no options stored in file, use default arguments in config file
-        opts.enblendOptions = wxConfigBase::Get()->Read(wxT("/Enblend/Args"), wxT(HUGIN_ENBLEND_ARGS)).mb_str(wxConvLocal);
+        opts.enblendOptions = wxConfigBase::Get()->Read("/Enblend/Args", HUGIN_ENBLEND_ARGS).mb_str(wxConvLocal);
     }
     pano.setOptions(opts);
     DEBUG_DEBUG("output file specified is " << (const char *)outname.mb_str(wxConvLocal));
@@ -170,14 +163,14 @@ bool RunStitchPanel::StitchProject(const wxString& scriptFile, const wxString& o
     outpath = outputPrefix.GetPath();
     basename = outputPrefix.GetFullName();
     //get temp dir from preferences
-    wxString tempDir= wxConfigBase::Get()->Read(wxT("tempDir"),wxT(""));
+    wxString tempDir= wxConfigBase::Get()->Read("tempDir",wxEmptyString);
     if(!tempDir.IsEmpty())
         if(tempDir.Last()!=wxFileName::GetPathSeparator())
             tempDir.Append(wxFileName::GetPathSeparator());
 
     try {
         // copy pto file to temporary file
-        m_currentPTOfn = wxFileName::CreateTempFileName(tempDir+wxT("huginpto_"));
+        m_currentPTOfn = wxFileName::CreateTempFileName(tempDir+"huginpto_");
         if(m_currentPTOfn.empty()) {
             wxLogError(_("Could not create temporary file"));
         }
@@ -205,7 +198,7 @@ bool RunStitchPanel::StitchProject(const wxString& scriptFile, const wxString& o
         };
         if (commands->empty())
         {
-            wxMessageBox(_("Queue is empty. This should never happen.") + "\n\n" + wxString(errors.str()), _("Error during stitching"), wxICON_ERROR | wxOK);
+            hugin_utils::HuginMessageBox(_("Queue is empty. This should never happen.") + "\n\n" + wxString(errors.str()), _("Hugin"), wxICON_ERROR | wxOK, this);
             return false;
         };
         // check output directories.
@@ -217,15 +210,16 @@ bool RunStitchPanel::StitchProject(const wxString& scriptFile, const wxString& o
                 wxString fn(outputFiles[i]);
                 if (wxFile::Exists(fn))
                 {
-                    overwrittenFiles.Append(fn + wxT(" "));
+                    overwrittenFiles.Append(fn + " ");
                 };
             };
 
             if (!overwrittenFiles.IsEmpty())
             {
-                int overwriteret = wxMessageBox(_("Overwrite existing images?\n\n") + overwrittenFiles, _("Overwrite existing images"), wxYES_NO | wxICON_QUESTION);
-                // TODO: change button label ok to overwrite
-                if (overwriteret != wxYES) {
+                hugin_utils::MessageDialog dlg = hugin_utils::GetMessageDialog(_("Overwrite existing images?") + "\n\n" + overwrittenFiles, _("Hugin"), wxYES_NO | wxICON_QUESTION, wxGetActiveWindow());
+                dlg->SetYesNoLabels(_("Overwrite files"), _("Cancel, don't overwrite files"));
+                if (dlg->ShowModal() != wxID_YES)
+                {
                     DEBUG_DEBUG("Abort, do not overwrite images!");
                     return false;
                 }
@@ -238,14 +232,14 @@ bool RunStitchPanel::StitchProject(const wxString& scriptFile, const wxString& o
         };
         if (m_execPanel->ExecQueue(commands) == -1)
         {
-            wxMessageBox(wxString::Format(_("Error while stitching project\n%s"), scriptFile.c_str()),
-                             _("Error during stitching"),  wxICON_ERROR | wxOK );
+            hugin_utils::HuginMessageBox(wxString::Format(_("Error while stitching project\n%s"), scriptFile),
+                             _("Hugin"),  wxICON_ERROR | wxOK, this);
         };
     } catch (std::exception & e)
     {
         std::cerr << "caught exception: " << e.what() << std::endl;
-        wxMessageBox(wxString(e.what(), wxConvLocal),
-                     _("Error during stitching"), wxICON_ERROR | wxOK );
+        hugin_utils::HuginMessageBox(wxString(e.what(), wxConvLocal),
+                     _("Hugin"), wxICON_ERROR | wxOK, this);
     }
     return true;
 }
@@ -292,7 +286,7 @@ bool RunStitchPanel::DetectProject(const wxString& scriptFile, const wxString& u
     pano.setMemento(newPano);
 
     //read settings
-    wxString tempDir= wxConfigBase::Get()->Read(wxT("tempDir"),wxT(""));
+    wxString tempDir= wxConfigBase::Get()->Read("tempDir",wxEmptyString);
     if (!tempDir.IsEmpty())
     {
         if (tempDir.Last() != wxFileName::GetPathSeparator())
@@ -317,20 +311,20 @@ bool RunStitchPanel::DetectProject(const wxString& scriptFile, const wxString& u
         };
         if (commands->empty())
         {
-            wxMessageBox(_("Queue is empty. This should never happen."), _("Error during running assistant"), wxICON_ERROR | wxOK);
+            hugin_utils::HuginMessageBox(_("Queue is empty. This should never happen."), _("Hugin"), wxICON_ERROR | wxOK, this);
             return false;
         };
         if (m_execPanel->ExecQueue(commands) == -1)
         {
-            wxMessageBox(wxString::Format(_("Error while running assistant\n%s"), scriptFile.c_str()),
-                         _("Error during running assistant"),  wxICON_ERROR | wxOK );
+            hugin_utils::HuginMessageBox(wxString::Format(_("Error while running assistant\n%s"), scriptFile),
+                         _("Hugin"),  wxICON_ERROR | wxOK, this);
         }
     } 
     catch (std::exception & e)
     {
         std::cerr << "caught exception: " << e.what() << std::endl;
-        wxMessageBox(wxString(e.what(), wxConvLocal),
-                     _("Error during running assistant"), wxICON_ERROR | wxOK );
+        hugin_utils::HuginMessageBox(wxString(e.what(), wxConvLocal),
+                     _("Hugin"), wxICON_ERROR | wxOK, this);
     }
     return true;
 }

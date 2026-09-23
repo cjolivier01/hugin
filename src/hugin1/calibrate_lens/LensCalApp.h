@@ -32,11 +32,6 @@
 
 #include "LensCalFrame.h"
 
-/** Store window size and position in configfile/registry */
-void StoreFramePosition(wxTopLevelWindow * frame, const wxString & basename);
-/** Restore window size and position from configfile/registry */
-void RestoreFramePosition(wxTopLevelWindow * frame, const wxString & basename);
-
 /** The application class for lens_calibrate_gui .
  */
 class LensCalApp : public wxApp
@@ -44,11 +39,7 @@ class LensCalApp : public wxApp
 public:
     virtual bool OnInit();
 #if wxUSE_ON_FATAL_EXCEPTION
-#if wxCHECK_VERSION(3,1,0)
     virtual void OnFatalException() wxOVERRIDE;
-#else
-    virtual void OnFatalException();
-#endif
 #endif
 
     /** return currently active locale */
@@ -72,7 +63,6 @@ private:
     wxLocale locale;
     wxString m_xrcPrefix;
     LensCalFrame* m_frame;
-    DECLARE_EVENT_TABLE()
 };
 
 DECLARE_APP(LensCalApp)

@@ -42,7 +42,7 @@ class ImagesPanel: public wxPanel, public HuginBase::PanoramaObserver
 public:
     ImagesPanel();
 
-    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxT("panel"));
+    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = "panel");
 
     void Init(HuginBase::Panorama * pano);
 
@@ -162,13 +162,13 @@ private:
 
     wxButton * m_matchingButton;
     wxChoice *m_CPDetectorChoice;
+    wxChoice* m_groupModeChoice;
     //storing for different cp detector settings
     CPDetectorConfig cpdetector_config;
 
     GuiLevel m_guiLevel;
     int m_degDigits;
 
-    DECLARE_EVENT_TABLE()
     DECLARE_DYNAMIC_CLASS(ImagesPanel)
 };
 

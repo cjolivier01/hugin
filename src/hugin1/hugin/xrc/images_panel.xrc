@@ -104,7 +104,7 @@
                     <orient>wxVERTICAL</orient>
                     <object class="sizeritem" platform="win">
                       <object class="wxStaticBitmap">
-                        <bitmap>data/hugin.png</bitmap>
+                        <bitmap default_size="64,64">data/hugin.svg</bitmap>
                       </object>
                       <option>1</option>
                       <flag>wxEXPAND|wxALL</flag>

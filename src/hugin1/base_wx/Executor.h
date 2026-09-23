@@ -81,10 +81,10 @@ namespace HuginQueue
 #ifdef __WXMSW__
         // on Windows we return the string enclosed in quotes "
         // the quote itself is not allowed in filenames, so no further handling is required
-        return str(wxT("\"")) + arg + str(wxT("\""));
+        return str("\"") + arg + str("\"");
 #else
         // we use UNIX style escaping, escape all special chars with backslash
-        return hugin_utils::wxQuoteStringInternal(arg, str(wxT("\\")), str(wxT("\\ ~$\"|'`{}[]()")));
+        return hugin_utils::wxQuoteStringInternal(arg, str("\\"), str("\\ ~$\"|'`{}[]()"));
 #endif
     };
     

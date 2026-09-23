@@ -27,6 +27,7 @@
 #include "platform.h"
 
 #include <hugin_utils/utils.h>
+#include "wxutils.h"
 #include <vigra/imageinfo.hxx>
 
 /** build filter string "*.ext", adds also upper case version for UNIX paths when needed */
@@ -69,12 +70,20 @@ wxString GetVigraImageFilter()
 wxString GetFileDialogImageFilters()
 {
     wxString filterString=GetVigraImageFilter();
-    filterString.Append(_("JPEG files (*.jpg,*.jpeg)")).Append("|").Append(GetFilterExtensions("jpg")).Append(";").Append(GetFilterExtensions("jpeg"));
-    filterString.Append("|").Append(_("TIFF files (*.tif,*.tiff)")).Append("|").Append(GetFilterExtensions("tif")).Append(";").Append(GetFilterExtensions("tiff"));
-    filterString.Append("|").Append(_("PNG files (*.png)")).Append("|").Append(GetFilterExtensions("png"));
+    // append JPG/TIFF/PNG
+    filterString.Append(GetMainImageFilters());
     filterString.Append("|").Append(_("HDR files (*.hdr)")).Append("|").Append(GetFilterExtensions("hdr"));
     filterString.Append("|").Append(_("EXR files (*.exr)")).Append("|").Append(GetFilterExtensions("exr"));
     filterString.Append("|").Append(_("All files (*)")).Append("|*");
+    return filterString;
+}
+
+wxString GetMainImageFilters()
+{
+    wxString filterString;
+    filterString.Append(_("JPEG files (*.jpg,*.jpeg)")).Append("|").Append(GetFilterExtensions("jpg")).Append(";").Append(GetFilterExtensions("jpeg"));
+    filterString.Append("|").Append(_("TIFF files (*.tif,*.tiff)")).Append("|").Append(GetFilterExtensions("tif")).Append(";").Append(GetFilterExtensions("tiff"));
+    filterString.Append("|").Append(_("PNG files (*.png)")).Append("|").Append(GetFilterExtensions("png"));
     return filterString;
 }
 
@@ -134,7 +143,7 @@ CFStringRef MacCreateCFStringWithWxString(const wxString& string)
 
 wxString MacGetPathToMainExecutableFileOfBundle(CFStringRef bundlePath)
 {
-    wxString theResult = wxT("");
+    wxString theResult = wxEmptyString;
 
     CFURLRef bundleURL = CFURLCreateWithFileSystemPath(NULL, bundlePath, kCFURLPOSIXPathStyle, TRUE);
 
@@ -178,7 +187,7 @@ wxString MacGetPathToMainExecutableFileOfBundle(CFStringRef bundlePath)
                 else
                 {
                     CFRetain( pathInCFString );
-                    theResult =  wxCFStringRef(pathInCFString).AsString(wxLocale::GetSystemEncoding());
+                    theResult =  wxCFStringRef(pathInCFString).AsString();
                     DEBUG_INFO("Mac: the executable's full path in the application bundle: " << theResult.mb_str(wxConvLocal));
                 }
             }
@@ -189,7 +198,7 @@ wxString MacGetPathToMainExecutableFileOfBundle(CFStringRef bundlePath)
 
 wxString MacGetPathToMainExecutableFileOfRegisteredBundle(CFStringRef BundleIdentifier)
 {
-    wxString theResult = wxT("");
+    wxString theResult = wxEmptyString;
 	
 	FSRef appRef;
 	CFURLRef bundleURL;
@@ -207,7 +216,7 @@ wxString MacGetPathToMainExecutableFileOfRegisteredBundle(CFStringRef BundleIden
 	if (err != noErr) {
 		// error, can't find PTBatcherGUI
 		cout << "PTBatcherGui check failed \n" << endl;
-		wxMessageBox(wxString::Format(_("External program %s not found in the bundle, reverting to system path"), wxT("open")), _("Error"));
+		hugin_utils::HuginMessageBox(wxString::Format(_("External program %s not found in the bundle, reverting to system path"), "open"), _("Hugin"), wxOK, wxGetActiveWindow());
 	}
     if(bundleURL == NULL)
     {
@@ -249,7 +258,7 @@ wxString MacGetPathToMainExecutableFileOfRegisteredBundle(CFStringRef BundleIden
                 else
                 {
                     CFRetain( pathInCFString );
-                    theResult =  wxCFStringRef(pathInCFString).AsString(wxLocale::GetSystemEncoding());
+                    theResult =  wxCFStringRef(pathInCFString).AsString();
                     DEBUG_INFO("Mac: the executable's full path in the application bundle: " << theResult.mb_str(wxConvLocal));
                 }
             }
@@ -263,7 +272,7 @@ wxString MacGetPathToMainExecutableFileOfRegisteredBundle(CFStringRef BundleIden
 
 wxString MacGetPathToBundledAppMainExecutableFile(CFStringRef appname)
 {
-    wxString theResult = wxT("");
+    wxString theResult = wxEmptyString;
 
     CFBundleRef mainbundle = CFBundleGetMainBundle();
     if(mainbundle == NULL)
@@ -314,7 +323,7 @@ wxString MacGetPathToBundledAppMainExecutableFile(CFStringRef appname)
                         else
                         {
                             CFRetain( pathInCFString );
-                            theResult =  wxCFStringRef(pathInCFString).AsString(wxLocale::GetSystemEncoding());
+                            theResult =  wxCFStringRef(pathInCFString).AsString();
                             DEBUG_INFO("Mac: the executable's full path in the application bundle: " << theResult.mb_str(wxConvLocal));
                         }
                     }
@@ -327,7 +336,7 @@ wxString MacGetPathToBundledAppMainExecutableFile(CFStringRef appname)
 
 wxString MacGetPathToBundledResourceFile(CFStringRef filename)
 {
-    wxString theResult = wxT("");
+    wxString theResult = wxEmptyString;
 
     CFBundleRef mainbundle = CFBundleGetMainBundle();
     if(mainbundle == NULL)
@@ -352,7 +361,7 @@ wxString MacGetPathToBundledResourceFile(CFStringRef filename)
             else
             {
                 CFRetain( pathInCFString );
-                theResult = wxCFStringRef(pathInCFString).AsString(wxLocale::GetSystemEncoding());
+                theResult = wxCFStringRef(pathInCFString).AsString();
                 DEBUG_INFO("Mac: the resource file's path in the application bundle: " << theResult.mb_str(wxConvLocal));
             }
         }
@@ -362,7 +371,7 @@ wxString MacGetPathToBundledResourceFile(CFStringRef filename)
 
 wxString MacGetPathToBundledFrameworksDirectory()
 {
-    wxString theResult = wxT("");
+    wxString theResult = wxEmptyString;
     
     CFBundleRef mainbundle = CFBundleGetMainBundle();
     if(mainbundle == NULL)
@@ -387,17 +396,17 @@ wxString MacGetPathToBundledFrameworksDirectory()
             else
             {
                 CFRetain( pathInCFString );
-                theResult = wxCFStringRef(pathInCFString).AsString(wxLocale::GetSystemEncoding());
+                theResult = wxCFStringRef(pathInCFString).AsString();
                 DEBUG_INFO("Mac: the Frameworks file's path in the application bundle: " << theResult.mb_str(wxConvLocal));
             }
         }
     }
-    return theResult + wxT("/Contents/Frameworks");
+    return theResult + "/Contents/Frameworks";
 }
 
 wxString MacGetPathToBundledExecutableFile(CFStringRef filename)
 {
-    wxString theResult = wxT("");
+    wxString theResult = wxEmptyString;
 
     CFBundleRef mainbundle = CFBundleGetMainBundle();
     if(mainbundle == NULL)
@@ -429,7 +438,7 @@ wxString MacGetPathToBundledExecutableFile(CFStringRef filename)
                 else
                 {
                     CFRetain( pathInCFString );
-                    theResult =  wxCFStringRef(pathInCFString).AsString(wxLocale::GetSystemEncoding());
+                    theResult =  wxCFStringRef(pathInCFString).AsString();
                     DEBUG_INFO("Mac: executable's full path in the application bundle: " << theResult.mb_str(wxConvLocal));
                 }
             }
@@ -441,7 +450,7 @@ wxString MacGetPathToBundledExecutableFile(CFStringRef filename)
 
 wxString MacGetPathToUserDomainTempDir()
 {
-    wxString tmpDirPath = wxT("");
+    wxString tmpDirPath = wxEmptyString;
     
     FSRef tempDirRef;
     OSErr err = FSFindFolder(kUserDomain, kTemporaryFolderType, kCreateFolder, &tempDirRef);
@@ -452,7 +461,7 @@ wxString MacGetPathToUserDomainTempDir()
         {
             CFStringRef tmpPath = CFURLCopyFileSystemPath(tempDirURL, kCFURLPOSIXPathStyle);
             CFRetain(tmpPath);
-            tmpDirPath = wxCFStringRef(tmpPath).AsString(wxLocale::GetSystemEncoding());
+            tmpDirPath = wxCFStringRef(tmpPath).AsString();
             CFRelease(tempDirURL);
         }
     }
@@ -462,7 +471,7 @@ wxString MacGetPathToUserDomainTempDir()
 
 wxString MacGetPathToUserAppSupportAutoPanoFolder()
 {
-    wxString appSupportAutoPanoFolder = wxT("");
+    wxString appSupportAutoPanoFolder = wxEmptyString;
 
     FSRef appSupportFolder;
     OSErr err = FSFindFolder(kUserDomain,kApplicationSupportFolderType,kDontCreateFolder,&appSupportFolder);
@@ -473,7 +482,7 @@ wxString MacGetPathToUserAppSupportAutoPanoFolder()
         CFURLRef autopanoURL = CFURLCreateCopyAppendingPathComponent(kCFAllocatorDefault,appSupportHugin,CFSTR("Autopano"),true);
         CFStringRef tmpPath = CFURLCopyFileSystemPath(autopanoURL,  kCFURLPOSIXPathStyle);
         CFRetain(tmpPath);
-        appSupportAutoPanoFolder = wxCFStringRef(tmpPath).AsString(wxLocale::GetSystemEncoding());
+        appSupportAutoPanoFolder = wxCFStringRef(tmpPath).AsString();
         CFRelease(autopanoURL);
     }
     return appSupportAutoPanoFolder;
@@ -495,7 +504,7 @@ const wxString getInvalidCharacters()
     // we are also rejecting the characters <>*?| which are principally allowed in filenames but will probably make problems when used
     // the double quote does not work with the panotools file format, so also reject
     //@BUG tilde ~ and backslash \ are not working with vigraimpex, if this works again these characters can be removed from the list
-    return wxT("*?<>|\"\\~");
+    return "*?<>|\"\\~";
 #endif
 };
 
@@ -515,7 +524,7 @@ bool containsInvalidCharacters(const wxString stringToTest)
 void ShowFilenameWarning(wxWindow* parent, const wxArrayString filelist)
 {
     wxDialog dlg;
-    wxXmlResource::Get()->LoadDialog(&dlg, parent, wxT("dlg_warning_filename"));
+    wxXmlResource::Get()->LoadDialog(&dlg, parent, "dlg_warning_filename");
     XRCCTRL(dlg, "dlg_warning_text", wxStaticText)->SetLabel(wxString::Format(_("The filename(s) contains one of the following invalid characters: %s\nHugin can not work with these filenames. Please rename your file(s) and try again."), getInvalidCharacters().c_str()));
     XRCCTRL(dlg, "dlg_warning_list", wxListBox)->Append(filelist);
     dlg.Fit();

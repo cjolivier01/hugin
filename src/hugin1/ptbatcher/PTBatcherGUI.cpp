@@ -30,6 +30,7 @@
 #include <wx/stdpaths.h>
 #endif
 #include "lensdb/LensDB.h"
+#include "base_wx/wxutils.h"
 
 // make wxwindows use this class as the main application
 #if defined USE_GDKBACKEND_X11
@@ -51,25 +52,25 @@ int main(int argc, char **argv)
 wxIMPLEMENT_APP(PTBatcherGUI);
 #endif
 
-BEGIN_EVENT_TABLE(PTBatcherGUI, wxApp)
-    EVT_LIST_ITEM_ACTIVATED(XRCID("project_listbox"),PTBatcherGUI::OnItemActivated)
-END_EVENT_TABLE()
-
 bool PTBatcherGUI::OnInit()
 {
 #if wxUSE_ON_FATAL_EXCEPTION
     wxHandleFatalExceptions();
 #endif
     // Required to access the preferences of hugin
-    SetAppName(wxT("hugin"));
-#if defined __WXGTK__ && wxCHECK_VERSION(3,1,1)
+    SetAppName("hugin");
+#if defined __WXMSW__ && wxCHECK_VERSION(3,3,0)
+    // automatically switch between light and dark mode
+    SetAppearance(Appearance::System);
+#endif
+#if defined __WXGTK__
     CheckConfigFilename();
 #endif
 
     // need to explicitly initialize locale for C++ library/runtime
     setlocale(LC_ALL, "");
 #if defined __WXMSW__
-    int localeID = wxConfigBase::Get()->Read(wxT("language"), (long) wxLANGUAGE_DEFAULT);
+    int localeID = wxConfigBase::Get()->Read("language", (long) wxLANGUAGE_DEFAULT);
     m_locale.Init(localeID);
 #else
     m_locale.Init(wxLANGUAGE_DEFAULT);
@@ -83,20 +84,20 @@ bool PTBatcherGUI::OnInit()
     wxFileName exePath(wxStandardPaths::Get().GetExecutablePath());
     exePath.RemoveLastDir();
     const wxString huginRoot(exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR));
-    m_xrcPrefix = huginRoot + wxT("share\\hugin\\xrc\\");
+    m_xrcPrefix = huginRoot + "share\\hugin\\xrc\\";
 
     // locale setup
-    m_locale.AddCatalogLookupPathPrefix(huginRoot + wxT("share\\locale"));
+    m_locale.AddCatalogLookupPathPrefix(huginRoot + "share\\locale");
 #elif defined __WXMAC__ && defined MAC_SELF_CONTAINED_BUNDLE
     {
         wxString exec_path = MacGetPathToBundledResourceFile(CFSTR("xrc"));
-        if(exec_path != wxT(""))
+        if(exec_path != wxEmptyString)
         {
-            m_xrcPrefix = exec_path + wxT("/");
+            m_xrcPrefix = exec_path + "/";
         }
         else
         {
-            wxMessageBox(_("xrc directory not found in bundle"), _("Fatal Error"));
+            hugin_utils::HuginMessageBox(_("xrc directory not found in bundle"), _("PTBatcherGUI"), wxOK|wxICON_ERROR, wxGetActiveWindow());
             return false;
         }
 
@@ -108,29 +109,29 @@ bool PTBatcherGUI::OnInit()
       wxFileName exePath(wxStandardPaths::Get().GetExecutablePath());
       exePath.RemoveLastDir();
       const wxString huginRoot(exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR));
-      m_xrcPrefix = huginRoot + wxT("share/hugin/xrc/");
+      m_xrcPrefix = huginRoot + "share/hugin/xrc/";
 
       // locale setup
-      m_locale.AddCatalogLookupPathPrefix(huginRoot + wxT("share/locale"));
+      m_locale.AddCatalogLookupPathPrefix(huginRoot + "share/locale");
     }
 #else
     // add the locale directory specified during configure
-    m_xrcPrefix = wxT(INSTALL_XRC_DIR);
-    m_locale.AddCatalogLookupPathPrefix(wxT(INSTALL_LOCALE_DIR));
+    m_xrcPrefix = INSTALL_XRC_DIR;
+    m_locale.AddCatalogLookupPathPrefix(INSTALL_LOCALE_DIR);
 #endif
 
     // set the name of locale recource to look for
-    m_locale.AddCatalog(wxT("hugin"));
+    m_locale.AddCatalog("hugin");
 
     const wxString name = wxString::Format(_T("PTBatcherGUI-%s"), wxGetUserId().c_str());
-    m_checker = new wxSingleInstanceChecker(name+wxT(".lock"),wxFileName::GetTempDir());
+    m_checker = new wxSingleInstanceChecker(name+".lock",wxFileName::GetTempDir());
     bool IsFirstInstance=(!m_checker->IsAnotherRunning());
 
     if(IsFirstInstance)
     {
-        if ( ! wxFile::Exists(m_xrcPrefix + wxT("/batch_frame.xrc")) )
+        if ( ! wxFile::Exists(m_xrcPrefix + "/batch_frame.xrc") )
         {
-            wxMessageBox(_("xrc directory not found, hugin needs to be properly installed\nTried Path:") + m_xrcPrefix , _("Fatal Error"));
+            hugin_utils::HuginMessageBox(wxString::Format(_("xrc directory not found, hugin needs to be properly installed\nTried Path: %s"), m_xrcPrefix), _("PTBatcherGUI"), wxOK | wxICON_ERROR, wxGetActiveWindow());
             return false;
         }
         // initialize image handlers
@@ -140,11 +141,11 @@ bool PTBatcherGUI::OnInit()
         wxXmlResource::Get()->InitAllHandlers();
         wxXmlResource::Get()->AddHandler(new ProjectListBoxXmlHandler());
         // load XRC files
-        wxXmlResource::Get()->Load(m_xrcPrefix + wxT("batch_frame.xrc"));
-        wxXmlResource::Get()->Load(m_xrcPrefix + wxT("batch_toolbar.xrc"));
-        wxXmlResource::Get()->Load(m_xrcPrefix + wxT("batch_menu.xrc"));
-        wxXmlResource::Get()->Load(m_xrcPrefix + wxT("lensdb_dialogs.xrc"));
-        wxXmlResource::Get()->Load(m_xrcPrefix + wxT("dlg_warning.xrc"));
+        wxXmlResource::Get()->Load(m_xrcPrefix + "batch_frame.xrc");
+        wxXmlResource::Get()->Load(m_xrcPrefix + "batch_toolbar.xrc");
+        wxXmlResource::Get()->Load(m_xrcPrefix + "batch_menu.xrc");
+        wxXmlResource::Get()->Load(m_xrcPrefix + "lensdb_dialogs.xrc");
+        wxXmlResource::Get()->Load(m_xrcPrefix + "dlg_warning.xrc");
     };
 
     // parse arguments
@@ -187,7 +188,7 @@ bool PTBatcherGUI::OnInit()
 #ifdef _WIN32
     servername=name;
 #else
-    servername=wxFileName::GetTempDir()+wxFileName::GetPathSeparator()+name+wxT(".ipc");
+    servername=wxFileName::GetTempDir()+wxFileName::GetPathSeparator()+name+".ipc";
 #endif
     if(IsFirstInstance)
     {
@@ -196,7 +197,7 @@ bool PTBatcherGUI::OnInit()
         // init help system
         provider->SetHelpController(&m_frame->GetHelpController());
 #ifdef __WXMSW__
-        m_frame->GetHelpController().Initialize(m_xrcPrefix + wxT("data/hugin_help_en_EN.chm"));
+        m_frame->GetHelpController().Initialize(m_xrcPrefix + "data/hugin_help_en_EN.chm");
 #else
 #if wxUSE_WXHTML_HELP
         // using wxHtmlHelpController
@@ -206,19 +207,19 @@ bool PTBatcherGUI::OnInit()
         wxString strFile = MacGetPathToBundledResourceFile(CFSTR("help"));
         if (!strFile.IsEmpty())
         {
-            m_frame->GetHelpController().AddBook(wxFileName(strFile + wxT("/hugin_help_en_EN.hhp")));
+            m_frame->GetHelpController().AddBook(wxFileName(strFile + "/hugin_help_en_EN.hhp"));
         }
         else
         {
-            wxLogError(wxString::Format(wxT("Could not find help directory in the bundle"), strFile.c_str()));
+            wxLogError(wxString::Format("Could not find help directory in the bundle", strFile.c_str()));
             return false;
         }
 #else
-        m_frame->GetHelpController().AddBook(wxFileName(m_xrcPrefix + wxT("data/help_en_EN/hugin_help_en_EN.hhp")));
+        m_frame->GetHelpController().AddBook(wxFileName(m_xrcPrefix + "data/help_en_EN/hugin_help_en_EN.hhp"));
 #endif
 #else
         // using wxExtHelpController
-        m_frame->GetHelpController().Initialize(Initialize(m_xrcPrefix + wxT("data/help_en_EN")));
+        m_frame->GetHelpController().Initialize(Initialize(m_xrcPrefix + "data/help_en_EN"));
 #endif
 #endif
 
@@ -226,10 +227,6 @@ bool PTBatcherGUI::OnInit()
         if(!(m_frame->IsStartedMinimized()))
         {
             m_frame->Show(true);
-        }
-        else
-        {
-            m_frame->SetStatusInformation(_("PTBatcherGUI started"));
         };
         m_server = new BatchIPCServer();
         if (!m_server->Create(servername))
@@ -248,11 +245,11 @@ bool PTBatcherGUI::OnInit()
     };
 
     size_t count = 0;
-    if (parser.Found(wxT("a")))
+    if (parser.Found("a"))
     {
         //added assistant files
         wxString userDefined;
-        parser.Found(wxT("u"), &userDefined);
+        parser.Found("u", &userDefined);
         while (parser.GetParamCount() > count)
         {
             wxString param = parser.GetParam(count);
@@ -262,7 +259,7 @@ bool PTBatcherGUI::OnInit()
             if (name.FileExists())
             {
                 //only add existing pto files
-                if (name.GetExt().CmpNoCase(wxT("pto")) == 0)
+                if (name.GetExt().CmpNoCase("pto") == 0)
                 {
                     if (IsFirstInstance)
                     {
@@ -270,10 +267,10 @@ bool PTBatcherGUI::OnInit()
                     }
                     else
                     {
-                        conn->Request(wxT("D ") + name.GetFullPath());
+                        conn->Request("D " + name.GetFullPath());
                         if (!userDefined.IsEmpty())
                         {
-                            conn->Request(wxT("U ") + userDefined);
+                            conn->Request("U " + userDefined);
                         };
                     };
                 };
@@ -284,7 +281,7 @@ bool PTBatcherGUI::OnInit()
     {
         bool projectSpecified = false;
         wxString userDefined;
-        parser.Found(wxT("u"), &userDefined);
+        parser.Found("u", &userDefined);
         //we collect all parameters - all project files <and their output prefixes>
         while (parser.GetParamCount() > count)
         {
@@ -300,10 +297,10 @@ bool PTBatcherGUI::OnInit()
                 }
                 else
                 {
-                    conn->Request(wxT("A ") + name.GetFullPath());
+                    conn->Request("A " + name.GetFullPath());
                     if (!userDefined.IsEmpty())
                     {
-                        conn->Request(wxT("U ") + userDefined);
+                        conn->Request("U " + userDefined);
                     };
                 }
                 projectSpecified = true;
@@ -320,7 +317,7 @@ bool PTBatcherGUI::OnInit()
                     }
                     else
                     {
-                        conn->Request(wxT("P ") + fn.GetFullPath());
+                        conn->Request("P " + fn.GetFullPath());
                     };
                     projectSpecified = false;
                 }
@@ -328,10 +325,10 @@ bool PTBatcherGUI::OnInit()
                 {
                     wxString ext = fn.GetExt();
                     //we may still have a prefix, but with added image extension
-                    if (ext.CmpNoCase(wxT("jpg")) == 0 || ext.CmpNoCase(wxT("jpeg")) == 0 ||
-                        ext.CmpNoCase(wxT("tif")) == 0 || ext.CmpNoCase(wxT("tiff")) == 0 ||
-                        ext.CmpNoCase(wxT("png")) == 0 || ext.CmpNoCase(wxT("exr")) == 0 ||
-                        ext.CmpNoCase(wxT("pnm")) == 0 || ext.CmpNoCase(wxT("hdr")) == 0)
+                    if (ext.CmpNoCase("jpg") == 0 || ext.CmpNoCase("jpeg") == 0 ||
+                        ext.CmpNoCase("tif") == 0 || ext.CmpNoCase("tiff") == 0 ||
+                        ext.CmpNoCase("png") == 0 || ext.CmpNoCase("exr") == 0 ||
+                        ext.CmpNoCase("pnm") == 0 || ext.CmpNoCase("hdr") == 0)
                     {
                         //extension will be removed before stitch, so there is no need to do it now
                         if (IsFirstInstance)
@@ -340,7 +337,7 @@ bool PTBatcherGUI::OnInit()
                         }
                         else
                         {
-                            conn->Request(wxT("P ") + fn.GetFullPath());
+                            conn->Request("P " + fn.GetFullPath());
                         };
                         projectSpecified = false;
                     }
@@ -353,10 +350,10 @@ bool PTBatcherGUI::OnInit()
                         }
                         else
                         {
-                            conn->Request(wxT("A ") + fn.GetFullPath());
+                            conn->Request("A " + fn.GetFullPath());
                             if (!userDefined.IsEmpty())
                             {
-                                conn->Request(wxT("U ") + userDefined);
+                                conn->Request("U " + userDefined);
                             };
                         }
                         projectSpecified = true;
@@ -369,45 +366,45 @@ bool PTBatcherGUI::OnInit()
     if(IsFirstInstance)
     {
         wxConfigBase* config=wxConfigBase::Get();
-        if (parser.Found(wxT("s")))
+        if (parser.Found("s"))
         {
-            config->DeleteEntry(wxT("/BatchFrame/ShutdownCheck"));
+            config->DeleteEntry("/BatchFrame/ShutdownCheck");
 #if !defined __WXMAC__ && !defined __WXOSX_COCOA__
             // wxMac has not wxShutdown
-            config->Write(wxT("/BatchFrame/AtEnd"), static_cast<long>(Batch::SHUTDOWN));
+            config->Write("/BatchFrame/AtEnd", static_cast<long>(Batch::SHUTDOWN));
 #endif
         }
-        if (parser.Found(wxT("o")))
+        if (parser.Found("o"))
         {
-            config->Write(wxT("/BatchFrame/OverwriteCheck"), 1l);
+            config->Write("/BatchFrame/OverwriteCheck", 1l);
         }
-        if (parser.Found(wxT("v")))
+        if (parser.Found("v"))
         {
-            config->Write(wxT("/BatchFrame/VerboseCheck"), 1l);
+            config->Write("/BatchFrame/VerboseCheck", 1l);
         }
         config->Flush();
     }
     else
     {
-        if (parser.Found(wxT("s")))
+        if (parser.Found("s"))
         {
 #if !defined __WXMAC__ && !defined __WXOSX_COCOA__
             // wxMac has not wxShutdown
-            conn->Request(wxT("SetShutdownCheck"));
+            conn->Request("SetShutdownCheck");
 #endif
         }
-        if (parser.Found(wxT("o")))
+        if (parser.Found("o"))
         {
-            conn->Request(wxT("SetOverwriteCheck"));
+            conn->Request("SetOverwriteCheck");
         }
-        if (parser.Found(wxT("v")))
+        if (parser.Found("v"))
         {
-            conn->Request(wxT("SetVerboseCheck"));
+            conn->Request("SetVerboseCheck");
         }
-        conn->Request(wxT("BringWindowToTop"));
-        if(parser.Found(wxT("b")))
+        conn->Request("BringWindowToTop");
+        if(parser.Found("b"))
         {
-            conn->Request(wxT("RunBatch"));
+            conn->Request("RunBatch");
         }
         conn->Disconnect();
         delete conn;
@@ -421,7 +418,7 @@ bool PTBatcherGUI::OnInit()
     {
         m_frame->SetInternalVerbose(false);
     };
-    if (parser.Found(wxT("b")) )
+    if (parser.Found("b") )
     {
         m_frame->RunBatch();
     }
@@ -458,12 +455,6 @@ void PTBatcherGUI::OnFatalException()
 };
 #endif
 
-void PTBatcherGUI::OnItemActivated(wxListEvent& event)
-{
-    wxCommandEvent dummy;
-    m_frame->OnButtonOpenWithHugin(dummy);
-}
-
 #ifdef __WXMAC__
 // wx calls this method when the app gets "Open files" AppleEvent
 void PTBatcherGUI::MacOpenFiles(const wxArrayString &fileNames) 
@@ -483,22 +474,22 @@ const void* BatchIPCConnection::OnRequest(const wxString& topic, const wxString&
 {
     *size=wxNO_LEN;
     BatchFrame* MyBatchFrame=wxGetApp().GetFrame();
-    if(item.Left(1)==wxT("A"))
+    if(item.Left(1)=="A")
     {
         MyBatchFrame->AddToList(item.Mid(2));
         return wxEmptyString;
     };
-    if(item.Left(1)==wxT("D"))
+    if(item.Left(1)=="D")
     {
         MyBatchFrame->AddToList(item.Mid(2), Project::DETECTING);
         return wxEmptyString;
     };
-    if(item.Left(1)==wxT("P"))
+    if(item.Left(1)=="P")
     {
         MyBatchFrame->ChangePrefix(-1,item.Mid(2));
         return wxEmptyString;
     };
-    if (item.Left(1) == wxT("U"))
+    if (item.Left(1) == "U")
     {
         MyBatchFrame->ChangeUserDefined(-1, item.Mid(2));
         return wxEmptyString;
@@ -507,7 +498,7 @@ const void* BatchIPCConnection::OnRequest(const wxString& topic, const wxString&
     event.SetInt(1);
 #if !defined __WXMAC__ && !defined __WXOSX_COCOA__
     // wxMac has not wxShutdown
-    if(item==wxT("SetShutdownCheck"))
+    if(item=="SetShutdownCheck")
         if (MyBatchFrame->GetEndTask()!=Batch::SHUTDOWN)
         {
             wxCommandEvent choiceEvent;
@@ -516,23 +507,23 @@ const void* BatchIPCConnection::OnRequest(const wxString& topic, const wxString&
             MyBatchFrame->SetCheckboxes();
         };
 #endif
-    if(item==wxT("SetOverwriteCheck"))
+    if(item=="SetOverwriteCheck")
         if(!MyBatchFrame->GetCheckOverwrite())
         {
             MyBatchFrame->OnCheckOverwrite(event);
             MyBatchFrame->SetCheckboxes();
         };
-    if(item==wxT("SetVerboseCheck"))
+    if(item=="SetVerboseCheck")
         if(!MyBatchFrame->GetCheckVerbose())
         {
             MyBatchFrame->OnCheckVerbose(event);
             MyBatchFrame->SetCheckboxes();
         };
-    if(item==wxT("BringWindowToTop"))
+    if(item=="BringWindowToTop")
     {
         MyBatchFrame->RequestUserAttention();
     }
-    if(item==wxT("RunBatch"))
+    if(item=="RunBatch")
     {
         wxCommandEvent myEvent(wxEVT_COMMAND_TOOL_CLICKED ,XRCID("tool_start"));
         MyBatchFrame->GetEventHandler()->AddPendingEvent(myEvent);

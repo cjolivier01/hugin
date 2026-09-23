@@ -84,7 +84,6 @@ private:
     bool twoStepAllowed;
 
     void ChangeType();
-    DECLARE_EVENT_TABLE();
 };
 
 #endif

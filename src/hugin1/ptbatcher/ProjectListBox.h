@@ -33,7 +33,7 @@ class ProjectListBox : public wxListCtrl
 {
 public:
     //Constructor
-    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxT("panel"));
+    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = "panel");
 
     //Appends project to list
     void AppendProject(Project* project);
@@ -88,7 +88,6 @@ private:
     static const wxString HDRMergeType[];
     static const wxString blendingMechanism[];
 
-    DECLARE_EVENT_TABLE()
     DECLARE_DYNAMIC_CLASS(ProjectListBox)
 };
 

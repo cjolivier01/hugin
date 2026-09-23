@@ -30,62 +30,52 @@
 
 #include "hugin/huginApp.h"
 
-BEGIN_EVENT_TABLE(ResetDialog,wxDialog)
-    EVT_BUTTON(wxID_OK, ResetDialog::OnOk)
-    EVT_CHECKBOX(XRCID("reset_exposure"), ResetDialog::OnSelectExposure)
-    EVT_CHECKBOX(XRCID("reset_color"), ResetDialog::OnSelectColor)
-END_EVENT_TABLE()
-
 ResetDialog::ResetDialog(wxWindow *parent, GuiLevel guiLevel)
 {
     // load our children. some children might need special
     // initialization. this will be done later.
-    wxXmlResource::Get()->LoadDialog(this, parent, wxT("reset_dialog"));
-
-#ifdef __WXMSW__
-    wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + wxT("data/hugin.ico"),wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(huginApp::Get()->GetXRCPath() + wxT("data/hugin.png"),wxBITMAP_TYPE_PNG);
-    SetIcon(myIcon);
-#endif
+    wxXmlResource::Get()->LoadDialog(this, parent, "reset_dialog");
 
     //set parameters
     wxConfigBase * cfg = wxConfigBase::Get();
     bool check;
-    cfg->Read(wxT("/ResetDialog/ResetPosition"),&check,true);
+    cfg->Read("/ResetDialog/ResetPosition",&check,true);
     XRCCTRL(*this,"reset_pos",wxCheckBox)->SetValue(check);
-    cfg->Read(wxT("/ResetDialog/ResetTranslation"), &check, true);
+    cfg->Read("/ResetDialog/ResetTranslation", &check, true);
     wxCheckBox* reset_translation=XRCCTRL(*this,"reset_translation",wxCheckBox);
     reset_translation->SetValue(check);
     if(guiLevel<GUI_EXPERT)
     {
         reset_translation->Hide();
     };
-    cfg->Read(wxT("/ResetDialog/ResetFOV"),&check,true);
+    cfg->Read("/ResetDialog/ResetFOV",&check,true);
     XRCCTRL(*this,"reset_fov",wxCheckBox)->SetValue(check);
-    cfg->Read(wxT("/ResetDialog/ResetLens"),&check,true);
+    cfg->Read("/ResetDialog/ResetLens",&check,true);
     XRCCTRL(*this,"reset_lens",wxCheckBox)->SetValue(check);
-    cfg->Read(wxT("/ResetDialog/ResetExposure"),&check,true);
-    XRCCTRL(*this,"reset_exposure",wxCheckBox)->SetValue(check);
+    cfg->Read("/ResetDialog/ResetExposure",&check,true);
+    wxCheckBox* checkbox = XRCCTRL(*this, "reset_exposure", wxCheckBox);
+    checkbox->SetValue(check);
+    checkbox->Bind(wxEVT_CHECKBOX, &ResetDialog::OnSelectExposure, this);
     int exp_param;
-    cfg->Read(wxT("/ResetDialog/ResetExposureParam"),&exp_param,0);
+    cfg->Read("/ResetDialog/ResetExposureParam",&exp_param,0);
     XRCCTRL(*this,"combo_exposure",wxComboBox)->Select(exp_param);
     wxCommandEvent dummy;
     OnSelectExposure(dummy);
-    cfg->Read(wxT("/ResetDialog/ResetColor"),&check,true);
-    XRCCTRL(*this,"reset_color",wxCheckBox)->SetValue(check);
-    cfg->Read(wxT("/ResetDialog/ResetColorParam"),&exp_param,0);
+    cfg->Read("/ResetDialog/ResetColor",&check,true);
+    checkbox = XRCCTRL(*this, "reset_color", wxCheckBox);
+    checkbox->SetValue(check);
+    checkbox->Bind(wxEVT_CHECKBOX, &ResetDialog::OnSelectColor, this);
+    cfg->Read("/ResetDialog/ResetColorParam",&exp_param,0);
     OnSelectColor(dummy);
     XRCCTRL(*this,"combo_color",wxComboBox)->Select(exp_param);
-    cfg->Read(wxT("/ResetDialog/ResetVignetting"),&check,true);
+    cfg->Read("/ResetDialog/ResetVignetting",&check,true);
     XRCCTRL(*this,"reset_vignetting",wxCheckBox)->SetValue(check);
-    cfg->Read(wxT("/ResetDialog/ResetResponse"),&check,true);
+    cfg->Read("/ResetDialog/ResetResponse",&check,true);
     XRCCTRL(*this,"reset_response",wxCheckBox)->SetValue(check);
     GetSizer()->Fit(this);
     //position
-    int x = cfg->Read(wxT("/ResetDialog/positionX"),-1l);
-    int y = cfg->Read(wxT("/ResetDialog/positionY"),-1l);
+    int x = cfg->Read("/ResetDialog/positionX",-1l);
+    int y = cfg->Read("/ResetDialog/positionY",-1l);
     if ( y >= 0 && x >= 0) 
     {
         this->Move(x, y);
@@ -94,6 +84,7 @@ ResetDialog::ResetDialog(wxWindow *parent, GuiLevel guiLevel)
     {
         this->Move(0, 44);
     };
+    Bind(wxEVT_BUTTON, &ResetDialog::OnOk, this, wxID_OK);
 };
 
 void ResetDialog::LimitToGeometric()
@@ -120,21 +111,21 @@ void ResetDialog::OnOk(wxCommandEvent & e)
 {
     wxConfigBase * cfg = wxConfigBase::Get();
     wxPoint ps = this->GetPosition();
-    cfg->Write(wxT("/ResetDialog/positionX"), ps.x);
-    cfg->Write(wxT("/ResetDialog/positionY"), ps.y);
-    cfg->Write(wxT("/ResetDialog/ResetPosition"),GetResetPos());
-    cfg->Write(wxT("/ResetDialog/ResetTranslation"), GetResetTranslation());
-    cfg->Write(wxT("/ResetDialog/ResetFOV"),GetResetFOV());
-    cfg->Write(wxT("/ResetDialog/ResetLens"),GetResetLens());
-    cfg->Write(wxT("/ResetDialog/ResetExposure"),GetResetExposure());
+    cfg->Write("/ResetDialog/positionX", ps.x);
+    cfg->Write("/ResetDialog/positionY", ps.y);
+    cfg->Write("/ResetDialog/ResetPosition",GetResetPos());
+    cfg->Write("/ResetDialog/ResetTranslation", GetResetTranslation());
+    cfg->Write("/ResetDialog/ResetFOV",GetResetFOV());
+    cfg->Write("/ResetDialog/ResetLens",GetResetLens());
+    cfg->Write("/ResetDialog/ResetExposure",GetResetExposure());
     int exp_param;
     exp_param=XRCCTRL(*this,"combo_exposure",wxComboBox)->GetSelection();
-    cfg->Write(wxT("/ResetDialog/ResetExposureParam"),exp_param);
-    cfg->Write(wxT("/ResetDialog/ResetColor"),GetResetColor());
+    cfg->Write("/ResetDialog/ResetExposureParam",exp_param);
+    cfg->Write("/ResetDialog/ResetColor",GetResetColor());
     exp_param=XRCCTRL(*this,"combo_color",wxComboBox)->GetSelection();
-    cfg->Write(wxT("/ResetDialog/ResetColorParam"), exp_param);
-    cfg->Write(wxT("/ResetDialog/ResetVignetting"),GetResetVignetting());
-    cfg->Write(wxT("/ResetDialog/ResetResponse"),GetResetResponse());
+    cfg->Write("/ResetDialog/ResetColorParam", exp_param);
+    cfg->Write("/ResetDialog/ResetVignetting",GetResetVignetting());
+    cfg->Write("/ResetDialog/ResetResponse",GetResetResponse());
     cfg->Flush();
     e.Skip();
 };

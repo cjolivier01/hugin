@@ -31,6 +31,7 @@
 // standard hugin include
 #include "panoinc.h"
 #include "base_wx/platform.h"
+#include <wx/dcbuffer.h>
 
 #include <vigra/inspectimage.hxx>
 #include <vigra/transformimage.hxx>
@@ -50,11 +51,7 @@
 // definition of the control point event
 
 IMPLEMENT_DYNAMIC_CLASS( CPEvent, wxEvent )
-#if defined _WIN32 && defined Hugin_shared
-DEFINE_LOCAL_EVENT_TYPE( EVT_CPEVENT )
-#else
-DEFINE_EVENT_TYPE( EVT_CPEVENT )
-#endif
+wxDEFINE_EVENT(EVT_CPEVENT, CPEvent);
 
 CPEvent::CPEvent( )
 {
@@ -182,19 +179,19 @@ void DisplayedControlPoint::Draw(wxDC& dc, const wxRect& visibleRect, bool selec
     bool drawMag = false;
     if (selected)
     {
-        bgColor = wxTheColourDatabase->Find(wxT("RED"));
-        textColor = wxTheColourDatabase->Find(wxT("WHITE"));
+        bgColor = wxTheColourDatabase->Find("RED");
+        textColor = wxTheColourDatabase->Find("WHITE");
         drawMag = !m_control->GetMouseInWindow() || m_control->GetForceMagnifier();
     }
     if (newPoint)
     {
-        bgColor = wxTheColourDatabase->Find(wxT("YELLOW"));
-        textColor = wxTheColourDatabase->Find(wxT("BLACK"));
+        bgColor = wxTheColourDatabase->Find("YELLOW");
+        textColor = wxTheColourDatabase->Find("BLACK");
         drawMag = true;
     }
 
-    dc.SetPen(wxPen(wxT("WHITE"), 1, wxPENSTYLE_SOLID));
-    dc.SetBrush(wxBrush(wxT("BLACK"),wxBRUSHSTYLE_TRANSPARENT));
+    dc.SetPen(wxPen("WHITE", 1, wxPENSTYLE_SOLID));
+    dc.SetBrush(wxBrush("BLACK",wxBRUSHSTYLE_TRANSPARENT));
 
     hugin_utils::FDiff2D pointInput = m_mirrored ? hugin_utils::FDiff2D(m_cp.x2, m_cp.y2) : hugin_utils::FDiff2D(m_cp.x1, m_cp.y1);
     hugin_utils::FDiff2D point = m_control->applyRot(pointInput);
@@ -254,11 +251,11 @@ void DisplayedControlPoint::Draw(wxDC& dc, const wxRect& visibleRect, bool selec
                         lumac, average);
     if (average() < 150)
     {
-        dc.SetPen(wxPen(wxT("WHITE"), 1, wxPENSTYLE_SOLID));
+        dc.SetPen(wxPen("WHITE", 1, wxPENSTYLE_SOLID));
     }
     else
     {
-        dc.SetPen(wxPen(wxT("BLACK"), 1, wxPENSTYLE_SOLID));
+        dc.SetPen(wxPen("BLACK", 1, wxPENSTYLE_SOLID));
     }
 
     if(IsDrawingLine())
@@ -343,8 +340,8 @@ wxRect DisplayedControlPoint::DrawTextMag(wxDC& dc, wxPoint p, hugin_utils::FDif
         };
 
         dc.DrawBitmap(magBitmap, ulMag);
-        dc.SetPen(wxPen(wxT("BLACK"), 1, wxPENSTYLE_SOLID));
-        dc.SetBrush(wxBrush(wxT("WHITE"),wxBRUSHSTYLE_TRANSPARENT));
+        dc.SetPen(wxPen("BLACK", 1, wxPENSTYLE_SOLID));
+        dc.SetBrush(wxBrush("WHITE",wxBRUSHSTYLE_TRANSPARENT));
 
         // draw Bevel
         int bw = magBitmap.GetWidth();
@@ -353,7 +350,7 @@ wxRect DisplayedControlPoint::DrawTextMag(wxDC& dc, wxPoint p, hugin_utils::FDif
                     ulMag.x+bw+1, ulMag.y+bh);
         dc.DrawLine(ulMag.x+bw, ulMag.y+bh, 
                     ulMag.x+bw, ulMag.y-2);
-        dc.SetPen(wxPen(wxT("WHITE"), 1, wxPENSTYLE_SOLID));
+        dc.SetPen(wxPen("WHITE", 1, wxPENSTYLE_SOLID));
         dc.DrawLine(ulMag.x-1, ulMag.y-1, 
                     ulMag.x+bw+1, ulMag.y-1);
         dc.DrawLine(ulMag.x-1, ulMag.y+bh, 
@@ -647,27 +644,6 @@ bool DisplayedControlPoint::operator==(const DisplayedControlPoint other)
 };
 
 // our image control
-BEGIN_EVENT_TABLE(CPImageCtrl, wxScrolledWindow)
-    EVT_SIZE(CPImageCtrl::OnSize)
-    EVT_CHAR(CPImageCtrl::OnKey)
-//    EVT_KEY_UP(CPImageCtrl::OnKeyUp)
-    EVT_KEY_DOWN(CPImageCtrl::OnKeyDown)
-    EVT_LEAVE_WINDOW(CPImageCtrl::OnMouseLeave)
-    EVT_ENTER_WINDOW(CPImageCtrl::OnMouseEnter)
-    EVT_MOTION(CPImageCtrl::mouseMoveEvent)
-    EVT_LEFT_DOWN(CPImageCtrl::mousePressLMBEvent)
-    EVT_LEFT_UP(CPImageCtrl::mouseReleaseLMBEvent)
-    EVT_RIGHT_DOWN(CPImageCtrl::mousePressRMBEvent)
-    EVT_RIGHT_UP(CPImageCtrl::mouseReleaseRMBEvent)
-    EVT_MIDDLE_DOWN(CPImageCtrl::mousePressMMBEvent)
-    EVT_MIDDLE_UP(CPImageCtrl::mouseReleaseMMBEvent)
-    EVT_TIMER(-1, CPImageCtrl::OnTimer)
-#ifdef __WXMSW__
-    // update view after scrolling on Windows
-    // on WXGTK this is handled already by the control
-    EVT_SCROLLWIN(CPImageCtrl::OnScrollWin)
-#endif
-END_EVENT_TABLE()
 
 bool CPImageCtrl::Create(wxWindow * parent, wxWindowID id,
                          const wxPoint& pos,
@@ -688,11 +664,12 @@ bool CPImageCtrl::Create(wxWindow * parent, wxWindowID id,
     m_imgRotation = ROT0;
     m_sameImage = false;
     m_magImgCenter = hugin_utils::FDiff2D(-1, -1);
+    SetBackgroundStyle(wxBG_STYLE_PAINT);
 
     wxString filename;
 
 #if defined(__WXMSW__) 
-    wxString cursorPath = huginApp::Get()->GetXRCPath() + wxT("/data/cursor_cp_pick.cur");
+    wxString cursorPath = huginApp::Get()->GetXRCPath() + "/data/cursor_cp_pick.cur";
     m_CPSelectCursor = new wxCursor(cursorPath, wxBITMAP_TYPE_CUR);
 #else
     m_CPSelectCursor = new wxCursor(wxCURSOR_CROSS);
@@ -700,36 +677,51 @@ bool CPImageCtrl::Create(wxWindow * parent, wxWindowID id,
     SetCursor(*m_CPSelectCursor);
 
     // TODO: define custom, light background colors.
-    pointColors.push_back(wxTheColourDatabase->Find(wxT("BLUE")));
-    textColours.push_back(wxTheColourDatabase->Find(wxT("WHITE")));
+    pointColors.push_back(wxTheColourDatabase->Find("BLUE"));
+    textColours.push_back(wxTheColourDatabase->Find("WHITE"));
 
-    pointColors.push_back(wxTheColourDatabase->Find(wxT("GREEN")));
-    textColours.push_back(wxTheColourDatabase->Find(wxT("WHITE")));
+    pointColors.push_back(wxTheColourDatabase->Find("GREEN"));
+    textColours.push_back(wxTheColourDatabase->Find("WHITE"));
 
-    pointColors.push_back(wxTheColourDatabase->Find(wxT("CYAN")));
-    textColours.push_back(wxTheColourDatabase->Find(wxT("BLACK")));
-    pointColors.push_back(wxTheColourDatabase->Find(wxT("GOLD")));
-    textColours.push_back(wxTheColourDatabase->Find(wxT("BLACK")));
+    pointColors.push_back(wxTheColourDatabase->Find("CYAN"));
+    textColours.push_back(wxTheColourDatabase->Find("BLACK"));
+    pointColors.push_back(wxTheColourDatabase->Find("GOLD"));
+    textColours.push_back(wxTheColourDatabase->Find("BLACK"));
 
-    pointColors.push_back(wxTheColourDatabase->Find(wxT("NAVY")));
-    textColours.push_back(wxTheColourDatabase->Find(wxT("WHITE")));
+    pointColors.push_back(wxTheColourDatabase->Find("NAVY"));
+    textColours.push_back(wxTheColourDatabase->Find("WHITE"));
 
-    pointColors.push_back(wxTheColourDatabase->Find(wxT("DARK TURQUOISE")));
-    textColours.push_back(wxTheColourDatabase->Find(wxT("BLACK")));
+    pointColors.push_back(wxTheColourDatabase->Find("DARK TURQUOISE"));
+    textColours.push_back(wxTheColourDatabase->Find("BLACK"));
 
-    pointColors.push_back(wxTheColourDatabase->Find(wxT("SALMON")));
-    textColours.push_back(wxTheColourDatabase->Find(wxT("BLACK")));
+    pointColors.push_back(wxTheColourDatabase->Find("SALMON"));
+    textColours.push_back(wxTheColourDatabase->Find("BLACK"));
 
-    pointColors.push_back(wxTheColourDatabase->Find(wxT("MAROON")));
-    textColours.push_back(wxTheColourDatabase->Find(wxT("BLACK")));
+    pointColors.push_back(wxTheColourDatabase->Find("MAROON"));
+    textColours.push_back(wxTheColourDatabase->Find("BLACK"));
 
-    pointColors.push_back(wxTheColourDatabase->Find(wxT("KHAKI")));
-    textColours.push_back(wxTheColourDatabase->Find(wxT("BLACK")));
+    pointColors.push_back(wxTheColourDatabase->Find("KHAKI"));
+    textColours.push_back(wxTheColourDatabase->Find("BLACK"));
 
     m_searchRectWidth = 120;
     m_mouseInWindow = false;
     m_forceMagnifier = false;
     m_timer.SetOwner(this);
+    // bind event handler
+    Bind(wxEVT_SIZE, &CPImageCtrl::OnSize, this);
+    Bind(wxEVT_CHAR, &CPImageCtrl::OnKey, this);
+    Bind(wxEVT_KEY_DOWN, &CPImageCtrl::OnKeyDown, this);
+    Bind(wxEVT_LEAVE_WINDOW, &CPImageCtrl::OnMouseLeave, this);
+    Bind(wxEVT_ENTER_WINDOW, &CPImageCtrl::OnMouseEnter, this);
+    Bind(wxEVT_MOTION, &CPImageCtrl::mouseMoveEvent, this);
+    Bind(wxEVT_LEFT_DOWN, &CPImageCtrl::mousePressLMBEvent, this);
+    Bind(wxEVT_LEFT_UP, &CPImageCtrl::mouseReleaseLMBEvent, this);
+    Bind(wxEVT_RIGHT_DOWN, &CPImageCtrl::mousePressRMBEvent, this);
+    Bind(wxEVT_RIGHT_UP, &CPImageCtrl::mouseReleaseRMBEvent, this);
+    Bind(wxEVT_MIDDLE_DOWN, &CPImageCtrl::mousePressMMBEvent, this);
+    Bind(wxEVT_MIDDLE_UP, &CPImageCtrl::mouseReleaseMMBEvent, this);
+    Bind(wxEVT_TIMER, &CPImageCtrl::OnTimer, this);
+    Bind(wxEVT_PAINT, &CPImageCtrl::OnPaint, this);
 
     return true;
 }
@@ -749,33 +741,23 @@ CPImageCtrl::~CPImageCtrl()
     DEBUG_TRACE("dtor end");
 }
 
-void CPImageCtrl::OnDraw(wxDC & dc)
+void CPImageCtrl::OnPaint(wxPaintEvent& e)
 {
+    wxAutoBufferedPaintDC dc(this);
+    PrepareDC(dc);
+    dc.SetBackground(GetBackgroundColour());
+    dc.Clear();
     wxSize vSize = GetClientSize();
     // draw image (FIXME, redraw only visible regions.)
-    if (editState != NO_IMAGE && m_img.get()) {
-		//clear the blank rectangle to the left of the image
-        if (bitmap.GetWidth() < vSize.GetWidth()) {
-            dc.SetPen(wxPen(GetBackgroundColour(), 1, wxPENSTYLE_SOLID));
-            dc.SetBrush(wxBrush(GetBackgroundColour(), wxBRUSHSTYLE_SOLID));
-            dc.DrawRectangle(bitmap.GetWidth(), 0,
-                             vSize.GetWidth() - bitmap.GetWidth(),vSize.GetHeight());
-        }
-		//clear the blank rectangle below the image
-        if (bitmap.GetHeight() < vSize.GetHeight()) {
-            dc.SetPen(wxPen(GetBackgroundColour(), 1, wxPENSTYLE_SOLID));
-            dc.SetBrush(wxBrush(GetBackgroundColour(), wxBRUSHSTYLE_SOLID));
-			dc.DrawRectangle(0, bitmap.GetHeight(),
-                             vSize.GetWidth(), vSize.GetHeight() - bitmap.GetHeight());
-        }
+    if (editState != NO_IMAGE && m_img.get())
+    {
         dc.DrawBitmap(bitmap,0,0);
-	} else {
-		// clear the rectangle and exit
-        dc.SetPen(wxPen(GetBackgroundColour(), 1, wxPENSTYLE_SOLID));
-        dc.SetBrush(wxBrush(GetBackgroundColour(), wxBRUSHSTYLE_SOLID));
-        dc.Clear();
-		return;
-	}
+    }
+    else
+    {
+        // no or valid image, exit
+        return;
+    }
 
     // draw known points.
     wxRect visibleRect(GetViewStart(), vSize);
@@ -802,8 +784,8 @@ void CPImageCtrl::OnDraw(wxDC & dc)
         }
         if (m_showTemplateArea) {
             dc.SetLogicalFunction(wxINVERT);
-            dc.SetPen(wxPen(wxT("RED"), 1, wxPENSTYLE_SOLID));
-            dc.SetBrush(wxBrush(wxT("WHITE"), wxBRUSHSTYLE_TRANSPARENT));
+            dc.SetPen(wxPen("RED", 1, wxPENSTYLE_SOLID));
+            dc.SetBrush(wxBrush("WHITE", wxBRUSHSTYLE_TRANSPARENT));
             wxPoint upperLeft = applyRot(roundP(newPoint));
             upperLeft = scale(upperLeft);
 
@@ -828,8 +810,8 @@ void CPImageCtrl::OnDraw(wxDC & dc)
 
     if (m_showSearchArea && m_mousePos.x != -1){
         dc.SetLogicalFunction(wxINVERT);
-        dc.SetPen(wxPen(wxT("WHITE"), 1, wxPENSTYLE_SOLID));
-        dc.SetBrush(wxBrush(wxT("WHITE"), wxBRUSHSTYLE_TRANSPARENT));
+        dc.SetPen(wxPen("WHITE", 1, wxPENSTYLE_SOLID));
+        dc.SetBrush(wxBrush("WHITE", wxBRUSHSTYLE_TRANSPARENT));
 
         hugin_utils::FDiff2D upperLeft = applyRot(m_mousePos);
         upperLeft = scale(upperLeft);
@@ -854,7 +836,7 @@ wxBitmap& CPImageCtrl::GetMagBitmap(hugin_utils::FDiff2D point)
 
     // draw magnified image
     // width (and height) of magnifier region (output), should be odd
-    int magWidth = wxConfigBase::Get()->Read(wxT("/CPEditorPanel/MagnifierWidth"),61l);
+    int magWidth = wxConfigBase::Get()->Read("/CPEditorPanel/MagnifierWidth",61l);
     int hw = magWidth/2;
     magWidth = hw*2+1;
 
@@ -1071,7 +1053,7 @@ void CPImageCtrl::setCtrlPoint(const HuginBase::ControlPoint& cp, const bool mir
 {
     DisplayedControlPoint dcp(cp, this, mirrored);
     dcp.SetColour(pointColors[m_points.size() % pointColors.size()], textColours[m_points.size() % textColours.size()]);
-    dcp.SetLabel(wxString::Format(wxT("%lu"), (unsigned long int)m_points.size()));
+    dcp.SetLabel(wxString::Format("%lu", (unsigned long int)m_points.size()));
     m_points.push_back(dcp);
 }
 
@@ -1105,7 +1087,7 @@ void CPImageCtrl::selectPoint(unsigned int nr, bool scrollTo)
             // scroll to center only when requested
             showPosition(m_points[nr].GetPos());
         };
-        update();
+        Refresh();
     } else {
         DEBUG_DEBUG("trying to select invalid point nr: " << nr << ". Nr of points: " << m_points.size());
     }
@@ -1118,7 +1100,7 @@ void CPImageCtrl::deselect()
         editState = NO_SELECTION;
     }
     // update view
-    update();
+    Refresh();
 }
 
 void CPImageCtrl::showPosition(hugin_utils::FDiff2D point, bool warpPointer)
@@ -1171,10 +1153,16 @@ CPImageCtrl::EditorState CPImageCtrl::isOccupied(wxPoint mousePos, const hugin_u
 
 void CPImageCtrl::DrawSelectionRectangle(hugin_utils::FDiff2D pos1,hugin_utils::FDiff2D pos2)
 {
+#if wxCHECK_VERSION(3,3,0)
+    wxOverlayDC dc(m_overlay, this);
+    PrepareDC(dc);
+    dc.Clear();
+#else
     wxClientDC dc(this);
     PrepareDC(dc);
     wxDCOverlay overlaydc(m_overlay, &dc);
     overlaydc.Clear();
+#endif
     dc.SetPen(wxPen(*wxWHITE, 2, wxPENSTYLE_LONG_DASH));
     dc.SetBrush(*wxTRANSPARENT_BRUSH);
     wxPoint p1=roundP(scale(applyRot(pos1)));
@@ -1287,7 +1275,7 @@ void CPImageCtrl::mouseMoveEvent(wxMouseEvent& mouse)
     m_mousePos = mpos;
     // repaint
     if (doUpdate) {
-        update();
+        Refresh(false);
     }
 }
 
@@ -1354,13 +1342,13 @@ void CPImageCtrl::OnTimer(wxTimerEvent & e)
 {
     if (!m_img.get()) return; // ignore events if no image loaded.
     m_forceMagnifier = false;
-    update();
+    Refresh();
 }
 
 void CPImageCtrl::OnScrollWin(wxScrollWinEvent& e)
 {
     // repaint image, so that labels and magnifier are updated
-    update();
+    Refresh();
     e.Skip();
 }
 
@@ -1500,14 +1488,6 @@ void CPImageCtrl::mouseReleaseRMBEvent(wxMouseEvent& mouse)
     }
 }
 
-void CPImageCtrl::update()
-{
-    DEBUG_TRACE("edit state:" << editState);
-    wxClientDC dc(this);
-    PrepareDC(dc);
-    OnDraw(dc);
-}
-
 bool CPImageCtrl::emit(CPEvent & ev)
 {
     if ( ProcessEvent( ev ) == FALSE ) {
@@ -1628,7 +1608,7 @@ void CPImageCtrl::OnKey(wxKeyEvent & e)
         } else if (editState == NEW_POINT_SELECTED) {
             newPoint = newPoint + shift;
             // update display.
-            update();
+            Refresh();
         }
 
     }
@@ -1697,7 +1677,7 @@ void CPImageCtrl::OnMouseLeave(wxMouseEvent & e)
     DEBUG_TRACE("MOUSE LEAVE");
     m_mousePos = hugin_utils::FDiff2D(-1,-1);
     m_mouseInWindow = false;
-    update();
+    Refresh();
 }
 
 void CPImageCtrl::OnMouseEnter(wxMouseEvent & e)
@@ -1707,7 +1687,7 @@ void CPImageCtrl::OnMouseEnter(wxMouseEvent & e)
         DEBUG_TRACE("MOUSE Enter, setting focus");
         m_mouseInWindow = true;
         SetFocus();
-        update();
+        Refresh();
     };
 }
 
@@ -1738,7 +1718,7 @@ void CPImageCtrl::showSearchArea(bool show)
     m_showSearchArea = show;
     if (show)
     {
-        int templSearchAreaPercent = wxConfigBase::Get()->Read(wxT("/Finetune/SearchAreaPercent"), HUGIN_FT_SEARCH_AREA_PERCENT);
+        int templSearchAreaPercent = wxConfigBase::Get()->Read("/Finetune/SearchAreaPercent", HUGIN_FT_SEARCH_AREA_PERCENT);
         m_searchRectWidth = (m_realSize.GetWidth() * templSearchAreaPercent) / 200;
         DEBUG_DEBUG("Setting new search area: w in %:" << templSearchAreaPercent << " bitmap width: " << bitmap.GetWidth() << "  resulting size: " << m_searchRectWidth);
         m_mousePos = hugin_utils::FDiff2D(-1,-1);
@@ -1750,7 +1730,7 @@ void CPImageCtrl::showTemplateArea(bool show)
     m_showTemplateArea = show;
     if (show)
     {
-        m_templateRectWidth = wxConfigBase::Get()->Read(wxT("/Finetune/TemplateSize"),HUGIN_FT_TEMPLATE_SIZE) / 2;
+        m_templateRectWidth = wxConfigBase::Get()->Read("/Finetune/TemplateSize",HUGIN_FT_TEMPLATE_SIZE) / 2;
     }
 }
 
@@ -1805,7 +1785,7 @@ void CPImageCtrl::ScrollDelta(const wxPoint & delta)
     // repaint image, so that labels and magnifier are updated
     // only needed on Windows, on wxGTK this is handled by the 
     // underlying control
-    update();
+    Refresh(false);
 #endif
 }
 
@@ -1844,7 +1824,7 @@ wxObject *CPImageCtrlXmlHandler::DoCreateResource()
     cp->Create(m_parentAsWindow,
                    GetID(),
                    GetPosition(), GetSize(),
-                   GetStyle(wxT("style")),
+                   GetStyle("style"),
                    GetName());
 
     SetupWindow( cp);
@@ -1854,7 +1834,7 @@ wxObject *CPImageCtrlXmlHandler::DoCreateResource()
 
 bool CPImageCtrlXmlHandler::CanHandle(wxXmlNode *node)
 {
-    return IsOfClass(node, wxT("CPImageCtrl"));
+    return IsOfClass(node, "CPImageCtrl");
 }
 
 IMPLEMENT_DYNAMIC_CLASS(CPImageCtrlXmlHandler, wxXmlResourceHandler)

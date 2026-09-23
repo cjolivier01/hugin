@@ -37,18 +37,11 @@
 #include "hugin/MainFrame.h"
 #include "base_wx/CommandHistory.h"
 #include "base_wx/PanoCommand.h"
+#include "base_wx/wxutils.h"
 #include "hugin/huginApp.h"
 #include "hugin/config_defaults.h"
 #include "hugin_base/panotools/PanoToolsUtils.h"
 #include "algorithms/basic/CalculateCPStatistics.h"
-
-BEGIN_EVENT_TABLE(CPListCtrl, wxListCtrl)
-    EVT_CHAR(CPListCtrl::OnChar)
-    EVT_LIST_ITEM_SELECTED(wxID_ANY, CPListCtrl::OnCPListSelectionChanged)
-    EVT_LIST_ITEM_DESELECTED(wxID_ANY, CPListCtrl::OnCPListSelectionChanged)
-    EVT_LIST_COL_CLICK(wxID_ANY, CPListCtrl::OnCPListHeaderClick)
-    EVT_LIST_COL_END_DRAG(wxID_ANY, CPListCtrl::OnColumnWidthChange)
-END_EVENT_TABLE()
 
 std::string makePairId(unsigned int id1, unsigned int id2)
 {
@@ -78,8 +71,8 @@ CPListCtrl::CPListCtrl() : m_pano(NULL)
 CPListCtrl::~CPListCtrl()
 {
     wxConfigBase* config = wxConfig::Get();
-    config->Write(wxT("/CPListFrame/SortColumn"), m_sortCol);
-    config->Write(wxT("/CPListFrame/SortAscending"), m_sortAscend ? 1 : 0);
+    config->Write("/CPListFrame/SortColumn", m_sortCol);
+    config->Write("/CPListFrame/SortAscending", m_sortAscend ? 1 : 0);
     config->Flush();
     if (m_pano)
     {
@@ -105,7 +98,7 @@ bool CPListCtrl::Create(wxWindow *parent, wxWindowID id, const wxPoint& pos,
     for (int j = 0; j < GetColumnCount(); j++)
     {
         // -1 is auto
-        int width = wxConfigBase::Get()->Read(wxString::Format(wxT("/CPListFrame/ColumnWidth%d"), j), -1);
+        int width = wxConfigBase::Get()->Read(wxString::Format("/CPListFrame/ColumnWidth%d", j), -1);
         if (width != -1)
         {
             SetColumnWidth(j, width);
@@ -113,45 +106,17 @@ bool CPListCtrl::Create(wxWindow *parent, wxWindowID id, const wxPoint& pos,
     };
     EnableAlternateRowColours(true);
 
-#if !wxCHECK_VERSION(3,1,6)
-    wxMemoryDC memDC;
-    memDC.SetFont(GetFont());
-    wxSize fontSize = memDC.GetTextExtent(wxT("\u25b3"));
-    wxCoord charSize = std::max(fontSize.GetWidth(), fontSize.GetHeight());
-    wxImageList* sortIcons = new wxImageList(charSize, charSize, true, 0);
-    {
-        wxBitmap bmp(charSize, charSize);
-        wxMemoryDC dc(bmp);
-        dc.SetBackgroundMode(wxPENSTYLE_TRANSPARENT);
-        dc.SetBackground(GetBackgroundColour());
-        dc.Clear();
-        dc.SetFont(GetFont());
-        dc.DrawText(wxT("\u25b3"), (charSize - fontSize.GetWidth()) / 2, (charSize - fontSize.GetHeight()) / 2);
-        dc.SelectObject(wxNullBitmap);
-        sortIcons->Add(bmp, GetBackgroundColour());
-    };
-    {
-        wxBitmap bmp(charSize, charSize);
-        wxMemoryDC dc(bmp);
-        dc.SetBackgroundMode(wxPENSTYLE_TRANSPARENT);
-        dc.SetBackground(GetBackgroundColour());
-        dc.Clear();
-        dc.SetFont(GetFont());
-        dc.DrawText(wxT("\u25bd"), (charSize - fontSize.GetWidth()) / 2, (charSize - fontSize.GetHeight()) / 2);
-        dc.SelectObject(wxNullBitmap);
-        sortIcons->Add(bmp, GetBackgroundColour());
-    };
-    AssignImageList(sortIcons, wxIMAGE_LIST_SMALL);
-#endif
     wxConfigBase* config = wxConfig::Get();
-    m_sortCol=config->Read(wxT("/CPListFrame/SortColumn"), 0l);
-    m_sortAscend = config->Read(wxT("/CPListFrame/SortAscending"), 1l) == 1;
+    m_sortCol=config->Read("/CPListFrame/SortColumn", 0l);
+    m_sortAscend = config->Read("/CPListFrame/SortAscending", 1l) == 1;
     config->Flush();
-#if wxCHECK_VERSION(3,1,6)
     ShowSortIndicator(m_sortCol, m_sortAscend);
-#else
-    SetColumnImage(m_sortCol, m_sortAscend ? 0 : 1);
-#endif
+    // bind event handler
+    Bind(wxEVT_CHAR, &CPListCtrl::OnChar, this);
+    Bind(wxEVT_LIST_ITEM_SELECTED, &CPListCtrl::OnCPListSelectionChanged, this);
+    Bind(wxEVT_LIST_ITEM_DESELECTED, &CPListCtrl::OnCPListSelectionChanged, this);
+    Bind(wxEVT_LIST_COL_CLICK, &CPListCtrl::OnCPListHeaderClick, this);
+    Bind(wxEVT_LIST_COL_END_DRAG, &CPListCtrl::OnColumnWidthChange, this);
     return true;
 };
 
@@ -172,16 +137,16 @@ wxString CPListCtrl::OnGetItemText(long item, long column) const
     switch (column)
     {
         case 0:
-            return wxString::Format(wxT("%lu"), static_cast<unsigned long>(m_internalCPList[item].globalIndex));
+            return wxString::Format("%lu", static_cast<unsigned long>(m_internalCPList[item].globalIndex));
             break;
         case 1:
-            return wxString::Format(wxT("%u"), cp.image1Nr);
+            return wxString::Format("%u", cp.image1Nr);
             break;
         case 2:
-            return wxString::Format(wxT("%u"), cp.image2Nr);
+            return wxString::Format("%u", cp.image2Nr);
             break;
         case 3:
-            return wxString::Format(wxT("%lu"), static_cast<unsigned long>(m_internalCPList[item].localNumber));
+            return wxString::Format("%lu", static_cast<unsigned long>(m_internalCPList[item].localNumber));
             break;
         case 4:
             switch (cp.mode)
@@ -201,7 +166,7 @@ wxString CPListCtrl::OnGetItemText(long item, long column) const
             };
             break;
         case 5:
-            return wxString::Format(wxT("%.2f"), cp.error);
+            return wxString::Format("%.2f", cp.error);
             break;
         default:
             return wxEmptyString;
@@ -414,7 +379,6 @@ void CPListCtrl::OnCPListSelectionChanged(wxListEvent & e)
 void CPListCtrl::OnCPListHeaderClick(wxListEvent& e)
 {
     const int newCol = e.GetColumn();
-#if wxCHECK_VERSION(3,1,6)
     if (m_sortCol == newCol)
     {
         m_sortAscend = !m_sortAscend;
@@ -425,20 +389,6 @@ void CPListCtrl::OnCPListHeaderClick(wxListEvent& e)
         m_sortAscend = true;
     };
     ShowSortIndicator(m_sortCol, m_sortAscend);
-#else
-    if (m_sortCol == newCol)
-    {
-        m_sortAscend = !m_sortAscend;
-        SetColumnImage(m_sortCol, m_sortAscend ? 0 : 1);
-    }
-    else
-    {
-        ClearColumnImage(m_sortCol);
-        m_sortCol = newCol;
-        SetColumnImage(m_sortCol, 0);
-        m_sortAscend = true;
-    }
-#endif
     SortInternalList(false);
     Refresh();
 };
@@ -446,7 +396,7 @@ void CPListCtrl::OnCPListHeaderClick(wxListEvent& e)
 void CPListCtrl::OnColumnWidthChange(wxListEvent& e)
 {
     const int colNum = e.GetColumn();
-    wxConfigBase::Get()->Write(wxString::Format(wxT("/CPListFrame/ColumnWidth%d"), colNum), GetColumnWidth(colNum));
+    wxConfigBase::Get()->Write(wxString::Format("/CPListFrame/ColumnWidth%d", colNum), GetColumnWidth(colNum));
 };
 
 void CPListCtrl::DeleteSelected()
@@ -542,55 +492,38 @@ CPListCtrlXmlHandler::CPListCtrlXmlHandler()
 wxObject *CPListCtrlXmlHandler::DoCreateResource()
 {
     XRC_MAKE_INSTANCE(cp, CPListCtrl)
-    cp->Create(m_parentAsWindow, GetID(), GetPosition(), GetSize(), GetStyle(wxT("style")), wxDefaultValidator, GetName());
+    cp->Create(m_parentAsWindow, GetID(), GetPosition(), GetSize(), GetStyle("style"), wxDefaultValidator, GetName());
     SetupWindow(cp);
     return cp;
 }
 
 bool CPListCtrlXmlHandler::CanHandle(wxXmlNode *node)
 {
-    return IsOfClass(node, wxT("CPListCtrl"));
+    return IsOfClass(node, "CPListCtrl");
 }
 
-
-BEGIN_EVENT_TABLE(CPListFrame, wxFrame)
-    EVT_CLOSE(CPListFrame::OnClose)
-    EVT_BUTTON(XRCID("cp_list_delete"), CPListFrame::OnDeleteButton)
-    EVT_BUTTON(XRCID("cp_list_select"), CPListFrame::OnSelectButton)
-END_EVENT_TABLE()
-
-CPListFrame::CPListFrame(wxFrame* parent, HuginBase::Panorama& pano) : m_pano(pano)
+CPListFrame::CPListFrame(wxWindow* parent, HuginBase::Panorama& pano) : m_pano(pano)
 {
     DEBUG_TRACE("");
-    bool ok = wxXmlResource::Get()->LoadFrame(this, parent, wxT("cp_list_frame"));
+    bool ok = wxXmlResource::Get()->LoadDialog(this, parent, "cp_list_frame");
     DEBUG_ASSERT(ok);
     m_list = XRCCTRL(*this, "cp_list_frame_list", CPListCtrl);
     DEBUG_ASSERT(m_list);
     m_list->Init(&m_pano);
 
-#ifdef __WXMSW__
-    // wxFrame does have a strange background color on Windows, copy color from a child widget
-    this->SetBackgroundColour(XRCCTRL(*this, "cp_list_select", wxButton)->GetBackgroundColour());
-#endif
-#ifdef __WXMSW__
-    wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + wxT("data/hugin.ico"),wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(huginApp::Get()->GetXRCPath() + wxT("data/hugin.png"),wxBITMAP_TYPE_PNG);
-    SetIcon(myIcon);
-#endif
-
-
     //set minumum size
     SetSizeHints(200, 300);
     //size
-    RestoreFramePosition(this, wxT("CPListFrame"));
+    hugin_utils::RestoreFramePosition(this, "CPListFrame");
+    Bind(wxEVT_CLOSE_WINDOW, &CPListFrame::OnClose, this);
+    Bind(wxEVT_BUTTON, &CPListFrame::OnDeleteButton, this, XRCID("cp_list_delete"));
+    Bind(wxEVT_BUTTON, &CPListFrame::OnSelectButton, this, XRCID("cp_list_select"));
 }
 
 CPListFrame::~CPListFrame()
 {
     DEBUG_TRACE("dtor");
-    StoreFramePosition(this, wxT("CPListFrame"));
+    hugin_utils::StoreFramePosition(this, "CPListFrame");
     DEBUG_TRACE("dtor end");
 }
 
@@ -614,7 +547,7 @@ void CPListFrame::OnSelectButton(wxCommandEvent & e)
     if(isShowingCorrelation)
     { 
         threshold = HUGIN_FT_CORR_THRESHOLD;
-        wxConfig::Get()->Read(wxT("/Finetune/CorrThreshold"), &threshold, HUGIN_FT_CORR_THRESHOLD);;
+        wxConfig::Get()->Read("/Finetune/CorrThreshold", &threshold, HUGIN_FT_CORR_THRESHOLD);;
     }
     else
     {

@@ -29,12 +29,12 @@
 #include "panoinc.h"
 #include "hugin/TextKillFocusHandler.h"
 
-BEGIN_EVENT_TABLE(TextKillFocusHandler, wxEvtHandler)
-    EVT_KILL_FOCUS(TextKillFocusHandler::OnKillFocus)
-    EVT_TEXT_ENTER(-1, TextKillFocusHandler::OnTextEnter)
-    EVT_TEXT(-1, TextKillFocusHandler::OnTextChange)
-END_EVENT_TABLE()
-
+TextKillFocusHandler::TextKillFocusHandler(wxWindow* parent) : m_parent(parent), dirty(false)
+{
+    Bind(wxEVT_KILL_FOCUS, &TextKillFocusHandler::OnKillFocus, this);
+    Bind(wxEVT_TEXT_ENTER, &TextKillFocusHandler::OnTextEnter, this);
+    Bind(wxEVT_TEXT, &TextKillFocusHandler::OnTextChange, this);
+}
 
 TextKillFocusHandler::~TextKillFocusHandler()
 {
@@ -50,7 +50,7 @@ void TextKillFocusHandler::OnKillFocus(wxFocusEvent & e)
         DEBUG_DEBUG("forwarding focus change");
         wxCommandEvent cmdEvt(wxEVT_COMMAND_TEXT_ENTER, e.GetId());
         cmdEvt.SetEventObject(e.GetEventObject());
-        m_parent->GetEventHandler()->ProcessEvent(cmdEvt);
+        ProcessEvent(cmdEvt);
         dirty = false;
     }
     e.Skip();
@@ -70,7 +70,6 @@ void TextKillFocusHandler::OnTextEnter(wxCommandEvent & e)
     }
 }
 
-
 void TextKillFocusHandler::OnTextChange(wxCommandEvent & e)
 {
     DEBUG_TRACE("Control ID:" << e.GetId());
@@ -80,5 +79,4 @@ void TextKillFocusHandler::OnTextChange(wxCommandEvent & e)
     dirty = true;
     e.Skip();
 }
-
 

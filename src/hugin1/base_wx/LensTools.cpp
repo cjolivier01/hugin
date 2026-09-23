@@ -31,6 +31,7 @@
 #include "panodata/ImageVariableTranslate.h"
 #include "panodata/StandardImageVariableGroups.h"
 #include "base_wx/PanoCommand.h"
+#include "wxutils.h"
 
 void FillLensProjectionList(wxControlWithItems* list)
 {
@@ -149,13 +150,13 @@ void SaveLensParameters(const wxString filename, HuginBase::Panorama* pano, unsi
     char * p = setlocale(LC_NUMERIC,NULL);
     char * old_locale = strdup(p);
     setlocale(LC_NUMERIC,"C");
-    wxFileConfig cfg(wxT("hugin lens file"),wxT(""),filename);
-    cfg.Write(wxT("Lens/image_width"), (long) lens.getImageSize().x);
-    cfg.Write(wxT("Lens/image_height"), (long) lens.getImageSize().y);
-    cfg.Write(wxT("Lens/type"), (long) lens.getProjection());
-    cfg.Write(wxT("Lens/hfov"), const_map_get(vars,"v").getValue());
-    cfg.Write(wxT("Lens/hfov_link"), const_map_get(lens.variables,"v").isLinked() ? 1:0);
-    cfg.Write(wxT("Lens/crop"), lens.getCropFactor());
+    wxFileConfig cfg("hugin lens file",wxEmptyString,filename);
+    cfg.Write("Lens/image_width", (long) lens.getImageSize().x);
+    cfg.Write("Lens/image_height", (long) lens.getImageSize().y);
+    cfg.Write("Lens/type", (long) lens.getProjection());
+    cfg.Write("Lens/hfov", const_map_get(vars,"v").getValue());
+    cfg.Write("Lens/hfov_link", const_map_get(lens.variables,"v").isLinked() ? 1:0);
+    cfg.Write("Lens/crop", lens.getCropFactor());
 
     // loop to save lens variables
     const char ** varname = HuginBase::Lens::variableNames;
@@ -167,33 +168,33 @@ void SaveLensParameters(const wxString filename, HuginBase::Panorama* pano, unsi
             varname++;
             continue;
         }
-        wxString key(wxT("Lens/"));
+        wxString key("Lens/");
         key.append(wxString(*varname, wxConvLocal));
         cfg.Write(key, const_map_get(vars,*varname).getValue());
-        key.append(wxT("_link"));
+        key.append("_link");
         cfg.Write(key, const_map_get(lens.variables,*varname).isLinked() ? 1:0);
         varname++;
     }
 
     const HuginBase::SrcPanoImage & image = pano->getImage(imgNr);
-    cfg.Write(wxT("Lens/crop/enabled"), image.getCropMode()==HuginBase::SrcPanoImage::NO_CROP ? 0l : 1l);
-    cfg.Write(wxT("Lens/crop/autoCenter"), image.getAutoCenterCrop() ? 1l : 0l);
+    cfg.Write("Lens/crop/enabled", image.getCropMode()==HuginBase::SrcPanoImage::NO_CROP ? 0l : 1l);
+    cfg.Write("Lens/crop/autoCenter", image.getAutoCenterCrop() ? 1l : 0l);
     const vigra::Rect2D cropRect=image.getCropRect();
-    cfg.Write(wxT("Lens/crop/left"), cropRect.left());
-    cfg.Write(wxT("Lens/crop/top"), cropRect.top());
-    cfg.Write(wxT("Lens/crop/right"), cropRect.right());
-    cfg.Write(wxT("Lens/crop/bottom"), cropRect.bottom());
+    cfg.Write("Lens/crop/left", cropRect.left());
+    cfg.Write("Lens/crop/top", cropRect.top());
+    cfg.Write("Lens/crop/right", cropRect.right());
+    cfg.Write("Lens/crop/bottom", cropRect.bottom());
 
     if (!image.getExifMake().empty() && !image.getExifModel().empty() && image.getExifFocalLength()>0)
     {
         // write exif data to ini file
-        cfg.Write(wxT("EXIF/CameraMake"),  wxString(image.getExifMake().c_str(), wxConvLocal));
-        cfg.Write(wxT("EXIF/CameraModel"), wxString(image.getExifModel().c_str(), wxConvLocal));
-        cfg.Write(wxT("EXIF/FocalLength"), image.getExifFocalLength());
-        cfg.Write(wxT("EXIF/Aperture"), image.getExifAperture());
-        cfg.Write(wxT("EXIF/ISO"), image.getExifISO());
-        cfg.Write(wxT("EXIF/CropFactor"), image.getCropFactor()); 
-        cfg.Write(wxT("EXIF/Distance"), image.getExifDistance()); 
+        cfg.Write("EXIF/CameraMake",  wxString(image.getExifMake().c_str(), wxConvLocal));
+        cfg.Write("EXIF/CameraModel", wxString(image.getExifModel().c_str(), wxConvLocal));
+        cfg.Write("EXIF/FocalLength", image.getExifFocalLength());
+        cfg.Write("EXIF/Aperture", image.getExifAperture());
+        cfg.Write("EXIF/ISO", image.getExifISO());
+        cfg.Write("EXIF/CropFactor", image.getCropFactor()); 
+        cfg.Write("EXIF/Distance", image.getExifDistance()); 
     }
     cfg.Flush();
 
@@ -293,30 +294,31 @@ bool LoadLensParametersChoose(wxWindow * parent, HuginBase::Lens & lens,
     wxString fname;
     wxFileDialog dlg(parent,
                         _("Load lens parameters"),
-                        wxConfigBase::Get()->Read(wxT("/lensPath"),wxT("")), wxT(""),
+                        wxConfigBase::Get()->Read("/lensPath",wxEmptyString), wxEmptyString,
                         _("Lens Project Files (*.ini)|*.ini|All files (*.*)|*.*"),
                         wxFD_OPEN, wxDefaultPosition);
-    dlg.SetDirectory(wxConfigBase::Get()->Read(wxT("/lensPath"),wxT("")));
+    dlg.SetDirectory(wxConfigBase::Get()->Read("/lensPath",wxEmptyString));
     if (dlg.ShowModal() == wxID_OK)
     {
         fname = dlg.GetPath();
-        wxConfig::Get()->Write(wxT("/lensPath"), dlg.GetDirectory());  // remember for later
+        wxConfig::Get()->Write("/lensPath", dlg.GetDirectory());  // remember for later
         // read with with standart C numeric format
         char * p = setlocale(LC_NUMERIC,NULL);
         char * old_locale = strdup(p);
         setlocale(LC_NUMERIC,"C");
         {
-            wxFileConfig cfg(wxT("hugin lens file"),wxT(""),fname);
+            wxFileConfig cfg("hugin lens file",wxEmptyString,fname);
             long w=0;
-            cfg.Read(wxT("Lens/image_width"), &w);
+            cfg.Read("Lens/image_width", &w);
             long h=0;
-            cfg.Read(wxT("Lens/image_height"), &h);
+            cfg.Read("Lens/image_height", &h);
             if (w>0 && h>0) {
                 vigra::Size2D sz = lens.getImageSize();
                 if (w != sz.x || h != sz.y) {
                     std::cerr << "Image size: " << sz << " size in lens parameter file: " << w << "x" << h << std::endl;
-                    int ret = wxMessageBox(_("Incompatible lens parameter file, image sizes do not match\nApply settings anyway?"), _("Error loading lens parameters"), wxICON_QUESTION |wxYES_NO);
-                    if (ret == wxNO) {
+                    if (hugin_utils::HuginMessageBox(_("Incompatible lens parameter file, image sizes do not match\nApply settings anyway?"),
+                        _("Hugin"), wxICON_QUESTION | wxYES_NO, wxGetActiveWindow()) == wxNO)
+                    {
                         setlocale(LC_NUMERIC,old_locale);
                         free(old_locale);
                         return false;
@@ -327,23 +329,23 @@ bool LoadLensParametersChoose(wxWindow * parent, HuginBase::Lens & lens,
                 // assume everything is all right.
             }
             long integer=0;
-            if(cfg.Read(wxT("Lens/type"), &integer))
+            if(cfg.Read("Lens/type", &integer))
             {
                 lens.setProjection((HuginBase::Lens::LensProjectionFormat) integer);
             };
             double d=1;
-            if(cfg.Read(wxT("Lens/crop"), &d))
+            if(cfg.Read("Lens/crop", &d))
             {
                 lens.setCropFactor(d);
             };
             //special treatment for hfov, we are reading hfov and hfov_linked instead of v and v_linked
             d=50;
-            if(cfg.Read(wxT("Lens/hfov"), &d))
+            if(cfg.Read("Lens/hfov", &d))
             {
                 map_get(lens.variables,"v").setValue(d);
             };
             integer=1;
-            if(cfg.Read(wxT("Lens/hfov_linked"), &integer))
+            if(cfg.Read("Lens/hfov_linked", &integer))
             {
                 map_get(lens.variables,"v").setLinked(integer != 0);
             };
@@ -352,7 +354,7 @@ bool LoadLensParametersChoose(wxWindow * parent, HuginBase::Lens & lens,
             // loop to load lens variables
             const char ** varname = HuginBase::Lens::variableNames;
             while (*varname) {
-                wxString key(wxT("Lens/"));
+                wxString key("Lens/");
                 key.append(wxString(*varname, wxConvLocal));
                 d = 0;
                 if (cfg.Read(key,&d))
@@ -360,7 +362,7 @@ bool LoadLensParametersChoose(wxWindow * parent, HuginBase::Lens & lens,
                     // only set value if variabe was found in the script
                     map_get(lens.variables, *varname).setValue(d);
                     integer = 1;
-                    key.append(wxT("_link"));
+                    key.append("_link");
                     if(cfg.Read(key, &integer))
                     {
                         map_get(lens.variables, *varname).setLinked(integer != 0);
@@ -371,7 +373,7 @@ bool LoadLensParametersChoose(wxWindow * parent, HuginBase::Lens & lens,
 
             // crop parameters
             long v=0;
-            cfg.Read(wxT("Lens/crop/enabled"), &v);
+            cfg.Read("Lens/crop/enabled", &v);
             cropped=(v!=0);
             if(cropped)
             {
@@ -379,8 +381,8 @@ bool LoadLensParametersChoose(wxWindow * parent, HuginBase::Lens & lens,
                 long top=0;
                 long right=0;
                 long bottom=0;
-                if(cfg.Read(wxT("Lens/crop/left"), &left) && cfg.Read(wxT("Lens/crop/top"), &top) &&
-                    cfg.Read(wxT("Lens/crop/right"), &right) && cfg.Read(wxT("Lens/crop/bottom"), &bottom))
+                if(cfg.Read("Lens/crop/left", &left) && cfg.Read("Lens/crop/top", &top) &&
+                    cfg.Read("Lens/crop/right", &right) && cfg.Read("Lens/crop/bottom", &bottom))
                 {
                     cropped=true;
                     cropRect=vigra::Rect2D(left,top,right,bottom);
@@ -391,7 +393,7 @@ bool LoadLensParametersChoose(wxWindow * parent, HuginBase::Lens & lens,
                 };
             };
             v=1;
-            if(cfg.Read(wxT("Lens/crop/autoCenter"), &v))
+            if(cfg.Read("Lens/crop/autoCenter", &v))
             {
                 autoCenterCrop=(v!=0);
             };
@@ -414,26 +416,25 @@ void SaveLensParametersToIni(wxWindow * parent, HuginBase::Panorama *pano, const
         unsigned int imgNr = *(images.begin());
         wxFileDialog dlg(parent,
                          _("Save lens parameters file"),
-                         wxConfigBase::Get()->Read(wxT("/lensPath"),wxT("")), wxT(""),
+                         wxConfigBase::Get()->Read("/lensPath",wxEmptyString), wxEmptyString,
                          _("Lens Project Files (*.ini)|*.ini|All files (*)|*"),
                          wxFD_SAVE | wxFD_OVERWRITE_PROMPT, wxDefaultPosition);
-        dlg.SetDirectory(wxConfigBase::Get()->Read(wxT("/lensPath"),wxT("")));
+        dlg.SetDirectory(wxConfigBase::Get()->Read("/lensPath",wxEmptyString));
         if (dlg.ShowModal() == wxID_OK)
         {
             wxFileName filename(dlg.GetPath());
             if(!filename.HasExt())
             {
-                filename.SetExt(wxT("ini"));
+                filename.SetExt("ini");
                 if (filename.Exists())
                 {
-                    int d = wxMessageBox(wxString::Format(_("File %s exists. Overwrite?"), filename.GetFullPath().c_str()),
-                        _("Save project"), wxYES_NO | wxICON_QUESTION);
-                    if (d != wxYES) {
+                    if (!hugin_utils::AskUserOverwrite(filename.GetFullPath(), _("Hugin"), wxGetActiveWindow()))
+                    {
                         return;
                     }
                 }
             }
-            wxConfig::Get()->Write(wxT("/lensPath"), dlg.GetDirectory());  // remember for later
+            wxConfig::Get()->Write("/lensPath", dlg.GetDirectory());  // remember for later
             SaveLensParameters(filename.GetFullPath(),pano,imgNr);
         }
     }
@@ -481,13 +482,8 @@ bool CheckLensStacks(HuginBase::Panorama* pano, bool allowCancel)
         {
             flags = flags | wxCANCEL;
         };
-        if (wxMessageBox(_("This project contains stacks with linked positions. But the lens parameters are not linked for these images.\nThis will result in unwanted results.\nPlease check and correct this before proceeding."),
-#ifdef _WIN32
-            _("Hugin"),
-#else
-            wxT(""),
-#endif
-            flags)==wxOK)
+        if (hugin_utils::HuginMessageBox(_("This project contains stacks with linked positions. But the lens parameters are not linked for these images.\nThis will result in unwanted results.\nPlease check and correct this before proceeding."),
+            _("Hugin"), flags, wxGetActiveWindow()) == wxOK)
         {
             return true;
         }
@@ -523,11 +519,11 @@ wxString GetFocalLength(const HuginBase::SrcPanoImage* img)
     {
         if (img->getExifFocalLength35() > 0.0)
         {
-            s = wxString::Format(wxT("%0.1f mm (%0.0f mm)"), img->getExifFocalLength(), img->getExifFocalLength35());
+            s = wxString::Format("%0.1f mm (%0.0f mm)", img->getExifFocalLength(), img->getExifFocalLength35());
         }
         else
         {
-            s = wxString::Format(wxT("%0.1f mm"), img->getExifFocalLength());
+            s = wxString::Format("%0.1f mm", img->getExifFocalLength());
         };
     }
     else
@@ -542,7 +538,7 @@ wxString GetAperture(const HuginBase::SrcPanoImage* img)
     wxString s;
     if (img->getExifAperture() > 0)
     {
-        s = wxString::Format(wxT("F%.1f"), img->getExifAperture());
+        s = wxString::Format("F%.1f", img->getExifAperture());
     }
     else
     {
@@ -561,23 +557,23 @@ wxString GetExposureTime(const HuginBase::SrcPanoImage* img)
         {
             if (exposureTime >= 10.0)
             {
-                s = wxString::Format(wxT("%3.0f s"), exposureTime);
+                s = wxString::Format("%3.0f s", exposureTime);
             }
             else
             {
-                s = wxString::Format(wxT("%1.1f s"), exposureTime);
+                s = wxString::Format("%1.1f s", exposureTime);
             }
         }
         else
         {
-            s = wxString::Format(wxT("%1.2f s"), exposureTime);
+            s = wxString::Format("%1.2f s", exposureTime);
         }
     }
     else
     {
         if (exposureTime > 1e-9)
         {
-            s = wxString::Format(wxT("1/%0.0f s"), 1.0 / exposureTime);
+            s = wxString::Format("1/%0.0f s", 1.0 / exposureTime);
         }
         else
         {
@@ -593,7 +589,7 @@ wxString GetIso(const HuginBase::SrcPanoImage* img)
     wxString s;
     if (img->getExifISO() > 0)
     {
-        s = wxString::Format(wxT("%0.0f"), img->getExifISO());
+        s = wxString::Format("%0.0f", img->getExifISO());
     }
     else
     {

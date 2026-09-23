@@ -36,10 +36,6 @@
 #if !wxUSE_HELP
 #error wxWidgets needs to be compiled with help support (wxUSE_HELP not set)
 #endif
-#if defined __WXMSW__ && !(wxCHECK_VERSION(3,1,1))
-#include "base_wx/wxPlatform.h"
-#define wxHelpController HuginCHMHelpController
-#endif
 
 #include <appbase/ProgressDisplay.h>
 
@@ -302,15 +298,9 @@ private:
     // list for user-defined output sequences
     std::map<int, wxString> m_userOutput;
     std::map<int, wxString> m_userAssistant;
-
-    DECLARE_EVENT_TABLE()
 };
 
 // event used to signal invalid or missing image files
-#if defined _WIN32 && defined Hugin_shared
-DECLARE_LOCAL_EVENT_TYPE(EVT_LOADING_FAILED, -1)
-#else
-DECLARE_EVENT_TYPE(EVT_LOADING_FAILED, -1)
-#endif
+wxDECLARE_EVENT(EVT_LOADING_FAILED, wxCommandEvent);
 
 #endif // _MAINFRAME_H

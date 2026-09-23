@@ -29,6 +29,7 @@
 #include "huginapp/ImageCache.h"
 #include "base_wx/MyProgressDialog.h"
 #include "base_wx/PTWXDlg.h"
+#include "base_wx/wxutils.h"
 #include "algorithms/optimizer/ImageGraph.h"
 #include "algorithms/control_points/CleanCP.h"
 #include "celeste/Celeste.h"
@@ -92,20 +93,20 @@ bool AddImageDialog(wxWindow* parent, std::vector<std::string>& files, bool& wit
 {
     // get stored path
     wxConfigBase* config = wxConfigBase::Get();
-    wxString path = config->Read(wxT("/actualPath"), wxT(""));
+    wxString path = config->Read("/actualPath", wxEmptyString);
     wxFileDialog dlg(parent,_("Add images"),
-                     path, wxT(""),
+                     path, wxEmptyString,
                      withRaws ? GetFileDialogImageAndRawFilters() : GetFileDialogImageFilters(),
                      wxFD_OPEN | wxFD_MULTIPLE | wxFD_FILE_MUST_EXIST | wxFD_PREVIEW, wxDefaultPosition);
     dlg.SetDirectory(path);
 
     // remember the image extension
     wxString img_ext;
-    if (config->HasEntry(wxT("lastImageType")))
+    if (config->HasEntry("lastImageType"))
     {
-      img_ext = config->Read(wxT("lastImageType")).c_str();
+      img_ext = config->Read("lastImageType").c_str();
     }
-    if (img_ext == wxT("all images"))
+    if (img_ext == "all images")
     {
         dlg.SetFilterIndex(0);
     }
@@ -113,32 +114,32 @@ bool AddImageDialog(wxWindow* parent, std::vector<std::string>& files, bool& wit
     {
         if (!withRaws)
         {
-            if (img_ext == wxT("jpg"))
+            if (img_ext == "jpg")
                 dlg.SetFilterIndex(1);
-            else if (img_ext == wxT("tiff"))
+            else if (img_ext == "tiff")
                 dlg.SetFilterIndex(2);
-            else if (img_ext == wxT("png"))
+            else if (img_ext == "png")
                 dlg.SetFilterIndex(3);
-            else if (img_ext == wxT("hdr"))
+            else if (img_ext == "hdr")
                 dlg.SetFilterIndex(4);
-            else if (img_ext == wxT("exr"))
+            else if (img_ext == "exr")
                 dlg.SetFilterIndex(5);
-            else if (img_ext == wxT("all files"))
+            else if (img_ext == "all files")
                 dlg.SetFilterIndex(6);
         }
         else
         {
-            if (img_ext == wxT("all raws"))
+            if (img_ext == "all raws")
                 dlg.SetFilterIndex(1);
-            else if (img_ext == wxT("jpg"))
+            else if (img_ext == "jpg")
                 dlg.SetFilterIndex(2);
-            else if (img_ext == wxT("tiff"))
+            else if (img_ext == "tiff")
                 dlg.SetFilterIndex(3);
-            else if (img_ext == wxT("png"))
+            else if (img_ext == "png")
                 dlg.SetFilterIndex(4);
-            else if (img_ext == wxT("hdr"))
+            else if (img_ext == "hdr")
                 dlg.SetFilterIndex(5);
-            else if (img_ext == wxT("exr"))
+            else if (img_ext == "exr")
                 dlg.SetFilterIndex(6);
         };
     };
@@ -153,35 +154,35 @@ bool AddImageDialog(wxWindow* parent, std::vector<std::string>& files, bool& wit
         // remember path for later
 #ifdef __WXGTK__
         //workaround a bug in GTK, see https://bugzilla.redhat.com/show_bug.cgi?id=849692 and http://trac.wxwidgets.org/ticket/14525
-        config->Write(wxT("/actualPath"), wxPathOnly(Pathnames[0]));
+        config->Write("/actualPath", wxPathOnly(Pathnames[0]));
 #else
-        config->Write(wxT("/actualPath"), dlg.GetDirectory());
+        config->Write("/actualPath", dlg.GetDirectory());
 #endif
         // save the image extension
         if (!withRaws)
         {
             switch (dlg.GetFilterIndex())
             {
-                case 0: config->Write(wxT("lastImageType"), wxT("all images")); break;
-                case 1: config->Write(wxT("lastImageType"), wxT("jpg")); break;
-                case 2: config->Write(wxT("lastImageType"), wxT("tiff")); break;
-                case 3: config->Write(wxT("lastImageType"), wxT("png")); break;
-                case 4: config->Write(wxT("lastImageType"), wxT("hdr")); break;
-                case 5: config->Write(wxT("lastImageType"), wxT("exr")); break;
-                case 6: config->Write(wxT("lastImageType"), wxT("all files")); break;
+                case 0: config->Write("lastImageType", "all images"); break;
+                case 1: config->Write("lastImageType", "jpg"); break;
+                case 2: config->Write("lastImageType", "tiff"); break;
+                case 3: config->Write("lastImageType", "png"); break;
+                case 4: config->Write("lastImageType", "hdr"); break;
+                case 5: config->Write("lastImageType", "exr"); break;
+                case 6: config->Write("lastImageType", "all files"); break;
             };
         }
         else
         {
             switch (dlg.GetFilterIndex())
             {
-                case 0: config->Write(wxT("lastImageType"), wxT("all images")); break;
-                case 1: config->Write(wxT("lastImageType"), wxT("all raws")); break;
-                case 2: config->Write(wxT("lastImageType"), wxT("jpg")); break;
-                case 3: config->Write(wxT("lastImageType"), wxT("tiff")); break;
-                case 4: config->Write(wxT("lastImageType"), wxT("png")); break;
-                case 5: config->Write(wxT("lastImageType"), wxT("hdr")); break;
-                case 6: config->Write(wxT("lastImageType"), wxT("exr")); break;
+                case 0: config->Write("lastImageType", "all images"); break;
+                case 1: config->Write("lastImageType", "all raws"); break;
+                case 2: config->Write("lastImageType", "jpg"); break;
+                case 3: config->Write("lastImageType", "tiff"); break;
+                case 4: config->Write("lastImageType", "png"); break;
+                case 5: config->Write("lastImageType", "hdr"); break;
+                case 6: config->Write("lastImageType", "exr"); break;
             }
             withRaws = dlg.GetFilterIndex() == 1;
         };
@@ -226,15 +227,10 @@ PanoCommand::PanoCommand* AddImageOperation::GetInternalCommand(wxWindow* parent
             {
                 if (files.size() == 1)
                 {
-                    wxMessageDialog message(parent, _("You selected only one raw file. This is not recommended.\nAll raw files should be converted at once."),
-#ifdef _WIN32
-                        _("Hugin"),
-#else
-                        wxT(""),
-#endif
-                        wxICON_EXCLAMATION | wxYES_NO );
-                    message.SetYesNoLabels(_("Convert anyway"), _("Let me select several raw files"));
-                    if (message.ShowModal() == wxID_NO)
+                    hugin_utils::MessageDialog message = hugin_utils::GetMessageDialog(_("You selected only one raw file. This is not recommended.\nAll raw files should be converted at once."),
+                        _("Hugin"), wxICON_EXCLAMATION | wxYES_NO, parent);
+                    message->SetYesNoLabels(_("Convert anyway"), _("Let me select several raw files"));
+                    if (message->ShowModal() == wxID_NO)
                     {
                         // post new add image event to open dialog again
                         wxCommandEvent newAddEvent(wxEVT_COMMAND_BUTTON_CLICKED, XRCID("action_add_images"));
@@ -386,7 +382,7 @@ PanoCommand::PanoCommand* AddImagesSeriesOperation::GetInternalCommand(wxWindow*
         preloaded[file] = 1;
 
         // Glob for all files of same type in same directory.
-        wxString path = ::wxPathOnly(file) + wxT("/*");
+        wxString path = ::wxPathOnly(file) + "/*";
         file = ::wxFindFirstFile(path);
         while (!file.IsEmpty())
         {
@@ -417,7 +413,7 @@ PanoCommand::PanoCommand* AddImagesSeriesOperation::GetInternalCommand(wxWindow*
     }
 
     //TODO: sorting the filenames keys by timestamp would be useful
-    int maxtimediff = wxConfigBase::Get()->Read(wxT("CaptureTimeSpan"), HUGIN_CAPTURE_TIMESPAN);
+    int maxtimediff = wxConfigBase::Get()->Read("CaptureTimeSpan", HUGIN_CAPTURE_TIMESPAN);
     // For each timestamped file,
     for (found = filenames.begin(); found != filenames.end(); ++found)
     {
@@ -460,14 +456,7 @@ PanoCommand::PanoCommand* AddImagesSeriesOperation::GetInternalCommand(wxWindow*
     }
     else
     {
-        wxMessageBox(
-            _("No matching images found."),
-#ifdef _WIN32
-            _("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxOK | wxICON_INFORMATION, parent);
+        hugin_utils::HuginMessageBox(_("No matching images found."), _("Hugin"), wxOK | wxICON_INFORMATION, parent);
         return NULL;
     };
 };
@@ -595,14 +584,9 @@ PanoCommand::PanoCommand* ChangeLensOperation::GetInternalCommand(wxWindow* pare
         {
             if (pano.getImage(img).getSize() != lensImgSize)
             {
-                wxMessageBox(wxString::Format(_("Selected images and selected lens have different sizes. All images of the same lens should have the same size.\n\nImage %d has size %dx%d, while lens %d has images with size of %dx%d pixel."),
+                hugin_utils::HuginMessageBox(wxString::Format(_("Selected images and selected lens have different sizes. All images of the same lens should have the same size.\n\nImage %d has size %dx%d, while lens %d has images with size of %dx%d pixel."),
                     img, pano.getImage(img).getWidth(), pano.getImage(img).getHeight(), nr, lensImgSize.width(), lensImgSize.height()),
-#ifdef __WXMSW__
-                    wxT("Hugin"),
-#else
-                    wxT(""),
-#endif
-                    wxICON_EXCLAMATION | wxOK);
+                    _("Hugin"), wxICON_EXCLAMATION | wxOK, wxGetActiveWindow());
                 return NULL;
             };
         };
@@ -638,7 +622,7 @@ PanoCommand::PanoCommand* LoadLensOperation::GetInternalCommand(wxWindow* parent
     if (!m_fromDatabase && images.size() == 1 && lensImages.size() > 1)
     {
         // database is always linking the parameters, so no need to ask user
-        if(wxMessageBox(_("You selected only one image.\nShould the loaded parameters be applied to all images with the same lens?"),_("Question"), wxICON_QUESTION | wxYES_NO)==wxYES)
+        if (hugin_utils::HuginMessageBox(_("You selected only one image.\nShould the loaded parameters be applied to all images with the same lens?"), _("Hugin"), wxICON_QUESTION | wxYES_NO, wxGetActiveWindow()) == wxYES)
         {
             // get all images with the current lens.
             std::copy(lensImages.begin(), lensImages.end(), std::inserter(images, images.end()));
@@ -653,7 +637,7 @@ PanoCommand::PanoCommand* LoadLensOperation::GetInternalCommand(wxWindow* parent
     };
     if(differentImageSize)
     {
-        if(wxMessageBox(_("You selected images with different sizes.\nApply lens parameter file can result in unwanted results.\nApply settings anyway?"), _("Error"), wxICON_QUESTION |wxYES_NO)==wxID_NO)
+        if (hugin_utils::HuginMessageBox(_("You selected images with different sizes.\nApply lens parameter file can result in unwanted results.\nApply settings anyway?"), _("Hugin"), wxICON_QUESTION | wxYES_NO, wxGetActiveWindow()) == wxNO)
         {
             return NULL;
         };
@@ -741,20 +725,11 @@ PanoCommand::PanoCommand* RemoveControlPointsOperation::GetInternalCommand(wxWin
     }
     if(cpsToDelete.empty())
     {
-        wxMessageBox(_("Selected images have no control points."),
-#ifdef __WXMSW__
-            wxT("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxICON_EXCLAMATION | wxOK);
+        hugin_utils::HuginMessageBox(_("Selected images have no control points."), _("Hugin"), wxICON_EXCLAMATION | wxOK, wxGetActiveWindow());
         return NULL;
     };
-    int r =wxMessageBox(wxString::Format(_("Really delete %lu control points?"),
-                                         (unsigned long int) cpsToDelete.size()),
-                        _("Delete Control Points"),
-                        wxICON_QUESTION | wxYES_NO);
-    if (r == wxYES)
+    if (hugin_utils::HuginMessageBox(wxString::Format(_("Really delete %lu control points?"), (unsigned long int) cpsToDelete.size()),
+        _("Hugin"), wxICON_QUESTION | wxYES_NO, wxGetActiveWindow()) == wxYES)
     {
         return new PanoCommand::RemoveCtrlPointsCmd(pano, cpsToDelete );
     }
@@ -824,7 +799,7 @@ PanoCommand::PanoCommand* CleanControlPointsOperation::GetInternalCommand(wxWind
     }
     if (!removedCPs.empty())
     {
-        wxMessageBox(wxString::Format(_("Removed %lu control points"), (unsigned long int)removedCPs.size()), _("Cleaning"), wxOK | wxICON_INFORMATION, parent);
+        hugin_utils::HuginMessageBox(wxString::Format(_("Removed %lu control points"), (unsigned long int)removedCPs.size()), _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
         return new PanoCommand::RemoveCtrlPointsCmd(pano,removedCPs);
     };
     return NULL;
@@ -850,10 +825,10 @@ PanoCommand::PanoCommand* CelesteOperation::GetInternalCommand(wxWindow* parent,
     wxConfigBase *cfg = wxConfigBase::Get();
     // SVM threshold
     double threshold = HUGIN_CELESTE_THRESHOLD;
-    cfg->Read(wxT("/Celeste/Threshold"), &threshold, HUGIN_CELESTE_THRESHOLD);
+    cfg->Read("/Celeste/Threshold", &threshold, HUGIN_CELESTE_THRESHOLD);
 
     // Mask resolution - 1 sets it to fine
-    bool t = (cfg->Read(wxT("/Celeste/Filter"), HUGIN_CELESTE_FILTER) == 0);
+    bool t = (cfg->Read("/Celeste/Filter", HUGIN_CELESTE_FILTER) == 0);
     int radius=(t)?10:20;
     DEBUG_TRACE("Running Celeste");
 
@@ -916,7 +891,7 @@ PanoCommand::PanoCommand* CelesteOperation::GetInternalCommand(wxWindow* parent,
     }
     if (!cpsToRemove.empty())
     {
-        wxMessageBox(wxString::Format(_("Removed %lu control points"), (unsigned long int) cpsToRemove.size()), _("Celeste result"),wxOK|wxICON_INFORMATION);
+        hugin_utils::HuginMessageBox(wxString::Format(_("Removed %lu control points"), (unsigned long int) cpsToRemove.size()), _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
         return new PanoCommand::RemoveCtrlPointsCmd(pano,cpsToRemove);
     }
     else
@@ -1269,14 +1244,9 @@ PanoCommand::PanoCommand* ChangeStackOperation::GetInternalCommand(wxWindow* par
         {
             if (pano.getImage(img).getSize() != stackImgSize)
             {
-                wxMessageBox(wxString::Format(_("Selected images and selected stack have different sizes. All images of the same stack should have the same size.\n\nImage %d has size %dx%d, while stack %d has images with size of %dx%d pixel."),
+                hugin_utils::HuginMessageBox(wxString::Format(_("Selected images and selected stack have different sizes. All images of the same stack should have the same size.\n\nImage %d has size %dx%d, while stack %d has images with size of %dx%d pixel."),
                     img, pano.getImage(img).getWidth(), pano.getImage(img).getHeight(), nr, stackImgSize.width(), stackImgSize.height()),
-#ifdef __WXMSW__
-                    wxT("Hugin"),
-#else
-                    wxT(""),
-#endif
-                    wxICON_EXCLAMATION | wxOK);
+                    _("Hugin"), wxICON_EXCLAMATION | wxOK, wxGetActiveWindow());
                 return NULL;
             };
         };
@@ -1303,14 +1273,14 @@ PanoCommand::PanoCommand* AssignStacksOperation::GetInternalCommand(wxWindow* pa
 {
     wxConfigBase* cfg = wxConfigBase::Get();
     wxDialog dlg;
-    wxXmlResource::Get()->LoadDialog(&dlg, parent, wxT("stack_size_dialog"));
+    wxXmlResource::Get()->LoadDialog(&dlg, parent, "stack_size_dialog");
     wxSpinCtrl* stackSpin = XRCCTRL(dlg, "stack_size_spinctrl", wxSpinCtrl);
     stackSpin->SetRange(1, pano.getNrOfImages());
-    size_t oldStackSize = cfg->Read(wxT("/StackDialog/StackSize"), 3);
+    size_t oldStackSize = cfg->Read("/StackDialog/StackSize", 3);
     oldStackSize = std::min(oldStackSize, pano.getNrOfImages());
     stackSpin->SetValue(oldStackSize);
     wxCheckBox* linkCheckBox = XRCCTRL(dlg, "stack_size_link_checkbox", wxCheckBox);
-    linkCheckBox->SetValue(cfg->Read(wxT("/StackDialog/LinkPosition"), true) != 0l);
+    linkCheckBox->SetValue(cfg->Read("/StackDialog/LinkPosition", true) != 0l);
     if (dlg.ShowModal() != wxID_OK)
     {
         // user has canceled dialog
@@ -1318,8 +1288,8 @@ PanoCommand::PanoCommand* AssignStacksOperation::GetInternalCommand(wxWindow* pa
     };
     long stackSize = stackSpin->GetValue();
     bool linkPosition = linkCheckBox->IsChecked();
-    cfg->Write(wxT("/StackDialog/StackSize"), stackSize);
-    cfg->Write(wxT("/StackDialog/LinkPosition"), linkPosition);
+    cfg->Write("/StackDialog/StackSize", stackSize);
+    cfg->Write("/StackDialog/LinkPosition", linkPosition);
     if(stackSize<0)
     {
         return NULL;

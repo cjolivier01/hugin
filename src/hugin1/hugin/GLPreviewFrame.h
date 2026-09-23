@@ -106,7 +106,6 @@ protected:
     void OnEnter(wxMouseEvent & e);
     void OnLeave(wxMouseEvent & e);
 private:
-    DECLARE_EVENT_TABLE()
     unsigned int image_number;
     std::vector<PreviewIdentifyTool**> identify_tools;
     wxToggleButton* m_identify_button;
@@ -124,7 +123,6 @@ protected:
     void OnEnter(wxMouseEvent & e);
     void OnLeave(wxMouseEvent & e);
 private:
-    DECLARE_EVENT_TABLE()
     unsigned int image_number;
     std::vector<DragTool**> drag_tools;
     std::vector<PreviewIdentifyTool**> identify_tools;
@@ -138,23 +136,11 @@ private:
  */
 class GLwxAuiFloatingFrame : public wxAuiFloatingFrame {
 public:
-    GLwxAuiFloatingFrame(wxWindow* parent,
-                   GLwxAuiManager* owner_mgr,
-                   const wxAuiPaneInfo& pane,
-                   wxWindowID id = wxID_ANY,
-                   long style = wxRESIZE_BORDER | wxSYSTEM_MENU | wxCAPTION |
-//                                wxFRAME_NO_TASKBAR | 
-                                wxFRAME_FLOAT_ON_PARENT | 
-                                wxCLIP_CHILDREN
-                   ) : wxAuiFloatingFrame(parent, (wxAuiManager*) owner_mgr, pane, id, style) {}
-
-
+    GLwxAuiFloatingFrame(wxWindow* parent, GLwxAuiManager* owner_mgr, const wxAuiPaneInfo& pane, wxWindowID id = wxID_ANY,
+        long style = wxRESIZE_BORDER | wxSYSTEM_MENU | wxCAPTION | wxFRAME_FLOAT_ON_PARENT | wxCLIP_CHILDREN
+    );
     void OnActivate(wxActivateEvent& evt);
     void OnMoveFinished();
-//    void OnClose(wxCloseEvent& event);
-
-    DECLARE_EVENT_TABLE()
-
 };
 
 /**
@@ -279,8 +265,8 @@ protected:
     void OnAutocropOutside(wxCommandEvent& e);
     void OnControlPoint(wxCommandEvent &e);
     void OnNumTransform(wxCommandEvent & e);
-    void OnChangeFOV(wxScrollEvent & e);
-    void OnTrackChangeFOV(wxScrollEvent & e);
+    void OnChangeProjectionParam(wxScrollEvent & e);
+    void OnTrackChangeProjectionParam(wxScrollEvent & e);
     void OnExposureChanged(wxCommandEvent & e);
     void OnProjParameterChanged(wxCommandEvent & e);
     /** event handler for reset projection parameters */
@@ -327,7 +313,7 @@ protected:
     /** event handler for blocking changing mode when panorama contains no images*/
     void OnToolModeChanging(wxNotebookEvent &e);
     /** event handler for change scale of layout mode */
-    void OnLayoutScaleChange(wxScrollEvent &e);
+    void OnLayoutScaleChange(wxCommandEvent &e);
     /** event handler when starting color picker */
     void OnColorPicker(wxCommandEvent &e);
     /** event handler when starting edit cp tool */
@@ -347,8 +333,6 @@ protected:
     void OnCreateCP(wxCommandEvent & e);
     /** handler to remove cp */
     void OnRemoveCP(wxCommandEvent & e);
-    /** handle menu close event */
-    void OnMenuClose(wxMenuEvent & e);
     /** handle all options of select all context menu */
     void OnSelectAllMenu(wxCommandEvent& e);
     void OnSelectMedianMenu(wxCommandEvent& e);
@@ -454,8 +438,6 @@ private:
     std::vector<wxPanel *> m_ToggleButtonPanel;
     std::vector<ImageToogleButtonEventHandler *> toogle_button_event_handlers;
     std::vector<ImageGroupButtonEventHandler *> toggle_group_button_event_handlers;
-
-    DECLARE_EVENT_TABLE()
 
     // tools
     PreviewToolHelper *preview_helper;

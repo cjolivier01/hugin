@@ -391,6 +391,11 @@ void PreviewLayoutLinesTool::updateLineInformation()
     for (unsigned int cpi = 0 ; cpi < numberOfControlPoints ; cpi++)
     {
         const HuginBase::ControlPoint & cp = pano.getCtrlPoint(cpi);
+        if (cp.mode != HuginBase::ControlPoint::X_Y)
+        {
+            // don't count line control points
+            continue;
+        };
         unsigned int low_index, high_index;
         if (cp.image1Nr < cp.image2Nr)
         {

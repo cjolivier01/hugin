@@ -32,6 +32,7 @@
 #include "base_wx/wxPlatform.h"
 #include "base_wx/LensTools.h"
 #include "base_wx/GraphTools.h"
+#include "base_wx/wxutils.h"
 #include "huginapp/ImageCache.h"
 #include "LensCalFrame.h"
 #include <wx/app.h>
@@ -63,17 +64,17 @@ bool FileDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& file
     for (unsigned int i=0; i< filenames.GetCount(); i++)
     {
         wxFileName file(filenames[i]);
-        if (file.GetExt().CmpNoCase(wxT("jpg")) == 0 ||
-            file.GetExt().CmpNoCase(wxT("jpeg")) == 0 ||
-            file.GetExt().CmpNoCase(wxT("tif")) == 0 ||
-            file.GetExt().CmpNoCase(wxT("tiff")) == 0 ||
-            file.GetExt().CmpNoCase(wxT("png")) == 0 ||
-            file.GetExt().CmpNoCase(wxT("bmp")) == 0 ||
-            file.GetExt().CmpNoCase(wxT("gif")) == 0 ||
-            file.GetExt().CmpNoCase(wxT("pnm")) == 0 ||
-            file.GetExt().CmpNoCase(wxT("sun")) == 0 ||
-            file.GetExt().CmpNoCase(wxT("hdr")) == 0 ||
-            file.GetExt().CmpNoCase(wxT("viff")) == 0 )
+        if (file.GetExt().CmpNoCase("jpg") == 0 ||
+            file.GetExt().CmpNoCase("jpeg") == 0 ||
+            file.GetExt().CmpNoCase("tif") == 0 ||
+            file.GetExt().CmpNoCase("tiff") == 0 ||
+            file.GetExt().CmpNoCase("png") == 0 ||
+            file.GetExt().CmpNoCase("bmp") == 0 ||
+            file.GetExt().CmpNoCase("gif") == 0 ||
+            file.GetExt().CmpNoCase("pnm") == 0 ||
+            file.GetExt().CmpNoCase("sun") == 0 ||
+            file.GetExt().CmpNoCase("hdr") == 0 ||
+            file.GetExt().CmpNoCase("viff") == 0 )
         {
             if(containsInvalidCharacters(file.GetFullPath()))
             {
@@ -98,65 +99,49 @@ bool FileDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& file
     return true;
 }
 
-// event table. this frame will recieve mostly global commands.
-BEGIN_EVENT_TABLE(LensCalFrame, wxFrame)
-    EVT_LISTBOX(XRCID("lenscal_images_list"), LensCalFrame::OnImageSelected)
-    EVT_MENU(XRCID("menu_save"), LensCalFrame::OnSaveProject)
-    EVT_MENU(XRCID("menu_quit"), LensCalFrame::OnExit)
-    EVT_BUTTON(XRCID("lenscal_add_image"), LensCalFrame::OnAddImage)
-    EVT_BUTTON(XRCID("lenscal_remove_image"), LensCalFrame::OnRemoveImage)
-    EVT_BUTTON(XRCID("lenscal_find_lines"), LensCalFrame::OnFindLines)
-    EVT_BUTTON(XRCID("lenscal_reset"), LensCalFrame::OnReset)
-    EVT_BUTTON(XRCID("lenscal_opt"), LensCalFrame::OnOptimize)
-    EVT_BUTTON(XRCID("lenscal_show_distortion_graph"), LensCalFrame::OnShowDistortionGraph)
-    EVT_BUTTON(XRCID("lenscal_save_lens"), LensCalFrame::OnSaveLens)
-    EVT_BUTTON(XRCID("lenscal_refresh"), LensCalFrame::OnRefresh)
-    EVT_CHOICE(XRCID("lenscal_preview_content"), LensCalFrame::OnSelectPreviewContent)
-    EVT_CHECKBOX(XRCID("lenscal_show_lines"), LensCalFrame::OnShowLines)
-END_EVENT_TABLE()
-
 LensCalFrame::LensCalFrame(wxWindow* parent)
 {
     DEBUG_TRACE("");
     // load our children. some children might need special
     // initialization. this will be done later.
-    wxXmlResource::Get()->LoadFrame(this, parent, wxT("lenscal_frame"));
+    wxXmlResource::Get()->LoadFrame(this, parent, "lenscal_frame");
     DEBUG_TRACE("");
 
     // load our menu bar
 #ifdef __WXMAC__
     wxApp::s_macExitMenuItemId = XRCID("menu_quit");
 #endif
-    SetMenuBar(wxXmlResource::Get()->LoadMenuBar(this, wxT("lenscal_menubar")));
+    SetMenuBar(wxXmlResource::Get()->LoadMenuBar(this, "lenscal_menubar"));
 
     m_choice_projection=XRCCTRL(*this,"lenscal_proj_choice",wxChoice);
     FillLensProjectionList(m_choice_projection);
     m_images_list=XRCCTRL(*this,"lenscal_images_list",wxListBox);
+    m_images_list->Bind(wxEVT_LISTBOX, &LensCalFrame::OnImageSelected, this);
     m_preview=XRCCTRL(*this,"lenscal_preview",LensCalImageCtrl);
 
     wxConfigBase* config = wxConfigBase::Get();
-    config->Read(wxT("/LensCalFrame/EdgeScale"),&m_edge_scale,DEFAULT_LENSCAL_SCALE);
-    config->Read(wxT("/LensCalFrame/EdgeThreshold"),&m_edge_threshold,DEFAULT_LENSCAL_THRESHOLD);
-    m_resize_dimension=config->Read(wxT("/LensCalFrame/ResizeDimension"),DEFAULT_RESIZE_DIMENSION);
-    config->Read(wxT("/LensCalFrame/MinLineLength"),&m_minlinelength,DEFAULT_MINLINELENGTH);
+    config->Read("/LensCalFrame/EdgeScale",&m_edge_scale,DEFAULT_LENSCAL_SCALE);
+    config->Read("/LensCalFrame/EdgeThreshold",&m_edge_threshold,DEFAULT_LENSCAL_THRESHOLD);
+    m_resize_dimension=config->Read("/LensCalFrame/ResizeDimension",DEFAULT_RESIZE_DIMENSION);
+    config->Read("/LensCalFrame/MinLineLength",&m_minlinelength,DEFAULT_MINLINELENGTH);
     ParametersToDisplay();
 
     bool selected;
-    config->Read(wxT("/LensCalFrame/Optimize_a"),&selected,false);
+    config->Read("/LensCalFrame/Optimize_a",&selected,false);
     XRCCTRL(*this,"lenscal_opt_a",wxCheckBox)->SetValue(selected);
-    config->Read(wxT("/LensCalFrame/Optimize_b"),&selected,true);
+    config->Read("/LensCalFrame/Optimize_b",&selected,true);
     XRCCTRL(*this,"lenscal_opt_b",wxCheckBox)->SetValue(selected);
-    config->Read(wxT("/LensCalFrame/Optimize_c"),&selected,false);
+    config->Read("/LensCalFrame/Optimize_c",&selected,false);
     XRCCTRL(*this,"lenscal_opt_c",wxCheckBox)->SetValue(selected);
-    config->Read(wxT("/LensCalFrame/Optimize_de"),&selected,false);
+    config->Read("/LensCalFrame/Optimize_de",&selected,false);
     XRCCTRL(*this,"lenscal_opt_de",wxCheckBox)->SetValue(selected);
 
     // set the minimize icon
 #ifdef __WXMSW__
-    wxIconBundle myIcons(GetXRCPath() + wxT("data/hugin.ico"), wxBITMAP_TYPE_ICO);
+    wxIconBundle myIcons(GetXRCPath() + "data/hugin.ico", wxBITMAP_TYPE_ICO);
     SetIcons(myIcons);
 #else
-    wxIcon myIcon(GetXRCPath() + wxT("data/hugin.png"),wxBITMAP_TYPE_PNG);
+    wxIcon myIcon(GetXRCPath() + "data/hugin.png",wxBITMAP_TYPE_PNG);
     SetIcon(myIcon);
 #endif
     SetTitle(_("Hugin Lens calibration GUI"));
@@ -184,8 +169,8 @@ LensCalFrame::LensCalFrame(wxWindow* parent)
     ImageCache::getInstance().setProgressDisplay(this);
 #if defined __WXMSW__
     unsigned long long mem = HUGIN_IMGCACHE_UPPERBOUND;
-    unsigned long mem_low = config->Read(wxT("/ImageCache/UpperBound"), HUGIN_IMGCACHE_UPPERBOUND);
-    unsigned long mem_high = config->Read(wxT("/ImageCache/UpperBoundHigh"), (long) 0);
+    unsigned long mem_low = config->Read("/ImageCache/UpperBound", HUGIN_IMGCACHE_UPPERBOUND);
+    unsigned long mem_high = config->Read("/ImageCache/UpperBoundHigh", (long) 0);
     if (mem_high > 0) {
       mem = ((unsigned long long) mem_high << 32) + mem_low;
     }
@@ -194,11 +179,24 @@ LensCalFrame::LensCalFrame(wxWindow* parent)
     }
     ImageCache::getInstance().SetUpperLimit(mem);
 #else
-    ImageCache::getInstance().SetUpperLimit(config->Read(wxT("/ImageCache/UpperBound"), HUGIN_IMGCACHE_UPPERBOUND));
+    ImageCache::getInstance().SetUpperLimit(config->Read("/ImageCache/UpperBound", HUGIN_IMGCACHE_UPPERBOUND));
 #endif
+    // bind event handler
+    Bind(wxEVT_MENU, &LensCalFrame::OnSaveProject, this, XRCID("menu_save"));
+    Bind(wxEVT_MENU, &LensCalFrame::OnExit, this, XRCID("menu_quit"));
+    Bind(wxEVT_BUTTON, &LensCalFrame::OnAddImage, this, XRCID("lenscal_add_image"));
+    Bind(wxEVT_BUTTON, &LensCalFrame::OnRemoveImage, this, XRCID("lenscal_remove_image"));
+    Bind(wxEVT_BUTTON, &LensCalFrame::OnFindLines, this, XRCID("lenscal_find_lines"));
+    Bind(wxEVT_BUTTON, &LensCalFrame::OnReset, this, XRCID("lenscal_reset"));
+    Bind(wxEVT_BUTTON, &LensCalFrame::OnOptimize, this, XRCID("lenscal_opt"));
+    Bind(wxEVT_BUTTON, &LensCalFrame::OnShowDistortionGraph, this, XRCID("lenscal_show_distortion_graph"));
+    Bind(wxEVT_BUTTON, &LensCalFrame::OnSaveLens, this, XRCID("lenscal_save_lens"));
+    Bind(wxEVT_BUTTON, &LensCalFrame::OnRefresh, this, XRCID("lenscal_refresh"));
+    Bind(wxEVT_CHOICE, &LensCalFrame::OnSelectPreviewContent, this, XRCID("lenscal_preview_content"));
+    Bind(wxEVT_CHECKBOX, &LensCalFrame::OnShowLines, this, XRCID("lenscal_show_lines"));
     //disable buttons
     EnableButtons();
-    XRCCTRL(*this,"lenscal_remove_image",wxButton)->Enable(false);
+    XRCCTRL(*this, "lenscal_remove_image", wxButton)->Enable(false);
 }
 
 LensCalFrame::~LensCalFrame()
@@ -211,16 +209,16 @@ LensCalFrame::~LensCalFrame()
     wxConfigBase* config = wxConfigBase::Get();
     if(ReadInputs(false,true,false))
     {
-        config->Write(wxT("/LensCalFrame/EdgeScale"),m_edge_scale);
-        config->Write(wxT("/LensCalFrame/EdgeThreshold"),m_edge_threshold);
-        config->Write(wxT("/LensCalFrame/ResizeDimension"),(int)m_resize_dimension);
-        config->Write(wxT("/LensCalFrame/MinLineLength"),m_minlinelength);
+        config->Write("/LensCalFrame/EdgeScale",m_edge_scale);
+        config->Write("/LensCalFrame/EdgeThreshold",m_edge_threshold);
+        config->Write("/LensCalFrame/ResizeDimension",(int)m_resize_dimension);
+        config->Write("/LensCalFrame/MinLineLength",m_minlinelength);
     };
-    config->Write(wxT("/LensCalFrame/Optimize_a"),XRCCTRL(*this,"lenscal_opt_a",wxCheckBox)->GetValue());
-    config->Write(wxT("/LensCalFrame/Optimize_b"),XRCCTRL(*this,"lenscal_opt_b",wxCheckBox)->GetValue());
-    config->Write(wxT("/LensCalFrame/Optimize_c"),XRCCTRL(*this,"lenscal_opt_c",wxCheckBox)->GetValue());
-    config->Write(wxT("/LensCalFrame/Optimize_de"),XRCCTRL(*this,"lenscal_opt_de",wxCheckBox)->GetValue());
-    StoreFramePosition(this, wxT("LensCalFrame"));
+    config->Write("/LensCalFrame/Optimize_a",XRCCTRL(*this,"lenscal_opt_a",wxCheckBox)->GetValue());
+    config->Write("/LensCalFrame/Optimize_b",XRCCTRL(*this,"lenscal_opt_b",wxCheckBox)->GetValue());
+    config->Write("/LensCalFrame/Optimize_c",XRCCTRL(*this,"lenscal_opt_c",wxCheckBox)->GetValue());
+    config->Write("/LensCalFrame/Optimize_de",XRCCTRL(*this,"lenscal_opt_de",wxCheckBox)->GetValue());
+    hugin_utils::StoreFramePosition(this, "LensCalFrame");
     config->Flush();
     //cleanup
     for(unsigned int i=0;i<m_images.size();i++)
@@ -236,7 +234,7 @@ void LensCalFrame::ParametersToDisplay()
 {
     XRCCTRL(*this,"lenscal_scale",wxTextCtrl)->SetValue(hugin_utils::doubleTowxString(m_edge_scale,2));
     XRCCTRL(*this, "lenscal_threshold", wxTextCtrl)->SetValue(hugin_utils::doubleTowxString(m_edge_threshold, 2));
-    XRCCTRL(*this, "lenscal_resizedim", wxTextCtrl)->SetValue(wxString::Format(wxT("%d"), m_resize_dimension));
+    XRCCTRL(*this, "lenscal_resizedim", wxTextCtrl)->SetValue(wxString::Format("%d", m_resize_dimension));
     XRCCTRL(*this, "lenscal_minlinelength", wxTextCtrl)->SetValue(hugin_utils::doubleTowxString(m_minlinelength, 2));
 };
 
@@ -254,7 +252,7 @@ void LensCalFrame::updateProgressDisplay()
         msg = wxGetTranslation(wxString(m_message.c_str(), wxConvLocal));
         if (!m_filename.empty())
         {
-            msg.Append(wxT(" "));
+            msg.Append(" ");
             msg.Append(wxString(ProgressDisplay::m_filename.c_str(), HUGIN_CONV_FILENAME));
         };
     };
@@ -286,8 +284,8 @@ void LensCalFrame::AddImages(wxArrayString files)
             {
                 if (it->second == "BILEVEL")
                 {
-                    wxMessageBox(wxString::Format(_("File \"%s\" is a black/white image.\nHugin does not support this image type. Skipping this image.\nConvert image to grayscale image and try loading again."), files[i].c_str()),
-                        _("Warning"), wxOK | wxICON_EXCLAMATION, this);
+                    hugin_utils::HuginMessageBox(wxString::Format(_("File \"%s\" is a black/white image.\nHugin does not support this image type. Skipping this image.\nConvert image to grayscale image and try loading again."), files[i].c_str()),
+                        _("Calibrate_lens_GUI"), wxOK | wxICON_EXCLAMATION, this);
                     delete image;
                     continue;
                 };
@@ -348,10 +346,10 @@ void LensCalFrame::AddImages(wxArrayString files)
             wxFileName filename(wrongSize[i]);
             fileText.Append(filename.GetFullName());
             if(i<wrongSize.size()-1)
-                fileText.Append(wxT(", "));
+                fileText.Append(", ");
         };
-        wxMessageBox(wxString::Format(_("The size of the images (%s) does not match the already added image(s)."),fileText.c_str()),
-            _("Error"),wxOK|wxICON_EXCLAMATION,this);
+        hugin_utils::HuginMessageBox(wxString::Format(_("The size of the images (%s) does not match the already added image(s)."), fileText.c_str()),
+            _("Calibrate_lens_GUI"), wxOK | wxICON_EXCLAMATION, this);
     };
     if(!wrongExif.empty())
     {
@@ -361,41 +359,41 @@ void LensCalFrame::AddImages(wxArrayString files)
             wxFileName filename(wrongExif[i]);
             fileText.Append(filename.GetFullName());
             if(i<wrongExif.size()-1)
-                fileText.Append(wxT(", "));
+                fileText.Append(", ");
         };
-        wxMessageBox(wxString::Format(_("The EXIF information of the added images (%s) is not consistent with the already added image(s).\nPlease check the image again, if you selected the correct images."),fileText.c_str()),
-            _("Warning"),wxOK|wxICON_EXCLAMATION,this);
+        hugin_utils::HuginMessageBox(wxString::Format(_("The EXIF information of the added images (%s) is not consistent with the already added image(s).\nPlease check the image again, if you selected the correct images."), fileText.c_str()),
+            _("Calibrate_lens_GUI"), wxOK | wxICON_EXCLAMATION, this);
     };
 };
 
 void LensCalFrame::OnAddImage(wxCommandEvent &e)
 {
     wxConfigBase* config = wxConfigBase::Get();
-    wxString path = config->Read(wxT("/actualPath"), wxT(""));
+    wxString path = config->Read("/actualPath", wxEmptyString);
     wxFileDialog dlg(this,_("Add images"),
-                     path, wxT(""),
+                     path, wxEmptyString,
                      GetFileDialogImageFilters(),
                      wxFD_OPEN | wxFD_MULTIPLE | wxFD_FILE_MUST_EXIST | wxFD_PREVIEW, wxDefaultPosition);
     dlg.SetDirectory(path);
 
     // remember the image extension
     wxString img_ext;
-    if (config->HasEntry(wxT("lastImageType"))){
-      img_ext = config->Read(wxT("lastImageType")).c_str();
+    if (config->HasEntry("lastImageType")){
+      img_ext = config->Read("lastImageType").c_str();
     }
-    if (img_ext == wxT("all images"))
+    if (img_ext == "all images")
       dlg.SetFilterIndex(0);
-    else if (img_ext == wxT("jpg"))
+    else if (img_ext == "jpg")
       dlg.SetFilterIndex(1);
-    else if (img_ext == wxT("tiff"))
+    else if (img_ext == "tiff")
       dlg.SetFilterIndex(2);
-    else if (img_ext == wxT("png"))
+    else if (img_ext == "png")
       dlg.SetFilterIndex(3);
-    else if (img_ext == wxT("hdr"))
+    else if (img_ext == "hdr")
       dlg.SetFilterIndex(4);
-    else if (img_ext == wxT("exr"))
+    else if (img_ext == "exr")
       dlg.SetFilterIndex(5);
-    else if (img_ext == wxT("all files"))
+    else if (img_ext == "all files")
       dlg.SetFilterIndex(6);
     DEBUG_INFO ( "Image extention: " << img_ext.mb_str(wxConvLocal) )
 
@@ -409,9 +407,9 @@ void LensCalFrame::OnAddImage(wxCommandEvent &e)
         // save the current path to config
 #ifdef __WXGTK__
         //workaround a bug in GTK, see https://bugzilla.redhat.com/show_bug.cgi?id=849692 and http://trac.wxwidgets.org/ticket/14525
-        config->Write(wxT("/actualPath"), wxPathOnly(Pathnames[0]));
+        config->Write("/actualPath", wxPathOnly(Pathnames[0]));
 #else
-        config->Write(wxT("/actualPath"), dlg.GetDirectory());
+        config->Write("/actualPath", dlg.GetDirectory());
 #endif
 
         wxArrayString invalidFiles;
@@ -430,17 +428,17 @@ void LensCalFrame::OnAddImage(wxCommandEvent &e)
         {
             AddImages(Pathnames);
         };
-        DEBUG_INFO ( wxString::Format(wxT("img_ext: %d"), dlg.GetFilterIndex()).mb_str(wxConvLocal) )
+        DEBUG_INFO ( wxString::Format("img_ext: %d", dlg.GetFilterIndex()).mb_str(wxConvLocal) )
         // save the image extension
         switch ( dlg.GetFilterIndex() )
         {
-            case 0: config->Write(wxT("lastImageType"), wxT("all images")); break;
-            case 1: config->Write(wxT("lastImageType"), wxT("jpg")); break;
-            case 2: config->Write(wxT("lastImageType"), wxT("tiff")); break;
-            case 3: config->Write(wxT("lastImageType"), wxT("png")); break;
-            case 4: config->Write(wxT("lastImageType"), wxT("hdr")); break;
-            case 5: config->Write(wxT("lastImageType"), wxT("exr")); break;
-            case 6: config->Write(wxT("lastImageType"), wxT("all files")); break;
+            case 0: config->Write("lastImageType", "all images"); break;
+            case 1: config->Write("lastImageType", "jpg"); break;
+            case 2: config->Write("lastImageType", "tiff"); break;
+            case 3: config->Write("lastImageType", "png"); break;
+            case 4: config->Write("lastImageType", "hdr"); break;
+            case 5: config->Write("lastImageType", "exr"); break;
+            case 6: config->Write("lastImageType", "all files"); break;
         }
     }
     else
@@ -555,7 +553,7 @@ void LensCalFrame::OnFindLines(wxCommandEvent &e)
 {
     if(!ReadInputs(true,true,false))
     {
-        wxMessageBox(_("There are invalid values in the input boxes.\nPlease check your inputs."),_("Warning"),wxOK | wxICON_INFORMATION, this);
+        hugin_utils::HuginMessageBox(_("There are invalid values in the input boxes.\nPlease check your inputs."), _("Calibrate_lens_GUI"), wxOK | wxICON_INFORMATION, this);
         return;
     }
     m_preview->SetLens(m_projection,m_focallength,m_cropfactor);
@@ -578,7 +576,7 @@ void LensCalFrame::OnOptimize(wxCommandEvent &e)
 {
     if(!ReadInputs(true,false,true))
     {
-        wxMessageBox(_("There are invalid values in the input boxes.\nPlease check your inputs."),_("Warning"),wxOK | wxICON_INFORMATION, this);
+        hugin_utils::HuginMessageBox(_("There are invalid values in the input boxes.\nPlease check your inputs."), _("Calibrate_lens_GUI"), wxOK | wxICON_INFORMATION, this);
         return;
     }
     unsigned int count=0;
@@ -586,7 +584,7 @@ void LensCalFrame::OnOptimize(wxCommandEvent &e)
         count+=m_images[i]->GetNrOfValidLines();
     if(count==0)
     {
-        wxMessageBox(_("There are no detected lines.\nPlease run \"Find lines\" first. If there are no lines found, change the parameters."),_("Warning"),wxOK  | wxICON_INFORMATION, this);
+        hugin_utils::HuginMessageBox(_("There are no detected lines.\nPlease run \"Find lines\" first. If there are no lines found, change the parameters."), _("Calibrate_lens_GUI"), wxOK | wxICON_INFORMATION, this);
         return;
     };
     Optimize();
@@ -600,7 +598,7 @@ void LensCalFrame::OnShowDistortionGraph(wxCommandEvent &e)
     };
     if (!ReadInputs(true, false, true))
     {
-        wxMessageBox(_("There are invalid values in the input boxes.\nPlease check your inputs."), _("Warning"), wxOK | wxICON_INFORMATION, this);
+        hugin_utils::HuginMessageBox(_("There are invalid values in the input boxes.\nPlease check your inputs."), _("Calibrate_lens_GUI"), wxOK | wxICON_INFORMATION, this);
         return;
     };
     delete m_popup;
@@ -720,21 +718,19 @@ void LensCalFrame::SaveLensToIni()
 {
     wxFileDialog dlg(this,
                         _("Save lens parameters file"),
-                        wxConfigBase::Get()->Read(wxT("/lensPath"),wxT("")), wxT(""),
+                        wxConfigBase::Get()->Read("/lensPath",wxEmptyString), wxEmptyString,
                         _("Lens Project Files (*.ini)|*.ini|All files (*)|*"),
                         wxFD_SAVE | wxFD_OVERWRITE_PROMPT, wxDefaultPosition);
-    dlg.SetDirectory(wxConfigBase::Get()->Read(wxT("/lensPath"),wxT("")));
+    dlg.SetDirectory(wxConfigBase::Get()->Read("/lensPath",wxEmptyString));
     if (dlg.ShowModal() == wxID_OK)
     {
         wxFileName filename(dlg.GetPath());
         if(!filename.HasExt())
-            filename.SetExt(wxT("ini"));
-        wxConfig::Get()->Write(wxT("/lensPath"), dlg.GetDirectory());  // remember for later
+            filename.SetExt("ini");
+        wxConfig::Get()->Write("/lensPath", dlg.GetDirectory());  // remember for later
         if (filename.FileExists())
         {
-            int d = wxMessageBox(wxString::Format(_("File %s exists. Overwrite?"), filename.GetFullPath().c_str()),
-                                 _("Save project"), wxYES_NO | wxICON_QUESTION);
-            if (d != wxYES)
+            if (!hugin_utils::AskUserOverwrite(filename.GetFullPath(), _("Calibrate_lens_GUI"), this))
             {
                 return;
             }
@@ -748,7 +744,7 @@ void LensCalFrame::OnSaveLens(wxCommandEvent &e)
 {
     if(!ReadInputs(true,false,true))
     {
-        wxMessageBox(_("There are invalid values in the input boxes.\nPlease check your inputs."),_("Warning"),wxOK | wxICON_INFORMATION, this);
+        hugin_utils::HuginMessageBox(_("There are invalid values in the input boxes.\nPlease check your inputs."), _("Calibrate_lens_GUI"), wxOK | wxICON_INFORMATION, this);
         return;
     }
     unsigned int count=0;
@@ -756,7 +752,7 @@ void LensCalFrame::OnSaveLens(wxCommandEvent &e)
         count+=m_images[i]->GetNrOfValidLines();
     if(count==0)
     {
-        wxMessageBox(_("There are no detected lines.\nPlease run \"Find lines\" and \"Optimize\" before saving the lens data. If there are no lines found, change the parameters."),_("Warning"),wxOK  | wxICON_INFORMATION, this);
+        hugin_utils::HuginMessageBox(_("There are no detected lines.\nPlease run \"Find lines\" and \"Optimize\" before saving the lens data. If there are no lines found, change the parameters."), _("Calibrate_lens_GUI"), wxOK | wxICON_INFORMATION, this);
         return;
     };
 
@@ -782,24 +778,22 @@ void LensCalFrame::OnSaveProject(wxCommandEvent &e)
 {
     if(!ReadInputs(true,false,true))
     {
-        wxMessageBox(_("There are invalid values in the input boxes.\nPlease check your inputs."),_("Warning"),wxOK | wxICON_INFORMATION, this);
+        hugin_utils::HuginMessageBox(_("There are invalid values in the input boxes.\nPlease check your inputs."), _("Calibrate_lens_GUI"), wxOK | wxICON_INFORMATION, this);
         return;
     }
 
     wxFileDialog dlg(this,_("Save project file"),wxEmptyString,wxEmptyString,
                      _("Project files (*.pto)|*.pto|All files (*)|*"), wxFD_SAVE | wxFD_OVERWRITE_PROMPT, wxDefaultPosition);
-    dlg.SetDirectory(wxConfigBase::Get()->Read(wxT("/actualPath"),wxT("")));
+    dlg.SetDirectory(wxConfigBase::Get()->Read("/actualPath",wxEmptyString));
     if (dlg.ShowModal() == wxID_OK)
     {
-        wxConfig::Get()->Write(wxT("/actualPath"), dlg.GetDirectory());  // remember for later
+        wxConfig::Get()->Write("/actualPath", dlg.GetDirectory());  // remember for later
         wxFileName filename(dlg.GetPath());
         if(!filename.HasExt())
-            filename.SetExt(wxT("pto"));
+            filename.SetExt("pto");
         if (filename.FileExists())
         {
-            int d = wxMessageBox(wxString::Format(_("File %s exists. Overwrite?"), filename.GetFullPath().c_str()),
-                                 _("Save project"), wxYES_NO | wxICON_QUESTION);
-            if (d != wxYES)
+            if (!hugin_utils::AskUserOverwrite(filename.GetFullPath(), _("Calibrate_lens_GUI"), this))
             {
                 return;
             }
@@ -849,7 +843,7 @@ void LensCalFrame::OnRefresh(wxCommandEvent &e)
 {
     if(!ReadInputs(true,false,true))
     {
-        wxMessageBox(_("There are invalid values in the input boxes.\nPlease check your inputs."),_("Warning"),wxOK | wxICON_INFORMATION, this);
+        hugin_utils::HuginMessageBox(_("There are invalid values in the input boxes.\nPlease check your inputs."), _("Calibrate_lens_GUI"), wxOK | wxICON_INFORMATION, this);
         return;
     }
     m_preview->SetLens(m_projection,m_focallength,m_cropfactor);

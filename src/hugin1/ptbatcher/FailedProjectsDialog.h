@@ -53,8 +53,6 @@ private:
     Batch* m_batch;
     wxListBox* m_list;
     wxTextCtrl* m_log;
-
-    DECLARE_EVENT_TABLE()
 };
 
 

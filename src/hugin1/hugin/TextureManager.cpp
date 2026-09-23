@@ -869,7 +869,7 @@ void TextureManager::TextureInfo::DefineLevels(int min,
     // forget the request if we made one before.
     m_imageRequest = ImageCache::RequestPtr();
     DEBUG_INFO("Converting to 8 bits");
-    std::shared_ptr<vigra::BRGBImage> img = entry->get8BitImage();
+    std::shared_ptr<vigra::BRGBImage> img = entry->get8BitImage(wxConfigBase::Get()->Read("/ImageCache/Mapping", HUGIN_IMGCACHE_MAPPING_FLOAT));
     std::shared_ptr<vigra::BImage> mask = entry->mask;
     // first make the biggest mip level.
     int wo = 1 << (width_p - min), ho = 1 << (height_p - min);

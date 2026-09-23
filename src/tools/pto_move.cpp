@@ -29,7 +29,7 @@
 #include <iostream>
 #include <string>
 #include <fstream>
-#include <hugin_utils/filesystem.h>
+#include <filesystem>
 #include <getopt.h>
 #include <panodata/Panorama.h>
 #include <hugin_utils/stl_utils.h>
@@ -52,9 +52,9 @@ std::string IncludeTrailingDelimiter(std::string path)
 };
 
 // rebase a filename from relative to srcPath to relative to destPath and return absolute new dest path
-bool RebaseFilename(fs::path srcFile, fs::path& destFile, std::string srcPath, std::string destPath)
+bool RebaseFilename(std::filesystem::path srcFile, std::filesystem::path& destFile, std::string srcPath, std::string destPath)
 {
-    fs::path input=fs::absolute(srcFile);
+    std::filesystem::path input=std::filesystem::absolute(srcFile);
     std::string fullInputPath=input.string();
     std::string srcPathWithTrailingDelimiter=IncludeTrailingDelimiter(srcPath);
     if(fullInputPath.compare(0, srcPathWithTrailingDelimiter.length(), srcPathWithTrailingDelimiter)!=0)
@@ -62,13 +62,13 @@ bool RebaseFilename(fs::path srcFile, fs::path& destFile, std::string srcPath, s
         return false;
     };
     fullInputPath.replace(0, srcPathWithTrailingDelimiter.length(), IncludeTrailingDelimiter(destPath));
-    destFile=fs::path(fullInputPath);
+    destFile=std::filesystem::path(fullInputPath);
     return true;
 };
 
-bool checkDestinationDirectory(std::string dir, fs::path& pathTo)
+bool checkDestinationDirectory(std::string dir, std::filesystem::path& pathTo)
 {
-    pathTo=fs::path(dir);
+    pathTo=std::filesystem::path(dir);
     try
     {
         // check if a destination directory is given
@@ -80,9 +80,9 @@ bool checkDestinationDirectory(std::string dir, fs::path& pathTo)
             return false;
         };
         // create destination directory if not exists
-        if(!fs::exists(pathTo))
+        if(!std::filesystem::exists(pathTo))
         {
-            if(!fs::create_directories(pathTo))
+            if(!std::filesystem::create_directories(pathTo))
             {
                 std::cerr << "ERROR: Could not create destination directory: " << pathTo.string() << std::endl
                           << "Maybe you have not sufficient rights to create this directory." << std::endl;
@@ -90,23 +90,23 @@ bool checkDestinationDirectory(std::string dir, fs::path& pathTo)
             };
         };
     }
-    catch (const fs::filesystem_error& ex)
+    catch (const std::filesystem::filesystem_error& ex)
     {
         std::cout << ex.what() << std::endl;
         return false;
     }
-    pathTo=fs::absolute(pathTo);
+    pathTo=std::filesystem::absolute(pathTo);
     return true;
 };
 
-typedef std::set<fs::path> pathVec;
+typedef std::set<std::filesystem::path> pathVec;
 
-bool PTOCopyMove(bool movingFile, fs::path src, fs::path dest, bool overwriteAllFiles)
+bool PTOCopyMove(bool movingFile, std::filesystem::path src, std::filesystem::path dest, bool overwriteAllFiles)
 {
-    fs::path destFile(hugin_utils::GetAbsoluteFilename(dest.string()));
+    std::filesystem::path destFile(hugin_utils::GetAbsoluteFilename(dest.string()));
     std::cout << (movingFile ? "Moving project file  " : "Copying project file ") << src.filename() << std::endl
-              << "  from " << src.parent_path() << std::endl
-              << "  to " << destFile.parent_path() << std::endl;
+              << "  from " << src.parent_path().string() << std::endl
+              << "  to " << destFile.parent_path().string() << std::endl;
     // open project file
     HuginBase::Panorama pano;
     const std::string input=src.string();
@@ -117,18 +117,18 @@ bool PTOCopyMove(bool movingFile, fs::path src, fs::path dest, bool overwriteAll
         return false;
     };
     pathVec imagesFrom;
-    std::map<fs::path,fs::path> imagesTo;
+    std::map<std::filesystem::path,std::filesystem::path> imagesTo;
     // check if all images exists
     for(size_t i=0; i<pano.getNrOfImages(); i++)
     {
-        fs::path p(pano.getImage(i).getFilename());
-        if(!fs::exists(p) || !fs::is_regular_file(p))
+        std::filesystem::path p(pano.getImage(i).getFilename());
+        if(!std::filesystem::exists(p) || !std::filesystem::is_regular_file(p))
         {
             std::cerr << "ERROR: image " << p.string() << " not found on disc." << std::endl
                       << "Skipping project " << input << std::endl;
             return false;
         };
-        p=fs::absolute(p);
+        p=std::filesystem::absolute(p);
         auto result = imagesFrom.insert(p);
         if (!result.second)
         {
@@ -138,7 +138,7 @@ bool PTOCopyMove(bool movingFile, fs::path src, fs::path dest, bool overwriteAll
             continue;
         };
         // now build now image filename
-        fs::path newFilename;
+        std::filesystem::path newFilename;
         if(RebaseFilename(p, newFilename, inputPathPrefix, outputPathPrefix))
         {
             pano.setImageFilename(i, newFilename.string());
@@ -149,13 +149,13 @@ bool PTOCopyMove(bool movingFile, fs::path src, fs::path dest, bool overwriteAll
     {
         if(imagesFrom.size()==imagesTo.size())
         {
-            fs::path targetDir(destFile);
+            std::filesystem::path targetDir(destFile);
             targetDir.remove_filename();
             if(!checkDestinationDirectory(targetDir.string(), targetDir))
             {
                 return false;
             };
-            if(fs::exists(destFile) && !overwriteAllFiles)
+            if(std::filesystem::exists(destFile) && !overwriteAllFiles)
             {
                 std::cout << "Project file " << destFile << " does already exists." << std::endl
                           << "  Overwrite this file? [Y|N] ";
@@ -182,7 +182,7 @@ bool PTOCopyMove(bool movingFile, fs::path src, fs::path dest, bool overwriteAll
                     return false;
                 };
                 //check if target image file already exists
-                if(fs::exists(imagesTo[imgFrom]) && !overwriteAllFiles)
+                if(std::filesystem::exists(imagesTo[imgFrom]) && !overwriteAllFiles)
                 {
                     std::cout << "Images file " << imagesTo[imgFrom] << " does already exists." << std::endl
                               << "  Overwrite this file? [Y|N] ";
@@ -202,9 +202,9 @@ bool PTOCopyMove(bool movingFile, fs::path src, fs::path dest, bool overwriteAll
                 {
                     try
                     {
-                        fs::rename(imgFrom, imagesTo[imgFrom]);
+                        std::filesystem::rename(imgFrom, imagesTo[imgFrom]);
                     }
-                    catch (const fs::filesystem_error& ex)
+                    catch (const std::filesystem::filesystem_error& ex)
                     {
                         std::cout << ex.what() << std::endl;
                         return false;
@@ -214,9 +214,9 @@ bool PTOCopyMove(bool movingFile, fs::path src, fs::path dest, bool overwriteAll
                 {
                     try
                     {
-                        fs::copy_file(imgFrom, imagesTo[imgFrom], OVERWRITE_EXISTING);
+                        std::filesystem::copy_file(imgFrom, imagesTo[imgFrom], std::filesystem::copy_options::overwrite_existing);
                     }
-                    catch (const fs::filesystem_error& ex)
+                    catch (const std::filesystem::filesystem_error& ex)
                     {
                         std::cout << ex.what() << std::endl;
                         return false;
@@ -233,9 +233,9 @@ bool PTOCopyMove(bool movingFile, fs::path src, fs::path dest, bool overwriteAll
             {
                 try
                 {
-                    fs::remove(src);
+                    std::filesystem::remove(src);
                 }
-                catch (const fs::filesystem_error& ex)
+                catch (const std::filesystem::filesystem_error& ex)
                 {
                     std::cout << "Could not remove original file: " << input << std::endl;
                     std::cout << ex.what() << std::endl;
@@ -264,9 +264,9 @@ bool PTOCopyMove(bool movingFile, fs::path src, fs::path dest, bool overwriteAll
         {
             try
             {
-                fs::remove(src);
+                std::filesystem::remove(src);
             }
-            catch (const fs::filesystem_error& ex)
+            catch (const std::filesystem::filesystem_error& ex)
             {
                 std::cout << "Could not remove original file: " << input << std::endl;
                 std::cout << ex.what() << std::endl;
@@ -291,7 +291,7 @@ bool iterateFileSystem(std::string src, pathVec& projectFiles)
             };
         }
     }
-    catch(fs::filesystem_error& e)
+    catch(std::filesystem::filesystem_error& e)
     {
         std::cout << e.what() << std::endl;
         return false;
@@ -303,11 +303,11 @@ void SearchPTOFilesInDirectory(pathVec& projectFiles, std::string src, bool recu
 {
     if(recursive)
     {
-        iterateFileSystem<fs::recursive_directory_iterator>(src, projectFiles);
+        iterateFileSystem<std::filesystem::recursive_directory_iterator>(src, projectFiles);
     }
     else
     {
-        iterateFileSystem<fs::directory_iterator>(src, projectFiles);
+        iterateFileSystem<std::filesystem::directory_iterator>(src, projectFiles);
     };
 };
 
@@ -389,14 +389,14 @@ int main(int argc, char* argv[])
 
     try
     {
-        fs::path p(argv[optind]);
-        if(fs::exists(p))
+        std::filesystem::path p(argv[optind]);
+        if(std::filesystem::exists(p))
         {
-            p=fs::absolute(p);
-            if(fs::is_directory(p))
+            p=std::filesystem::absolute(p);
+            if(std::filesystem::is_directory(p))
             {
                 // first parameter is a directory
-                fs::path pathTo;
+                std::filesystem::path pathTo;
                 if(!checkDestinationDirectory(std::string(argv[argc-1]), pathTo))
                 {
                     return 1;
@@ -413,7 +413,7 @@ int main(int argc, char* argv[])
                 std::cout << "Found " << projectFiles.size() << " project files." << std::endl << std::endl;
                 for(pathVec::const_iterator it=projectFiles.cbegin(); it!=projectFiles.cend(); ++it)
                 {
-                    fs::path newPath;
+                    std::filesystem::path newPath;
                     if(RebaseFilename(*it, newPath, p.string(), pathTo.string()))
                     {
                         PTOCopyMove(movingFiles, *it, newPath, forceOverwrite);
@@ -426,22 +426,22 @@ int main(int argc, char* argv[])
                 {
                     // several files given
                     // check if destination is a directory and create it if necessary
-                    fs::path pathTo;
+                    std::filesystem::path pathTo;
                     if(!checkDestinationDirectory(std::string(argv[argc-1]), pathTo))
                     {
                         return 1;
                     };
                     while(optind<argc-1)
                     {
-                        p=fs::path(argv[optind]);
+                        p=std::filesystem::path(argv[optind]);
                         std::string ext=hugin_utils::toupper(p.extension().string());
                         // work only on pto files
                         if(ext==".PTO")
                         {
-                            if(fs::exists(p) && fs::is_regular_file(p))
+                            if(std::filesystem::exists(p) && std::filesystem::is_regular_file(p))
                             {
-                                p=fs::absolute(p);
-                                fs::path newPath = pathTo / p.filename();
+                                p=std::filesystem::absolute(p);
+                                std::filesystem::path newPath = pathTo / p.filename();
                                 PTOCopyMove(movingFiles, p, newPath, forceOverwrite);
                             }
                             else
@@ -456,12 +456,12 @@ int main(int argc, char* argv[])
                 else
                 {
                     // exactly 2 files given
-                    fs::path pathTo(argv[argc-1]);
+                    std::filesystem::path pathTo(argv[argc-1]);
                     if(pathTo.extension().string().length()>0)
                     {
                         // user has given filename with extension
                         // so simply copy/move file
-                        pathTo=fs::absolute(pathTo);
+                        pathTo=std::filesystem::absolute(pathTo);
                         PTOCopyMove(movingFiles, p, pathTo, forceOverwrite);
                     }
                     else
@@ -484,7 +484,7 @@ int main(int argc, char* argv[])
             };
         };
     }
-    catch (const fs::filesystem_error& ex)
+    catch (const std::filesystem::filesystem_error& ex)
     {
         std::cout << ex.what() << std::endl;
     }

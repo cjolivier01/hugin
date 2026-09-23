@@ -43,7 +43,7 @@
 Hugin 2021.1 and later lists the executor and assistant files from 2 directories in the menu bar for easier access: 
 </p>
 <ul><li>from systemwide data directories - one for the output sequence and the other for the assistant: On Windows the paths are <tt>install directory\share\hugin\data\output</tt> and <tt>install directory\share\hugin\data\assistant</tt>, on Linux the paths are <tt>/usr/share/hugin/data/output</tt> and <tt>/usr/share/hugin/data/assistant</tt>.</li>
-<li>from an user data directory.  On Windows the path is <tt>c:\users\USERNAME\AppName\Roaming\hugin</tt>, on Linux the path is <tt>~/.hugindata</tt>.</li></ul>
+<li>from an user data directory.  On Windows the path is <tt>c:\users\USERNAME\AppName\Roaming\hugin</tt>, on Linux the path is <tt>~/.local/share/hugin</tt> or <tt>XDG_DATA_HOME/hugin</tt> (if environment variable <tt>XDG_DATA_HOME</tt> is set).</li></ul>
 
 <!--
 Transclusion expansion time report (%,ms,calls,template)

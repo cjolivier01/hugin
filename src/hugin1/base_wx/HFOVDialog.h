@@ -70,8 +70,6 @@ private:
     double m_cropFactor;
     wxString m_HFOVStr;
     double m_HFOV;
-
-    DECLARE_EVENT_TABLE()
 };
 
 

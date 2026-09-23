@@ -27,6 +27,7 @@
 #include "hugin/ImageVariableDialog.h"
 #include "base_wx/GraphTools.h"
 #include "base_wx/wxPlatform.h"
+#include "base_wx/wxutils.h"
 #include "panoinc.h"
 #include "photometric/ResponseTransform.h"
 #include <map>
@@ -36,33 +37,16 @@
 #include "base_wx/CommandHistory.h"
 #include "base_wx/PanoCommand.h"
 
-BEGIN_EVENT_TABLE(ImageVariableDialog,wxDialog)
-    EVT_BUTTON(wxID_OK, ImageVariableDialog::OnOk)
-    EVT_BUTTON(wxID_HELP, ImageVariableDialog::OnHelp)
-    EVT_BUTTON(XRCID("image_show_distortion_graph"), ImageVariableDialog::OnShowDistortionGraph)
-    EVT_BUTTON(XRCID("image_show_vignetting_graph"), ImageVariableDialog::OnShowVignettingGraph)
-    EVT_BUTTON(XRCID("image_show_response_graph"), ImageVariableDialog::OnShowResponseGraph)
-    EVT_CHOICE(XRCID("image_variable_responseType"), ImageVariableDialog::OnResponseSelected)
-END_EVENT_TABLE()
-
 ImageVariableDialog::ImageVariableDialog(wxWindow *parent, HuginBase::Panorama* pano, HuginBase::UIntSet imgs)
 {
     // load our children. some children might need special
     // initialization. this will be done later.
-    wxXmlResource::Get()->LoadDialog(this, parent, wxT("image_variables_dialog"));
-
-#ifdef __WXMSW__
-    wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + wxT("data/hugin.ico"),wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(huginApp::Get()->GetXRCPath() + wxT("data/hugin.png"),wxBITMAP_TYPE_PNG);
-    SetIcon(myIcon);
-#endif
+    wxXmlResource::Get()->LoadDialog(this, parent, "image_variables_dialog");
 
     wxConfigBase * cfg = wxConfigBase::Get();
     //position
-    int x = cfg->Read(wxT("/ImageVariablesDialog/positionX"),-1l);
-    int y = cfg->Read(wxT("/ImageVariablesDialog/positionY"),-1l);
+    int x = cfg->Read("/ImageVariablesDialog/positionX",-1l);
+    int y = cfg->Read("/ImageVariablesDialog/positionY",-1l);
     if ( y >= 0 && x >= 0) 
     {
         this->Move(x, y);
@@ -75,14 +59,21 @@ ImageVariableDialog::ImageVariableDialog(wxWindow *parent, HuginBase::Panorama* 
     m_images=imgs;
     m_popup=NULL;
     InitValues();
+    // bind event handler
+    Bind(wxEVT_BUTTON, &ImageVariableDialog::OnOk, this, wxID_OK);
+    Bind(wxEVT_BUTTON, &ImageVariableDialog::OnHelp, this, wxID_HELP);
+    Bind(wxEVT_BUTTON, &ImageVariableDialog::OnShowDistortionGraph, this, XRCID("image_show_distortion_graph"));
+    Bind(wxEVT_BUTTON, &ImageVariableDialog::OnShowVignettingGraph, this, XRCID("image_show_vignetting_graph"));
+    Bind(wxEVT_BUTTON, &ImageVariableDialog::OnShowResponseGraph, this, XRCID("image_show_response_graph"));
+    Bind(wxEVT_CHOICE, &ImageVariableDialog::OnResponseSelected, this, XRCID("image_variable_responseType"));
 };
 
 ImageVariableDialog::~ImageVariableDialog()
 {
     wxConfigBase * cfg = wxConfigBase::Get();
     wxPoint ps = this->GetPosition();
-    cfg->Write(wxT("/ImageVariablesDialog/positionX"), ps.x);
-    cfg->Write(wxT("/ImageVariablesDialog/positionY"), ps.y);
+    cfg->Write("/ImageVariablesDialog/positionX", ps.x);
+    cfg->Write("/ImageVariablesDialog/positionY", ps.y);
     cfg->Flush();
 };
 
@@ -96,7 +87,7 @@ wxTextCtrl* GetImageVariableControl(const wxWindow* parent, const char* varname)
     return wxStaticCast(
                 parent->FindWindow(
                     wxXmlResource::GetXRCID(
-                        wxString(wxT("image_variable_")).append(wxString(varname, wxConvLocal)).c_str()
+                        wxString("image_variable_").append(wxString(varname, wxConvLocal)).c_str()
                     )
                 ), wxTextCtrl
            );
@@ -120,9 +111,9 @@ void ImageVariableDialog::InitValues()
         XRCCTRL(*this, "image_variable_responseType", wxChoice)->SetSelection(responseType);
     };
 
-    int degDigits = wxConfigBase::Get()->Read(wxT("/General/DegreeFractionalDigitsEdit"),3);
-    int pixelDigits = wxConfigBase::Get()->Read(wxT("/General/PixelFractionalDigitsEdit"),2);
-    int distDigitsEdit = wxConfigBase::Get()->Read(wxT("/General/DistortionFractionalDigitsEdit"),5);
+    int degDigits = wxConfigBase::Get()->Read("/General/DegreeFractionalDigitsEdit",3);
+    int pixelDigits = wxConfigBase::Get()->Read("/General/PixelFractionalDigitsEdit",2);
+    int distDigitsEdit = wxConfigBase::Get()->Read("/General/DistortionFractionalDigitsEdit",5);
     
     HuginBase::VariableMapVector imgVarVector = m_pano->getVariables();
 
@@ -194,13 +185,7 @@ bool ImageVariableDialog::ApplyNewVariables()
                 {
                     if (val < 0.05)
                     {
-                        wxMessageBox(_("The horizontal field of view must be positive."),
-#ifdef __WXMSW__
-                            _("Hugin"),
-#else
-                            wxT(""),
-#endif
-                            wxICON_EXCLAMATION | wxOK);
+                        hugin_utils::HuginMessageBox(_("The horizontal field of view must be positive."), _("Hugin"), wxICON_EXCLAMATION | wxOK, this);
                         return false;
                     };
                     switch(m_pano->getImage(*m_images.begin()).getProjection())
@@ -214,14 +199,9 @@ bool ImageVariableDialog::ApplyNewVariables()
                         case HuginBase::SrcPanoImage::FISHEYE_ORTHOGRAPHIC:
                             if(val>190)
                             {
-                                if(wxMessageBox(
+                                if (hugin_utils::HuginMessageBox(
                                     wxString::Format(_("You have given a field of view of %.2f degrees.\n But the orthographic projection is limited to a field of view of 180 degress.\nDo you want still use that high value?"), val),
-#ifdef __WXMSW__
-                                    _("Hugin"),
-#else
-                                    wxT(""),
-#endif
-                                    wxICON_EXCLAMATION | wxYES_NO)==wxNO)
+                                    _("Hugin"), wxICON_EXCLAMATION | wxYES_NO, this) == wxNO)
                                 {
                                     return false;
                                 };
@@ -287,16 +267,16 @@ void ImageVariableDialog::OnHelp(wxCommandEvent & e)
     {
         //lens parameters
         case 1:
-            MainFrame::Get()->DisplayHelp(wxT("Lens_correction_model.html"));
+            MainFrame::Get()->DisplayHelp("Lens_correction_model.html");
             break;
         case 2:
-            MainFrame::Get()->DisplayHelp(wxT("Vignetting.html"));
+            MainFrame::Get()->DisplayHelp("Vignetting.html");
             break;
         case 3:
-            MainFrame::Get()->DisplayHelp(wxT("Camera_response_curve.html"));
+            MainFrame::Get()->DisplayHelp("Camera_response_curve.html");
             break;
         default:
-            MainFrame::Get()->DisplayHelp(wxT("Image_positioning_model.html"));
+            MainFrame::Get()->DisplayHelp("Image_positioning_model.html");
             break;
     };
 };

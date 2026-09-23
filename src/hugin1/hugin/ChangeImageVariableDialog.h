@@ -59,8 +59,6 @@ private:
     wxTextCtrl* m_textInput;
     wxFileConfig* m_presets;
     wxTextAttr m_textAttrInactive, m_textAttrDefault;
-
-    DECLARE_EVENT_TABLE()
 };
 
 #endif //_PARSEIMAGEVARIABLEDIALOG_H

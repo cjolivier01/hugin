@@ -33,7 +33,7 @@
 #include <panodata/Panorama.h>
 #include <base_wx/platform.h>
 #include "hugin/config_defaults.h"
-#if defined __WXGTK__ && wxCHECK_VERSION(3,1,1)
+#if defined __WXGTK__
 #include "base_wx/wxPlatform.h"
 #endif
 
@@ -44,10 +44,10 @@ extern "C"
 
 void iCPApp::ReadDetectorConfig()
 {
-#if defined __WXGTK__ && wxCHECK_VERSION(3,1,1)
+#if defined __WXGTK__
     CheckConfigFilename();
 #endif
-    wxConfig config(wxT("hugin"));
+    wxConfig config("hugin");
     //read cp detectors settings
     CPDetectorConfig cpdetector_config;
     cpdetector_config.Read(&config);
@@ -66,31 +66,31 @@ void iCPApp::ReadDetectorConfig()
 
     if(m_matches==-1)
     {
-        m_matches=config.Read(wxT("/Assistant/nControlPoints"), HUGIN_ASS_NCONTROLPOINTS);
+        m_matches=config.Read("/Assistant/nControlPoints", HUGIN_ASS_NCONTROLPOINTS);
     };
 };
 
 void iCPApp::OnInitCmdLine(wxCmdLineParser &parser)
 {
-    parser.AddSwitch(wxT("h"),wxT("help"),wxT("shows this help message"));
-    parser.AddOption(wxT("s"),wxT("setting"),wxT("used setting"),wxCMD_LINE_VAL_NUMBER);
-    parser.AddOption(wxT("m"),wxT("matches"),wxT("number of matches"),wxCMD_LINE_VAL_NUMBER);
-    parser.AddOption(wxT("o"),wxT("output"),wxT("output project"),wxCMD_LINE_VAL_STRING,wxCMD_LINE_OPTION_MANDATORY);
-    parser.AddParam(wxT("input.pto"),wxCMD_LINE_VAL_STRING,wxCMD_LINE_OPTION_MANDATORY);
+    parser.AddSwitch("h","help","shows this help message");
+    parser.AddOption("s","setting","used setting",wxCMD_LINE_VAL_NUMBER);
+    parser.AddOption("m","matches","number of matches",wxCMD_LINE_VAL_NUMBER);
+    parser.AddOption("o","output","output project",wxCMD_LINE_VAL_STRING,wxCMD_LINE_OPTION_MANDATORY);
+    parser.AddParam("input.pto",wxCMD_LINE_VAL_STRING,wxCMD_LINE_OPTION_MANDATORY);
 };
 
 bool iCPApp::OnCmdLineParsed(wxCmdLineParser &parser)
 {
     // we don't call the parents method of OnCmdLineParse, this will pull in other options we don't want
-    if(!parser.Found(wxT("s"),&m_setting))
+    if(!parser.Found("s",&m_setting))
     {
         m_setting=-1;
     };
-    if(!parser.Found(wxT("m"),&m_matches))
+    if(!parser.Found("m",&m_matches))
     {
         m_matches=-1;
     };
-    parser.Found(wxT("o"),&m_output);
+    parser.Found("o",&m_output);
     m_input=parser.GetParam();
     return true;
 };

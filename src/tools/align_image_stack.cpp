@@ -1179,7 +1179,13 @@ int main(int argc, char* argv[])
                 std::cout << "WARNING: Switch --threads is deprecated. Set environment variable OMP_NUM_THREADS instead" << std::endl;
                 break;
             case GPU:
+#if defined __APPLE__ && defined __aarch64__
+                // disable GPU remapping on ARM Macs, GPU code is not working on these systems
+                param.gpu = false;
+                std::cout << "WARNING: GPU remapping is not supported on ARM Macs. Switching back to CPU remapping." << std::endl;
+#else
                 param.gpu = true;
+#endif
                 break;
             case LENSDB:
                 param.loadDistortion = true;

@@ -73,7 +73,7 @@ wxString LocalizedFileTipProvider::GetTip()
 
         // Break if tip isn't a comment, and isn't an empty string
         // (or only stray space characters).
-        if ( !tip.StartsWith(wxT("#")) && (tip.Trim() != wxEmptyString) )
+        if ( !tip.StartsWith("#") && (tip.Trim() != wxEmptyString) )
         {
             break;
         }
@@ -81,12 +81,12 @@ wxString LocalizedFileTipProvider::GetTip()
 
     // If tip starts with '_(', then it is a gettext string of format
     // _("My \"global\" tip text") so first strip off the leading '_("'...
-    if ( tip.StartsWith(wxT("_(\"" ), &tip))
+    if ( tip.StartsWith("_(\"" , &tip))
     {
         //...and strip off the trailing '")'...
-        tip = tip.BeforeLast(wxT('\"'));
+        tip = tip.BeforeLast('\"');
         // ...and replace escaped quotes
-        tip.Replace(wxT("\\\""), wxT("\""));
+        tip.Replace("\\\"", "\"");
 
         DEBUG_DEBUG("Tip before translation " << tip);
         // translate tip

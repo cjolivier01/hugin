@@ -44,19 +44,11 @@
 #include "panodata/OptimizerSwitches.h"
 #include "hugin/PanoOperation.h"
 #include "base_wx/LensTools.h"
+#include "base_wx/wxutils.h"
 
 //============================================================================
 //============================================================================
 //============================================================================
-
-BEGIN_EVENT_TABLE(OptimizePanel, wxPanel)
-    EVT_CLOSE(OptimizePanel::OnClose)
-    EVT_BUTTON(XRCID("optimize_panel_optimize"), OptimizePanel::OnOptimizeButton)
-    EVT_BUTTON(XRCID("optimize_panel_reset"), OptimizePanel::OnReset)
-    EVT_CHECKBOX(XRCID("optimizer_panel_only_active_images"), OptimizePanel::OnCheckOnlyActiveImages)
-    EVT_CHECKBOX(XRCID("optimizer_panel_ignore_line_cp"), OptimizePanel::OnCheckIgnoreLineCP)
-END_EVENT_TABLE()
-
 
 OptimizePanel::OptimizePanel()
 {
@@ -74,7 +66,7 @@ bool OptimizePanel::Create(wxWindow* parent, wxWindowID id , const wxPoint& pos,
     // create a sub-panel and load class into it!
 
     // wxPanel::Create is called in here!
-    wxXmlResource::Get()->LoadPanel(this, wxT("optimize_panel"));
+    wxXmlResource::Get()->LoadPanel(this, "optimize_panel");
     wxPanel * panel = XRCCTRL(*this, "optimize_panel", wxPanel);
 
     wxBoxSizer *topsizer = new wxBoxSizer( wxVERTICAL );
@@ -84,20 +76,26 @@ bool OptimizePanel::Create(wxWindow* parent, wxWindowID id , const wxPoint& pos,
     m_only_active_images_cb = XRCCTRL(*this, "optimizer_panel_only_active_images", wxCheckBox);
     DEBUG_ASSERT(m_only_active_images_cb);
     m_only_active_images_cb->SetValue(false);
+    m_only_active_images_cb->Bind(wxEVT_CHECKBOX, &OptimizePanel::OnCheckOnlyActiveImages, this);
     m_ignore_line_cp = XRCCTRL(*this, "optimizer_panel_ignore_line_cp", wxCheckBox);
     DEBUG_ASSERT(m_ignore_line_cp);
     m_ignore_line_cp->SetValue(false);
+    m_ignore_line_cp->Bind(wxEVT_CHECKBOX, &OptimizePanel::OnCheckIgnoreLineCP, this);
 
     m_images_tree_list = XRCCTRL(*this, "optimize_panel_images", ImagesTreeCtrl);
     DEBUG_ASSERT(m_images_tree_list);
     m_lens_tree_list = XRCCTRL(*this, "optimize_panel_lenses", ImagesTreeCtrl);
     DEBUG_ASSERT(m_lens_tree_list);
-    SetOnlyActiveImages(wxConfigBase::Get()->Read(wxT("/OptimizePanel/OnlyActiveImages"), 1l) != 0);
+    SetOnlyActiveImages(wxConfigBase::Get()->Read("/OptimizePanel/OnlyActiveImages", 1l) != 0);
 
     m_edit_cb = XRCCTRL(*this, "optimizer_panel_edit_script", wxCheckBox);
     DEBUG_ASSERT(m_edit_cb);
 
     XRCCTRL(*this, "optimizer_panel_splitter", wxSplitterWindow)->SetSashGravity(0.66);
+    // bind other events
+    Bind(wxEVT_CLOSE_WINDOW, &OptimizePanel::OnClose, this);
+    Bind(wxEVT_BUTTON, &OptimizePanel::OnOptimizeButton, this, XRCID("optimize_panel_optimize"));
+    Bind(wxEVT_BUTTON, &OptimizePanel::OnReset, this, XRCID("optimize_panel_reset"));
 
     return true;
 }
@@ -149,8 +147,6 @@ void OptimizePanel::panoramaImagesChanged(HuginBase::Panorama &pano,
 void OptimizePanel::OnOptimizeButton(wxCommandEvent & e)
 {
     DEBUG_TRACE("");
-    // disable window so that user can't click optimize button twice
-    wxWindowDisabler winDisable;
     // run optimizer
     HuginBase::UIntSet imgs;
     if (m_only_active_images_cb->IsChecked() || m_pano->getOptimizerSwitch()!=0)
@@ -159,13 +155,8 @@ void OptimizePanel::OnOptimizeButton(wxCommandEvent & e)
         imgs = m_pano->getActiveImages();
         if (imgs.empty())
         {
-            wxMessageBox(_("The project does not contain any active images.\nPlease activate at least one image in the (fast) preview window.\nOptimization canceled."),
-#ifdef _WIN32
-                _("Hugin"),
-#else
-                wxT(""),
-#endif
-                wxICON_ERROR | wxOK);
+            hugin_utils::HuginMessageBox(_("The project does not contain any active images.\nPlease activate at least one image in the (fast) preview window.\nOptimization canceled."),
+                _("Hugin"), wxICON_ERROR | wxOK, wxGetActiveWindow());
             return;
         }
     }
@@ -184,22 +175,18 @@ void OptimizePanel::runOptimizer(const HuginBase::UIntSet & imgs, const bool ign
     DEBUG_TRACE("");
     // open window that shows a status dialog, and allows to
     // apply the results
-    int mode=m_pano->getOptimizerSwitch();
-    // remember active window for dialogs
-    wxWindow* activeWindow = wxGetActiveWindow();
+    const int mode=m_pano->getOptimizerSwitch();
 
     HuginBase::Panorama optPano = m_pano->getSubset(imgs);
     if (optPano.getNrOfCtrlPoints() == 0)
     {
-        wxMessageBox(_("There are no control points in the current configuration for the optimizer.\nPlease add control points before running the optimizer.\nOptimization canceled."),
-#ifdef __WXMSW__
-            _("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxICON_ERROR | wxOK);
+        hugin_utils::HuginMessageBox(_("There are no control points in the current configuration for the optimizer.\nPlease add control points before running the optimizer.\nOptimization canceled."),
+            _("Hugin"), wxICON_ERROR | wxOK, wxGetActiveWindow());
         return;
     };
+    // disable optimize button, so user can't click twice
+    hugin_utils::DisableWindow disableButton(XRCCTRL(*this, "optimize_panel_optimize", wxButton));
+
     HuginBase::PanoramaOptions opts = optPano.getOptions();
     switch(opts.getProjection())
     {
@@ -263,13 +250,8 @@ void OptimizePanel::runOptimizer(const HuginBase::UIntSet & imgs, const bool ign
             };
             if (optCps.empty())
             {
-                wxMessageBox(_("There are no control points in the current configuration for the optimizer.\nPlease add control points before running the optimizer.\nOptimization canceled."),
-#ifdef __WXMSW__
-                    _("Hugin"),
-#else
-                    wxT(""),
-#endif
-                    wxICON_ERROR | wxOK);
+                hugin_utils::HuginMessageBox(_("There are no control points in the current configuration for the optimizer.\nPlease add control points before running the optimizer.\nOptimization canceled."),
+                    _("Hugin"), wxICON_ERROR | wxOK, wxGetActiveWindow());
                 return;
             }
             optPano.setCtrlPoints(optCps);
@@ -281,7 +263,7 @@ void OptimizePanel::runOptimizer(const HuginBase::UIntSet & imgs, const bool ign
             optPano.printPanoramaScript(scriptbuf, optPano.getOptimizeVector(), optPano.getOptions(), allImg, true);
             // open a text dialog with an editor inside
             wxDialog edit_dlg;
-            wxXmlResource::Get()->LoadDialog(&edit_dlg, this, wxT("edit_script_dialog"));
+            wxXmlResource::Get()->LoadDialog(&edit_dlg, this, "edit_script_dialog");
             wxTextCtrl *txtCtrl=XRCCTRL(edit_dlg,"script_edit_text",wxTextCtrl);
             txtCtrl->SetValue(wxString(scriptbuf.str().c_str(), *wxConvCurrent));
 
@@ -319,7 +301,7 @@ void OptimizePanel::runOptimizer(const HuginBase::UIntSet & imgs, const bool ign
     wxTheApp->ProcessIdle();
 #endif
     // calculate control point errors and display text.
-    if (AskApplyResult(activeWindow, optPano))
+    if (AskApplyResult(wxGetActiveWindow(), optPano))
     {
         if (!originalCps.empty())
         {
@@ -378,9 +360,7 @@ bool OptimizePanel::AskApplyResult(wxWindow* activeWindow, const HuginBase::Pano
         }
     };
 
-    int id = wxMessageBox(msg, _("Optimization result"), style, activeWindow);
-
-    return id == wxYES;
+    return hugin_utils::HuginMessageBox(msg, _("Hugin"), style, activeWindow) == wxYES;
 }
 
 void OptimizePanel::OnClose(wxCloseEvent& event)
@@ -449,7 +429,7 @@ wxObject *OptimizePanelXmlHandler::DoCreateResource()
     cp->Create(m_parentAsWindow,
                    GetID(),
                    GetPosition(), GetSize(),
-                   GetStyle(wxT("style")),
+                   GetStyle("style"),
                    GetName());
 
     SetupWindow( cp);
@@ -459,7 +439,7 @@ wxObject *OptimizePanelXmlHandler::DoCreateResource()
 
 bool OptimizePanelXmlHandler::CanHandle(wxXmlNode *node)
 {
-    return IsOfClass(node, wxT("OptimizePanel"));
+    return IsOfClass(node, "OptimizePanel");
 }
 
 IMPLEMENT_DYNAMIC_CLASS(OptimizePanelXmlHandler, wxXmlResourceHandler)

@@ -59,7 +59,7 @@ namespace HuginQueue
 
     wxString NormalCommand::GetCommand() const
     {
-        return wxEscapeFilename(m_prog) + wxT(" ") + m_args;
+        return wxEscapeFilename(m_prog) + " " + m_args;
     };
 
     wxString NormalCommand::GetComment() const
@@ -87,16 +87,16 @@ namespace HuginQueue
         {
             wxString s;
             s << threads;
-            wxSetEnv(wxT("OMP_NUM_THREADS"), s);
+            wxSetEnv("OMP_NUM_THREADS", s);
         };
         // set temp dir
-        wxString tempDir = wxConfig::Get()->Read(wxT("tempDir"), wxT(""));
+        wxString tempDir = wxConfig::Get()->Read("tempDir", wxEmptyString);
         if (!tempDir.IsEmpty())
         {
 #ifdef UNIX_LIKE
-            wxSetEnv(wxT("TMPDIR"), tempDir);
+            wxSetEnv("TMPDIR", tempDir);
 #else
-            wxSetEnv(wxT("TMP"), tempDir);
+            wxSetEnv("TMP", tempDir);
 #endif
         };
         bool isSuccessful = true;
@@ -132,7 +132,7 @@ namespace HuginQueue
         CFStringRef filename = MacCreateCFStringWithWxString(name);
         wxString fn = MacGetPathToBundledExecutableFile(filename);
         CFRelease(filename);
-        if (fn == wxT(""))
+        if (fn == wxEmptyString)
         {
             std::cerr << wxString::Format(_("External program %s not found in the bundle, reverting to system path"), name.c_str()) << std::endl;
             return name;
@@ -148,9 +148,9 @@ namespace HuginQueue
     wxString GetExternalProgram(wxConfigBase * config, const wxString& bindir, const wxString& name)
     {
 #if defined __WXMAC__ && defined MAC_SELF_CONTAINED_BUNDLE
-        if (config->Read(name + wxT("/Custom"), 0l))
+        if (config->Read(name + "/Custom", 0l))
         {
-            wxString fn = config->Read(name + wxT("/Exe"), wxT(""));
+            wxString fn = config->Read(name + "/Exe", wxEmptyString);
             if (wxFileName::FileExists(fn))
             {
                 return fn;
@@ -160,33 +160,33 @@ namespace HuginQueue
                 std::cerr << wxString::Format(_("WARNING: External program %s not found as specified in preferences, reverting to bundled version"), fn.c_str()) << std::endl;
             };
         };
-        if (name == wxT("exiftool"))
+        if (name == "exiftool")
         {
             wxString exiftoolDirPath = MacGetPathToBundledResourceFile(CFSTR("ExifTool"));
-            if (exiftoolDirPath != wxT(""))
+            if (exiftoolDirPath != wxEmptyString)
             {
-                return exiftoolDirPath + wxT("/exiftool");
+                return exiftoolDirPath + "/exiftool";
             }
             else
             {
                 std::cerr << wxString::Format(_("WARNING: External program %s not found in the bundle, reverting to system path"), name.c_str()) << std::endl;
-                return wxT("exiftool");
+                return "exiftool";
             };
         };
 
         CFStringRef filename = MacCreateCFStringWithWxString(name);
         wxString fn = MacGetPathToBundledExecutableFile(filename);
         CFRelease(filename);
-        if (fn == wxT(""))
+        if (fn == wxEmptyString)
         {
             std::cerr << wxString::Format(_("WARNING: External program %s not found in the bundle, reverting to system path"), name.c_str()) << std::endl;
             return name;
         };
         return fn;
 #else
-        if (config->Read(name + wxT("/Custom"), 0l))
+        if (config->Read(name + "/Custom", 0l))
         {
-            wxString fn = config->Read(name + wxT("/Exe"), wxT(""));
+            wxString fn = config->Read(name + "/Exe", wxEmptyString);
             if (!fn.IsEmpty())
             {
                 wxFileName prog(fn);
@@ -202,7 +202,7 @@ namespace HuginQueue
                     // search in PATH
                     wxPathList pathlist;
                     pathlist.Add(bindir);
-                    pathlist.AddEnvList(wxT("PATH"));
+                    pathlist.AddEnvList("PATH");
                     fn = pathlist.FindAbsoluteValidPath(fn);
                     if (!fn.IsEmpty())
                     {
@@ -239,7 +239,7 @@ namespace HuginQueue
     {
         wxString s = hugin_utils::doubleTowxString(val, precision);
         const wxString sep = wxLocale::GetInfo(wxLOCALE_DECIMAL_POINT, wxLOCALE_CAT_NUMBER);
-        s.Replace(sep, wxT("."));
+        s.Replace(sep, ".");
         return s;
     };
 
@@ -266,7 +266,7 @@ namespace HuginQueue
             };
             wxPathList pathlist;
             pathlist.Add(bindir);
-            pathlist.AddEnvList(wxT("PATH"));
+            pathlist.AddEnvList("PATH");
             const wxString fullName = pathlist.FindAbsoluteValidPath(prog.GetFullName());
             if (!fullName.IsEmpty())
             {
@@ -301,7 +301,7 @@ const wxString GetSettingStringTranslated(wxConfigBase* setting, const wxString&
 /** return the temp dir from the preferences, ensure that it ends with path separator */
 const wxString GetConfigTempDir(const wxConfigBase* config)
 {
-    wxString tempDir = config->Read(wxT("tempDir"), wxT(""));
+    wxString tempDir = config->Read("tempDir", wxEmptyString);
     if (!tempDir.IsEmpty())
     {
         if (tempDir.Last() != wxFileName::GetPathSeparator())

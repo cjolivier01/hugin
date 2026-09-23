@@ -342,6 +342,8 @@
 		<param name="Name" value="Enfuse">
 		<param name="Name" value="Enfuse">
 		<param name="Local" value="Enfuse.html">
+		<param name="Name" value="Hugin toolbox - PanoTools.org Wiki">
+		<param name="Local" value="Hugin_toolbox.html">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
 		<param name="Name" value="Equirectangular Panini">
@@ -464,6 +466,11 @@
 		<param name="Name" value="Hugin_stitch_project">
 		<param name="Name" value="Hugin stitch project - PanoTools.org Wiki">
 		<param name="Local" value="Hugin_stitch_project.html">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Hugin_toolbox">
+		<param name="Name" value="Hugin toolbox - PanoTools.org Wiki">
+		<param name="Local" value="Hugin_toolbox.html">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
 		<param name="Name" value="Icpfind">
@@ -689,6 +696,8 @@
 		<param name="Name" value="Perspective correction">
 		<param name="Name" value="Perspective correction">
 		<param name="Local" value="Perspective_correction.html">
+		<param name="Name" value="Hugin toolbox - PanoTools.org Wiki">
+		<param name="Local" value="Hugin_toolbox.html">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
 		<param name="Name" value="Perspective distortion">

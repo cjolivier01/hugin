@@ -119,7 +119,6 @@ private:
     HuginBase::SrcPanoImage m_panoimage;
     HuginBase::PanoramaOptions m_opts;
 
-    DECLARE_EVENT_TABLE()
     DECLARE_DYNAMIC_CLASS(CenterCanvas)
 };
 

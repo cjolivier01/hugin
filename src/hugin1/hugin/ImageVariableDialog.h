@@ -72,8 +72,6 @@ private:
     void InitValues();
     /** applies the changed variables to the Panorama class, using CommandHistory */
     bool ApplyNewVariables();
-
-    DECLARE_EVENT_TABLE()
 };
 
 #endif //_IMAGEVARIABLEDIALOG_H

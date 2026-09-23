@@ -1,4 +1,12 @@
+Hugin 2025.0
+* Added hugin_toolbox: a GUI for enfuse and perspective correction.
+* Use vector SVG files instead of pixel PNG files for toolbars and buttons.
+* Internal changes: 
+** A C++17 compiler is now needed. Therefore the boost library is not needed anymore.
+** wxWidgets 3.2 is now required. The code has be refactored to follow the modern
+   wxWidgets code style.
 
+============================================================================================
 Hugin 2024.0
 * Added browser for project files to Hugin. It can show thumbnails or project
   details of all project files in a directory.

@@ -34,37 +34,17 @@
 #include "algorithms/basic/LayerStacks.h"
 #include "algorithms/basic/CalculateOptimalScale.h"
 
-BEGIN_EVENT_TABLE(PanoOutputDialog,wxDialog)
-    EVT_BUTTON(wxID_OK, PanoOutputDialog::OnOk)
-    EVT_CHECKBOX(XRCID("output_normal"), PanoOutputDialog::OnOutputChanged)
-    EVT_CHECKBOX(XRCID("output_fused_blended"), PanoOutputDialog::OnOutputChanged)
-    EVT_CHECKBOX(XRCID("output_blended_fused"), PanoOutputDialog::OnOutputChanged)
-    EVT_CHECKBOX(XRCID("output_hdr"), PanoOutputDialog::OnOutputChanged)
-    EVT_CHOICE(XRCID("output_ldr_format"), PanoOutputDialog::OnLDRFormatChanged)
-    EVT_CHOICE(XRCID("output_hdr_format"), PanoOutputDialog::OnHDRFormatChanged)
-    EVT_SPINCTRL(XRCID("output_width"), PanoOutputDialog::OnWidthChanged)
-    EVT_SPINCTRL(XRCID("output_height"), PanoOutputDialog::OnHeightChanged)
-END_EVENT_TABLE()
-
 PanoOutputDialog::PanoOutputDialog(wxWindow *parent, HuginBase::Panorama& pano, GuiLevel guiLevel) : m_pano(pano), m_aspect(0)
 {
     // load our children. some children might need special
     // initialization. this will be done later.
-    wxXmlResource::Get()->LoadDialog(this, parent, wxT("pano_output_dialog"));
-
-#ifdef __WXMSW__
-    wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + wxT("data/hugin.ico"),wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(huginApp::Get()->GetXRCPath() + wxT("data/hugin.png"),wxBITMAP_TYPE_PNG);
-    SetIcon(myIcon);
-#endif
+    wxXmlResource::Get()->LoadDialog(this, parent, "pano_output_dialog");
 
     //set parameters
     wxConfigBase * cfg = wxConfigBase::Get();
     //position
-    int x = cfg->Read(wxT("/PanoOutputDialog/positionX"),-1l);
-    int y = cfg->Read(wxT("/PanoOutputDialog/positionY"),-1l);
+    int x = cfg->Read("/PanoOutputDialog/positionX",-1l);
+    int y = cfg->Read("/PanoOutputDialog/positionY",-1l);
     if ( y >= 0 && x >= 0) 
     {
         this->Move(x, y);
@@ -87,7 +67,7 @@ PanoOutputDialog::PanoOutputDialog(wxWindow *parent, HuginBase::Panorama& pano, 
         // otherwise use current width as start point
         long opt_width = hugin_utils::roundi(HuginBase::CalculateOptimalScale::calcOptimalScale(m_pano) * m_newOpt.getWidth());
         double sizeFactor = HUGIN_ASS_PANO_DOWNSIZE_FACTOR;
-        config->Read(wxT("/Assistant/panoDownsizeFactor"), &sizeFactor, HUGIN_ASS_PANO_DOWNSIZE_FACTOR);
+        config->Read("/Assistant/panoDownsizeFactor", &sizeFactor, HUGIN_ASS_PANO_DOWNSIZE_FACTOR);
         m_newOpt.setWidth(hugin_utils::floori(sizeFactor*opt_width), true);
     };
     m_initalWidth=m_newOpt.getWidth();
@@ -99,11 +79,11 @@ PanoOutputDialog::PanoOutputDialog(wxWindow *parent, HuginBase::Panorama& pano, 
     m_edit_height->SetValue(m_newOpt.getROI().height());
 
     //LDR output format, as in preferences set
-    int i = config->Read(wxT("/output/jpeg_quality"),HUGIN_JPEG_QUALITY);
+    int i = config->Read("/output/jpeg_quality",HUGIN_JPEG_QUALITY);
     XRCCTRL(*this, "output_jpeg_quality", wxSpinCtrl)->SetValue(i);
-    i=config->Read(wxT("/output/tiff_compression"), HUGIN_TIFF_COMPRESSION);
+    i=config->Read("/output/tiff_compression", HUGIN_TIFF_COMPRESSION);
     XRCCTRL(*this, "output_tiff_compression", wxChoice)->SetSelection(i);
-    i=config->Read(wxT("/output/ldr_format"), HUGIN_LDR_OUTPUT_FORMAT);
+    i=config->Read("/output/ldr_format", HUGIN_LDR_OUTPUT_FORMAT);
     XRCCTRL(*this, "output_ldr_format", wxChoice)->SetSelection(i);
     //HDR output format, as in project given
     if (m_newOpt.outputImageTypeHDR == "exr")
@@ -142,14 +122,25 @@ PanoOutputDialog::PanoOutputDialog(wxWindow *parent, HuginBase::Panorama& pano, 
     OnOutputChanged(dummy);
     OnLDRFormatChanged(dummy);
     OnHDRFormatChanged(dummy);
+    // bind event handler
+    Bind(wxEVT_CHECKBOX, &PanoOutputDialog::OnOutputChanged, this, XRCID("output_normal"));
+    Bind(wxEVT_CHECKBOX, &PanoOutputDialog::OnOutputChanged, this, XRCID("output_fused_blended"));
+    Bind(wxEVT_CHECKBOX, &PanoOutputDialog::OnOutputChanged, this, XRCID("output_blended_fused"));
+    Bind(wxEVT_CHECKBOX, &PanoOutputDialog::OnOutputChanged, this, XRCID("output_hdr"));
+    Bind(wxEVT_CHOICE, &PanoOutputDialog::OnLDRFormatChanged, this, XRCID("output_ldr_format"));
+    Bind(wxEVT_CHOICE, &PanoOutputDialog::OnHDRFormatChanged, this, XRCID("output_hdr_format"));
+    Bind(wxEVT_SPINCTRL, &PanoOutputDialog::OnWidthChanged, this, XRCID("output_width"));
+    Bind(wxEVT_SPINCTRL, &PanoOutputDialog::OnHeightChanged, this, XRCID("output_height"));
+    Bind(wxEVT_BUTTON, &PanoOutputDialog::OnOk, this, wxID_OK);
+
 };
 
 PanoOutputDialog::~PanoOutputDialog()
 {
     wxConfigBase * cfg = wxConfigBase::Get();
     wxPoint ps = this->GetPosition();
-    cfg->Write(wxT("/PanoOutputDialog/positionX"), ps.x);
-    cfg->Write(wxT("/PanoOutputDialog/positionY"), ps.y);
+    cfg->Write("/PanoOutputDialog/positionX", ps.x);
+    cfg->Write("/PanoOutputDialog/positionY", ps.y);
     cfg->Flush();
 };
 
@@ -158,7 +149,7 @@ void PanoOutputDialog::EnableOutputOptions()
     // check, if hdr images
     wxFileName file1(wxString(m_pano.getImage(0).getFilename().c_str(), HUGIN_CONV_FILENAME));
     wxString ext1=file1.GetExt().Lower();
-    if(ext1 == wxT(".hdr") || ext1 == wxT(".exr") || ext1==wxT("hdr") || ext1==wxT("exr"))
+    if(ext1 == ".hdr" || ext1 == ".exr" || ext1=="hdr" || ext1=="exr")
     {
         XRCCTRL(*this, "output_normal", wxCheckBox)->SetValue(true);
         XRCCTRL(*this, "output_normal", wxCheckBox)->Enable(true);

@@ -58,7 +58,6 @@ public:
 protected:
     void OnOk(wxCommandEvent & e);
     void OnHelp(wxCommandEvent & e);
-    void OnCancel(wxCommandEvent & e);
     void OnRotationCheckBox(wxCommandEvent & e);
     void OnEnblendExe(wxCommandEvent & e);
     void OnEnfuseExe(wxCommandEvent & e);
@@ -79,7 +78,6 @@ protected:
     void OnCPDetectorMoveUp(wxCommandEvent & e);
     void OnCPDetectorMoveDown(wxCommandEvent & e);
     void OnCPDetectorDefault(wxCommandEvent & e);
-    void OnCPDetectorListDblClick(wxCommandEvent & e);
     void OnUserDefinedOutputOptionsCheckBox(wxCommandEvent & e);
     void OnChangeUserDefinedOutputOptions(wxCommandEvent & e);
     /** event handler for loading cp detector settings */
@@ -105,8 +103,6 @@ private:
     void UpdateBlenderControls();
     wxListBox* m_CPDetectorList;
     CPDetectorConfig cpdetector_config_edit;
-
-    DECLARE_EVENT_TABLE()
 };
 
 

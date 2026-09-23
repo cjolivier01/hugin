@@ -47,6 +47,7 @@
 #include "base_wx/platform.h"
 #include "base_wx/huginConfig.h"
 #include "base_wx/wxPlatform.h"
+#include "base_wx/wxutils.h"
 #include <wx/utils.h>
 #if defined __WXMSW__ || defined UNIX_SELF_CONTAINED_BUNDLE
 #include <wx/stdpaths.h>
@@ -68,7 +69,7 @@ void CPMessage(const wxString message,const wxString caption, wxWindow *parent)
 {
     if(parent!=NULL)
     {
-        wxMessageBox(message,caption,wxOK | wxICON_ERROR,parent);
+        hugin_utils::HuginMessageBox(message, caption, wxOK | wxICON_ERROR, parent);
     }
     else
     {
@@ -84,7 +85,7 @@ int CPExecute(wxString prog, wxString args, wxString caption, wxWindow *parent)
     }
     else
     {
-        wxString cmdline=prog+wxT(" ")+args;
+        wxString cmdline=prog+" "+args;
         return wxExecute(cmdline,wxEXEC_SYNC | wxEXEC_MAKE_GROUP_LEADER);
     };
 };
@@ -180,7 +181,7 @@ wxString GetProgPath(wxString progName)
         wxPathList pathlist;
         const wxFileName exePath(wxStandardPaths::Get().GetExecutablePath());
         pathlist.Add(exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR));
-        pathlist.AddEnvList(wxT("PATH"));
+        pathlist.AddEnvList("PATH");
         return pathlist.FindAbsoluteValidPath(progName);
     };
 #endif
@@ -207,7 +208,7 @@ bool CanStartProg(wxString progName,wxWindow* parent)
         const wxFileName exePath(wxStandardPaths::Get().GetExecutablePath());
         pathlist.Add(exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR));
 #endif
-        pathlist.AddEnvList(wxT("PATH"));
+        pathlist.AddEnvList("PATH");
         wxString path = pathlist.FindAbsoluteValidPath(progName);
         if(path.IsEmpty())
             canStart=false;
@@ -226,7 +227,7 @@ bool CanStartProg(wxString progName,wxWindow* parent)
 
 wxString GetCheckedTempDir()
 {
-    wxString tempDir = wxConfigBase::Get()->Read(wxT("tempDir"), wxT(""));
+    wxString tempDir = wxConfigBase::Get()->Read("tempDir", wxEmptyString);
     if (!tempDir.IsEmpty())
     {
         if (tempDir.Last() != wxFileName::GetPathSeparator())
@@ -352,7 +353,7 @@ void AutoCtrlPointCreator::Cleanup(CPDetectorSetting &setting, HuginBase::Panora
         };
     
         wxString ptoinfile_name = wxFileName::CreateTempFileName(GetCheckedTempDir() + ("ap_inproj"));
-        cleanupArgs.Replace(wxT("%s"), hugin_utils::wxQuoteFilename(ptoinfile_name));
+        cleanupArgs.Replace("%s", hugin_utils::wxQuoteFilename(ptoinfile_name));
         std::ofstream ptoinstream(ptoinfile_name.mb_str(wxConvFile));
         pano.printPanoramaScript(ptoinstream, pano.getOptimizeVector(), pano.getOptions(), imgs, false);
 
@@ -408,26 +409,26 @@ HuginBase::CPVector AutoPanoSift::automatch(CPDetectorSetting &setting, HuginBas
     };
 
     // TODO: create a secure temporary filename here
-    wxString ptofile = wxFileName::CreateTempFileName(GetCheckedTempDir() + wxT("ap_res"));
-    autopanoArgs.Replace(wxT("%o"), hugin_utils::wxQuoteFilename(ptofile));
+    wxString ptofile = wxFileName::CreateTempFileName(GetCheckedTempDir() + "ap_res");
+    autopanoArgs.Replace("%o", hugin_utils::wxQuoteFilename(ptofile));
     wxString tmp;
-    tmp.Printf(wxT("%d"), nFeatures);
-    autopanoArgs.Replace(wxT("%p"), tmp);
+    tmp.Printf("%d", nFeatures);
+    autopanoArgs.Replace("%p", tmp);
 
     HuginBase::SrcPanoImage firstImg = pano.getSrcImage(*imgs.begin());
-    tmp.Printf(wxT("%f"), firstImg.getHFOV());
-    autopanoArgs.Replace(wxT("%v"), tmp);
+    tmp.Printf("%f", firstImg.getHFOV());
+    autopanoArgs.Replace("%v", tmp);
 
-    tmp.Printf(wxT("%d"), (int) firstImg.getProjection());
-    autopanoArgs.Replace(wxT("%f"), tmp);
+    tmp.Printf("%d", (int) firstImg.getProjection());
+    autopanoArgs.Replace("%f", tmp);
 
-    long idx = autopanoArgs.Find(wxT("%namefile")) ;
+    long idx = autopanoArgs.Find("%namefile") ;
     DEBUG_DEBUG("find %namefile in '"<< autopanoArgs.mb_str(wxConvLocal) << "' returned: " << idx);
     bool use_namefile = idx >=0;
-    idx = autopanoArgs.Find(wxT("%i"));
+    idx = autopanoArgs.Find("%i");
     DEBUG_DEBUG("find %i in '"<< autopanoArgs.mb_str(wxConvLocal) << "' returned: " << idx);
     bool use_params = idx >=0;
-    idx = autopanoArgs.Find(wxT("%s"));
+    idx = autopanoArgs.Find("%s");
     bool use_inputscript = idx >=0;
 
     if (! (use_namefile || use_params || use_inputscript)) {
@@ -440,17 +441,17 @@ HuginBase::CPVector AutoPanoSift::automatch(CPDetectorSetting &setting, HuginBas
     wxString namefile_name;
     if (use_namefile) {
         // create temporary file with image names.
-        namefile_name = wxFileName::CreateTempFileName(GetCheckedTempDir() + wxT("ap_imgnames"), &namefile);
+        namefile_name = wxFileName::CreateTempFileName(GetCheckedTempDir() + "ap_imgnames", &namefile);
         DEBUG_DEBUG("before replace %namefile: " << autopanoArgs.mb_str(wxConvLocal));
-        autopanoArgs.Replace(wxT("%namefile"), hugin_utils::wxQuoteFilename(namefile_name));
+        autopanoArgs.Replace("%namefile", hugin_utils::wxQuoteFilename(namefile_name));
         DEBUG_DEBUG("after replace %namefile: " << autopanoArgs.mb_str(wxConvLocal));
         for (HuginBase::UIntSet::const_iterator it = imgs.begin(); it != imgs.end(); ++it)
         {
             namefile.Write(wxString(pano.getImage(*it).getFilename().c_str(), HUGIN_CONV_FILENAME));
-            namefile.Write(wxT("\r\n"));
+            namefile.Write("\r\n");
         }
         // close namefile
-        if (namefile_name != wxString(wxT(""))) {
+        if (namefile_name != wxString(wxEmptyString)) {
             namefile.Close();
         }
     } else {
@@ -459,14 +460,14 @@ HuginBase::CPVector AutoPanoSift::automatch(CPDetectorSetting &setting, HuginBas
         {
             imgFiles.append(" ").append(hugin_utils::quoteFilename(pano.getImage(*it).getFilename()));
         }
-        autopanoArgs.Replace(wxT("%i"), wxString (imgFiles.c_str(), HUGIN_CONV_FILENAME));
+        autopanoArgs.Replace("%i", wxString (imgFiles.c_str(), HUGIN_CONV_FILENAME));
     }
 
     wxString ptoinfile_name;
     if (use_inputscript) {
         wxFile ptoinfile;
         ptoinfile_name = wxFileName::CreateTempFileName(GetCheckedTempDir() + ("ap_inproj"));
-        autopanoArgs.Replace(wxT("%s"), hugin_utils::wxQuoteFilename(ptoinfile_name));
+        autopanoArgs.Replace("%s", hugin_utils::wxQuoteFilename(ptoinfile_name));
 
         std::ofstream ptoinstream(ptoinfile_name.mb_str(wxConvFile));
         // create a temporary project with only the selected images
@@ -496,7 +497,7 @@ HuginBase::CPVector AutoPanoSift::automatch(CPDetectorSetting &setting, HuginBas
     }
 #endif
 
-    wxString cmd = autopanoExe + wxT(" ") + autopanoArgs;
+    wxString cmd = autopanoExe + " " + autopanoArgs;
     DEBUG_DEBUG("Executing: " << autopanoExe.mb_str(wxConvLocal) << " " << autopanoArgs.mb_str(wxConvLocal));
 
     wxArrayString arguments = wxCmdLineParser::ConvertStringToArgs(autopanoArgs);
@@ -549,12 +550,12 @@ HuginBase::CPVector AutoPanoSift::automatch(CPDetectorSetting &setting, HuginBas
         };
     };
 
-    if (namefile_name != wxString(wxT(""))) {
+    if (namefile_name != wxString(wxEmptyString)) {
         namefile.Close();
         wxRemoveFile(namefile_name);
     }
 
-    if (ptoinfile_name != wxString(wxT(""))) {
+    if (ptoinfile_name != wxString(wxEmptyString)) {
         wxRemoveFile(ptoinfile_name);
     }
 
@@ -581,13 +582,13 @@ HuginBase::CPVector AutoPanoSift::automatch(CPDetectorSetting &setting, HuginBas
     wxString matcherArgs = setting.GetArgsMatcher();
     
     //check arguments
-    if(generateKeysArgs.Find(wxT("%i"))==wxNOT_FOUND || generateKeysArgs.Find(wxT("%k"))==wxNOT_FOUND)
+    if(generateKeysArgs.Find("%i")==wxNOT_FOUND || generateKeysArgs.Find("%k")==wxNOT_FOUND)
     {
         CPMessage(_("Please use %i to specify the input files and %k to specify the keypoint file for the generate keys step"),
                      _("Error in control point detector command"), parent);
         return cps;
     };
-    if(matcherArgs.Find(wxT("%k"))==wxNOT_FOUND || matcherArgs.Find(wxT("%o"))==wxNOT_FOUND)
+    if(matcherArgs.Find("%k")==wxNOT_FOUND || matcherArgs.Find("%o")==wxNOT_FOUND)
     {
         CPMessage(_("Please use %k to specify the keypoint files and %o to specify the output project file for the matching step"),
                      _("Error in control point detector command"), parent);
@@ -601,25 +602,25 @@ HuginBase::CPVector AutoPanoSift::automatch(CPDetectorSetting &setting, HuginBas
         if(keyFiles[*img].IsEmpty())
         {
             //no key files exists, so generate it
-            wxString keyfile=wxFileName::CreateTempFileName(tempDir+wxT("apk_"));
+            wxString keyfile=wxFileName::CreateTempFileName(tempDir+"apk_");
             keyFiles[*img]=keyfile;
             wxString cmd=generateKeysArgs;
             wxString tmp;
-            tmp.Printf(wxT("%d"), nFeatures);
-            cmd.Replace(wxT("%p"), tmp);
+            tmp.Printf("%d", nFeatures);
+            cmd.Replace("%p", tmp);
 
             HuginBase::SrcPanoImage srcImg = pano.getSrcImage(*img);
-            tmp.Printf(wxT("%f"), srcImg.getHFOV());
-            cmd.Replace(wxT("%v"), tmp);
+            tmp.Printf("%f", srcImg.getHFOV());
+            cmd.Replace("%v", tmp);
 
-            tmp.Printf(wxT("%d"), (int) srcImg.getProjection());
-            cmd.Replace(wxT("%f"), tmp);
+            tmp.Printf("%d", (int) srcImg.getProjection());
+            cmd.Replace("%f", tmp);
             
-            cmd.Replace(wxT("%i"),hugin_utils::wxQuoteFilename(wxString(srcImg.getFilename().c_str(), HUGIN_CONV_FILENAME)));
-            cmd.Replace(wxT("%k"),hugin_utils::wxQuoteFilename(keyfile));
+            cmd.Replace("%i",hugin_utils::wxQuoteFilename(wxString(srcImg.getFilename().c_str(), HUGIN_CONV_FILENAME)));
+            cmd.Replace("%k",hugin_utils::wxQuoteFilename(keyfile));
             // use MyExternalCmdExecDialog
             ret_value = CPExecute(generateKeysExe, cmd, _("generating key file"), parent);
-            cmd=generateKeysExe+wxT(" ")+cmd;
+            cmd=generateKeysExe+" "+cmd;
             if (ret_value == HUGIN_EXIT_CODE_CANCELLED) 
                 return cps;
             else
@@ -639,25 +640,25 @@ HuginBase::CPVector AutoPanoSift::automatch(CPDetectorSetting &setting, HuginBas
     };
 
     // TODO: create a secure temporary filename here
-    wxString ptofile = wxFileName::CreateTempFileName(GetCheckedTempDir() + wxT("ap_res"));
-    matcherArgs.Replace(wxT("%o"), hugin_utils::wxQuoteFilename(ptofile));
+    wxString ptofile = wxFileName::CreateTempFileName(GetCheckedTempDir() + "ap_res");
+    matcherArgs.Replace("%o", hugin_utils::wxQuoteFilename(ptofile));
     wxString tmp;
-    tmp.Printf(wxT("%d"), nFeatures);
-    matcherArgs.Replace(wxT("%p"), tmp);
+    tmp.Printf("%d", nFeatures);
+    matcherArgs.Replace("%p", tmp);
 
     HuginBase::SrcPanoImage firstImg = pano.getSrcImage(*imgs.begin());
-    tmp.Printf(wxT("%f"), firstImg.getHFOV());
-    matcherArgs.Replace(wxT("%v"), tmp);
+    tmp.Printf("%f", firstImg.getHFOV());
+    matcherArgs.Replace("%v", tmp);
 
-    tmp.Printf(wxT("%d"), (int) firstImg.getProjection());
-    matcherArgs.Replace(wxT("%f"), tmp);
+    tmp.Printf("%d", (int) firstImg.getProjection());
+    matcherArgs.Replace("%f", tmp);
 
     wxString imgFiles;
     for (HuginBase::UIntSet::const_iterator it = imgs.begin(); it != imgs.end(); ++it)
     {
-        imgFiles.append(wxT(" ")).append(hugin_utils::wxQuoteFilename(keyFiles[*it]));
+        imgFiles.append(" ").append(hugin_utils::wxQuoteFilename(keyFiles[*it]));
      };
-     matcherArgs.Replace(wxT("%k"), wxString (imgFiles.wc_str(), HUGIN_CONV_FILENAME));
+     matcherArgs.Replace("%k", wxString (imgFiles.wc_str(), HUGIN_CONV_FILENAME));
 
 #ifdef __WXMSW__
     if (matcherArgs.size() > 32000) {
@@ -667,7 +668,7 @@ HuginBase::CPVector AutoPanoSift::automatch(CPDetectorSetting &setting, HuginBas
     }
 #endif
 
-    wxString cmd = matcherExe + wxT(" ") + matcherArgs;
+    wxString cmd = matcherExe + " " + matcherArgs;
     DEBUG_DEBUG("Executing: " << matcherExe.mb_str(wxConvLocal) << " " << matcherArgs.mb_str(wxConvLocal));
 
     wxArrayString arguments = wxCmdLineParser::ConvertStringToArgs(matcherArgs);
@@ -728,26 +729,26 @@ HuginBase::CPVector AutoPanoKolor::automatch(CPDetectorSetting &setting, HuginBa
         imgFiles.append(" ").append(hugin_utils::quoteFilename(pano.getImage(*it).getFilename()));
     }
 
-    wxString ptofilepath = wxFileName::CreateTempFileName(GetCheckedTempDir() + wxT("ap_res"));
+    wxString ptofilepath = wxFileName::CreateTempFileName(GetCheckedTempDir() + "ap_res");
     wxFileName ptofn(ptofilepath);
     wxString ptofile = ptofn.GetFullName();
-    autopanoArgs.Replace(wxT("%o"), hugin_utils::wxQuoteFilename(ptofile));
+    autopanoArgs.Replace("%o", hugin_utils::wxQuoteFilename(ptofile));
     wxString tmp;
-    tmp.Printf(wxT("%d"), nFeatures);
-    autopanoArgs.Replace(wxT("%p"), tmp);
+    tmp.Printf("%d", nFeatures);
+    autopanoArgs.Replace("%p", tmp);
     HuginBase::SrcPanoImage firstImg = pano.getSrcImage(*imgs.begin());
-    tmp.Printf(wxT("%f"), firstImg.getHFOV());
-    autopanoArgs.Replace(wxT("%v"), tmp);
+    tmp.Printf("%f", firstImg.getHFOV());
+    autopanoArgs.Replace("%v", tmp);
 
-    tmp.Printf(wxT("%d"), (int) firstImg.getProjection());
-    autopanoArgs.Replace(wxT("%f"), tmp);
+    tmp.Printf("%d", (int) firstImg.getProjection());
+    autopanoArgs.Replace("%f", tmp);
 
-    autopanoArgs.Replace(wxT("%i"), wxString (imgFiles.c_str(), HUGIN_CONV_FILENAME));
+    autopanoArgs.Replace("%i", wxString (imgFiles.c_str(), HUGIN_CONV_FILENAME));
 
     wxString tempdir = ptofn.GetPath();
-	autopanoArgs.Replace(wxT("%d"), ptofn.GetPath());
+	autopanoArgs.Replace("%d", ptofn.GetPath());
     wxString cmd;
-    cmd.Printf(wxT("%s %s"), hugin_utils::wxQuoteFilename(autopanoExe).c_str(), autopanoArgs.c_str());
+    cmd.Printf("%s %s", hugin_utils::wxQuoteFilename(autopanoExe).c_str(), autopanoArgs.c_str());
 #ifdef __WXMSW__
     if (cmd.size() > 32766) {
         CPMessage(_("Command line for control point detector too long.\nThis is a Windows limitation\nPlease select less images, or place the images in a folder with\na shorter pathname"),
@@ -781,7 +782,7 @@ HuginBase::CPVector AutoPanoKolor::automatch(CPDetectorSetting &setting, HuginBa
     }
 
     ptofile = ptofn.GetFullPath();
-    ptofile.append(wxT("0.oto"));
+    ptofile.append("0.oto");
     if (! wxFileExists(ptofile.c_str()) ) {
         CPMessage(wxString::Format(_("Could not open %s for reading\nThis is an indicator that the control point detector call failed,\nor incorrect command line parameters have been used.\n\nExecuted command: %s"),ptofile.c_str(),cmd.c_str()),
                      _("Control point detector failure"), parent );

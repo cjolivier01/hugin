@@ -314,7 +314,14 @@ int main(int argc, char* argv[])
             }
             if((pixelType=="UINT8") || (pixelType=="UINT16") || (pixelType=="INT16"))
             {
-                srcImage.setResponseType(HuginBase::SrcPanoImage::RESPONSE_EMOR);
+                if (hugin_utils::IsLinearICCProfile(info.getICCProfile()))
+                {
+                    srcImage.setResponseType(HuginBase::SrcPanoImage::RESPONSE_LINEAR);
+                }
+                else
+                {
+                    srcImage.setResponseType(HuginBase::SrcPanoImage::RESPONSE_EMOR);
+                }
             }
             else
             {

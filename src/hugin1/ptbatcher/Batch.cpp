@@ -39,29 +39,18 @@
 #ifndef __WXMSW__
 #include <sys/wait.h>
 #endif
+#include "base_wx/wxutils.h"
 
-BEGIN_EVENT_TABLE(Batch, wxFrame)
-    EVT_END_PROCESS(-1, Batch::OnProcessTerminate)
-END_EVENT_TABLE()
-
-#if defined _WIN32 && defined Hugin_shared
-DEFINE_LOCAL_EVENT_TYPE(EVT_BATCH_FAILED)
-DEFINE_LOCAL_EVENT_TYPE(EVT_INFORMATION)
-DEFINE_LOCAL_EVENT_TYPE(EVT_UPDATE_PARENT)
-#else
-DEFINE_EVENT_TYPE(EVT_BATCH_FAILED)
-DEFINE_EVENT_TYPE(EVT_INFORMATION)
-DEFINE_EVENT_TYPE(EVT_UPDATE_PARENT)
-#endif
+wxDEFINE_EVENT(EVT_BATCH_FAILED, wxCommandEvent);
+wxDEFINE_EVENT(EVT_INFORMATION, wxCommandEvent);
+wxDEFINE_EVENT(EVT_UPDATE_PARENT, wxCommandEvent);
 
 Batch::Batch(wxFrame* parent) : wxFrame(parent, wxID_ANY, _T("Batch"))
 {
     //default flag settings
     deleteFiles = false;
     atEnd = DO_NOTHING;
-#if wxCHECK_VERSION(3,1,0)
     m_resBlocker = NULL;
-#endif
     overwrite = true;
     verbose = false;
     autoremove = false;
@@ -71,16 +60,15 @@ Batch::Batch(wxFrame* parent) : wxFrame(parent, wxID_ANY, _T("Batch"))
     m_paused = false;
     m_running = false;
     m_clearedInProgress = false;
+    Bind(wxEVT_END_PROCESS, &Batch::OnProcessTerminate, this);
 }
 
 Batch::~Batch()
 {
-#if wxCHECK_VERSION(3,1,0)
     if (m_resBlocker != NULL)
     {
         delete m_resBlocker;
     };
-#endif
 }
 
 void Batch::AddAppToBatch(wxString app)
@@ -200,13 +188,11 @@ void Batch::CancelBatch()
     {
         CancelProject(i);
     }
-#if wxCHECK_VERSION(3,1,0)
     if (m_resBlocker != NULL)
     {
         delete m_resBlocker;
         m_resBlocker = NULL;
     };
-#endif
     m_running = false;
 }
 void Batch::CancelProject(int index)
@@ -236,14 +222,7 @@ int Batch::ClearBatch()
 {
     if(m_stitchFrames.GetCount()!=0)
     {
-        wxMessageDialog message(this, _("Cannot clear batch in progress.\nDo you want to cancel it?"),
-#ifdef _WIN32
-                                _("PTBatcherGUI"),
-#else
-                                wxT(""),
-#endif
-                                wxYES_NO | wxICON_INFORMATION);
-        if(message.ShowModal()==wxID_YES)
+        if (hugin_utils::HuginMessageBox(_("Cannot clear batch in progress.\nDo you want to cancel it?"), _("PTBatcherGUI"), wxYES_NO | wxICON_INFORMATION, wxGetActiveWindow()) == wxYES)
         {
             CancelBatch();
 
@@ -344,7 +323,7 @@ Project::Status Batch::GetStatus(int index)
     }
     else
     {
-        wxMessageBox(wxString::Format(_("Error: Could not get status, project with index %d is not in list."),index),_("Error!"),wxOK | wxICON_INFORMATION );
+        hugin_utils::HuginMessageBox(wxString::Format(_("Error: Could not get status, project with index %d is not in list."), index), _("PTBatcherGUI"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
     }
     return Project::MISSING;
 }
@@ -374,7 +353,7 @@ int Batch::LoadBatchFile(wxString file)
     }
     else
     {
-        wxMessageBox(_("Error: Could not load batch file."));
+        hugin_utils::HuginMessageBox(_("Error: Could not load batch file."), _("PTBatcherGUI"), wxOK | wxICON_ERROR, wxGetActiveWindow());
     };
     return 1;
 }
@@ -435,12 +414,12 @@ void Batch::OnProcessTerminate(wxProcessEvent& event)
             //get filename for automatic saving of log file
             wxFileName logFile(m_projList.Item(i).path);
             logFile.MakeAbsolute();
-            logFile.SetExt(wxT("log"));
+            logFile.SetExt("log");
             wxString name=logFile.GetName();
             unsigned int i=1;
             while(logFile.FileExists() && i<1000)
             {
-                logFile.SetName(wxString::Format(wxT("%s_%d"),name.c_str(),i));
+                logFile.SetName(wxString::Format("%s_%d",name.c_str(),i));
                 i++;
             };
             if(i<1000)
@@ -493,13 +472,11 @@ void Batch::OnProcessTerminate(wxProcessEvent& event)
             {
                 SaveTemp();
                 m_running = false;
-#if wxCHECK_VERSION(3,1,0)
                 if (m_resBlocker != NULL)
                 {
                     delete m_resBlocker;
                     m_resBlocker = NULL;
                 };
-#endif
                 if(NoErrors())
                 {
                     wxCommandEvent e(EVT_INFORMATION,wxID_ANY);
@@ -529,8 +506,13 @@ void Batch::OnProcessTerminate(wxProcessEvent& event)
                         break;
                     case SHUTDOWN:
                         {
+#ifdef __WXMSW__
+                            wxGenericProgressDialog progress(_("Initializing shutdown..."), _("Shutting down..."), 49, this,
+                                wxPD_AUTO_HIDE | wxPD_SMOOTH | wxPD_APP_MODAL | wxPD_CAN_ABORT | wxPD_CAN_SKIP);
+#else
                             wxProgressDialog progress(_("Initializing shutdown..."), _("Shutting down..."), 49, this,
                                 wxPD_AUTO_HIDE | wxPD_SMOOTH | wxPD_APP_MODAL | wxPD_CAN_ABORT | wxPD_CAN_SKIP);
+#endif
                             progress.Fit();
                             int i = 0;
                             bool skip = false;
@@ -561,7 +543,7 @@ void Batch::OnProcessTerminate(wxProcessEvent& event)
                                 progressCaption = wxString(_("Prepare to suspend..."));
                                 progressLabel = wxString(_("Initializing suspend mode..."));
                             };
-                            wxProgressDialog progress(progressLabel, progressCaption, 49, this,
+                            wxGenericProgressDialog progress(progressLabel, progressCaption, 49, this,
                                 wxPD_AUTO_HIDE | wxPD_SMOOTH | wxPD_APP_MODAL | wxPD_CAN_ABORT | wxPD_CAN_SKIP);
                             progress.Fit();
                             int i = 0;
@@ -606,23 +588,23 @@ bool Batch::OnStitch(wxString scriptFile, wxString outname, wxString userDefined
     wxConfigBase* config = wxConfigBase::Get();
     if(wxIsEmpty(scriptFile))
     {
-        wxString defaultdir = config->Read(wxT("/actualPath"),wxT(""));
+        wxString defaultdir = config->Read("/actualPath",wxEmptyString);
         wxFileDialog dlg(0,
                          _("Specify project file"),
-                         defaultdir, wxT(""),
+                         defaultdir, wxEmptyString,
                          _("Project files (*.pto)|*.pto|All files (*)|*"),
                          wxFD_OPEN, wxDefaultPosition);
 
-        dlg.SetDirectory(wxConfigBase::Get()->Read(wxT("/actualPath"),wxT("")));
+        dlg.SetDirectory(wxConfigBase::Get()->Read("/actualPath",wxEmptyString));
         if (dlg.ShowModal() == wxID_OK)
         {
-            config->Write(wxT("/actualPath"), dlg.GetDirectory());  // remember for later
+            config->Write("/actualPath", dlg.GetDirectory());  // remember for later
             config->Flush();
             wxFileDialog dlg2(0,_("Specify output prefix"),
-                              wxConfigBase::Get()->Read(wxT("/actualPath"),wxT("")),
-                              wxT(""), wxT(""),
+                              wxConfigBase::Get()->Read("/actualPath",wxEmptyString),
+                              wxEmptyString, wxEmptyString,
                               wxFD_SAVE, wxDefaultPosition);
-            dlg2.SetDirectory(wxConfigBase::Get()->Read(wxT("/actualPath"),wxT("")));
+            dlg2.SetDirectory(wxConfigBase::Get()->Read("/actualPath",wxEmptyString));
             if (dlg2.ShowModal() == wxID_OK)
             {
                 outname = dlg2.GetPath();
@@ -645,16 +627,16 @@ bool Batch::OnStitch(wxString scriptFile, wxString outname, wxString userDefined
     wxFileName outfn(outname);
     wxString ext = outfn.GetExt();
     // remove extension if it indicates an image file
-    if (ext.CmpNoCase(wxT("jpg")) == 0 || ext.CmpNoCase(wxT("jpeg")) == 0 ||
-            ext.CmpNoCase(wxT("tif")) == 0 || ext.CmpNoCase(wxT("tiff")) == 0 ||
-            ext.CmpNoCase(wxT("png")) == 0 || ext.CmpNoCase(wxT("exr")) == 0 ||
-            ext.CmpNoCase(wxT("pnm")) == 0 || ext.CmpNoCase(wxT("hdr")) == 0)
+    if (ext.CmpNoCase("jpg") == 0 || ext.CmpNoCase("jpeg") == 0 ||
+            ext.CmpNoCase("tif") == 0 || ext.CmpNoCase("tiff") == 0 ||
+            ext.CmpNoCase("png") == 0 || ext.CmpNoCase("exr") == 0 ||
+            ext.CmpNoCase("pnm") == 0 || ext.CmpNoCase("hdr") == 0)
     {
         outfn.ClearExt();
         outname = outfn.GetFullPath();
     }
 
-    RunStitchFrame* stitchFrame = new RunStitchFrame(this, wxT("Hugin Stitcher"), wxDefaultPosition, wxSize(640,600));
+    RunStitchFrame* stitchFrame = new RunStitchFrame(this, "Hugin Stitcher", wxDefaultPosition, wxSize(640,600));
     stitchFrame->SetProjectId(id);
     if(verbose)
     {
@@ -686,7 +668,7 @@ bool Batch::OnDetect(wxString scriptFile, wxString userDefinedAssistant, int id)
 {
     // delete the existing wxConfig to force reloading of settings from file/registy
     delete wxConfigBase::Set((wxConfigBase*)NULL);
-    RunStitchFrame* stitchFrame = new RunStitchFrame(this, wxT("Hugin Assistant"), wxDefaultPosition, wxSize(640, 600));
+    RunStitchFrame* stitchFrame = new RunStitchFrame(this, "Hugin Assistant", wxDefaultPosition, wxSize(640, 600));
     stitchFrame->SetProjectId(id);
     if(verbose)
     {
@@ -752,7 +734,7 @@ void Batch::RemoveProject(int id)
     }
     else
     {
-        wxMessageBox(wxString::Format(_("Error removing, project with id %d is not in list."),id),_("Error!"),wxOK | wxICON_INFORMATION );
+        hugin_utils::HuginMessageBox(wxString::Format(_("Error removing, project with id %d is not in list."), id), _("PTBatcherGUI"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
     }
 }
 
@@ -768,7 +750,7 @@ void Batch::RemoveProjectAtIndex(int selIndex)
         {
             if(!wxRemoveFile(file.GetFullPath()))
             {
-                wxMessageBox(wxString::Format(_("Error: Could not delete project file %s"), file.GetFullPath()),_("Error!"),wxOK | wxICON_INFORMATION );
+                hugin_utils::HuginMessageBox(wxString::Format(_("Error: Could not delete project file %s"), file.GetFullPath()), _("PTBatcherGUI"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
             }
         }
     }
@@ -786,9 +768,7 @@ void Batch::RunBatch()
         m_failedProjects.clear();
         ((wxFrame*)GetParent())->SetStatusText(_("Running batch..."));
         m_running = true;
-#if wxCHECK_VERSION(3,1,0)
         m_resBlocker = new wxPowerResourceBlocker(wxPOWER_RESOURCE_SYSTEM, _("PTBatcherGUI is stitching"));
-#endif
         RunNextInBatch();
     }
     else
@@ -930,7 +910,7 @@ void Batch::SetStatus(int index,Project::Status status)
     }
     else
     {
-        wxMessageBox(wxString::Format(_("Error: Could not set status, project with index %d is not in list."),index),_("Error!"),wxOK | wxICON_INFORMATION );
+        hugin_utils::HuginMessageBox(wxString::Format(_("Error: Could not set status, project with index %d is not in list."), index), _("PTBatcherGUI"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
     }
 }
 

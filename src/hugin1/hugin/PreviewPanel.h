@@ -46,7 +46,7 @@ public:
      */
     PreviewPanel();
 
-    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxT("panel"));
+    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = "panel");
 
     void Init(PreviewFrame *parent, HuginBase::Panorama * pano );
 
@@ -82,7 +82,7 @@ private:
 
     /** recalculate panorama to fit the panel */
     void OnResize(wxSizeEvent & e);
-    void OnDraw(wxPaintEvent & event);
+    void OnPaint(wxPaintEvent & event);
     void OnMouse(wxMouseEvent & e);
     void mousePressRMBEvent(wxMouseEvent & e);
     void mousePressLMBEvent(wxMouseEvent & e);
@@ -122,7 +122,6 @@ private:
     bool m_rerender;
     bool m_imgsDirty;
 
-    DECLARE_EVENT_TABLE()
     DECLARE_DYNAMIC_CLASS(PreviewPanel)
 };
 

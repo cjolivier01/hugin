@@ -68,7 +68,7 @@ public:
      */
     CPEditorPanel();
 
-    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxT("panel"));
+    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = "panel");
 
     void Init(HuginBase::Panorama * pano);
 
@@ -248,9 +248,13 @@ private:
 
     wxTextCtrl *m_x1Text, *m_y1Text, *m_x2Text, *m_y2Text, *m_errorText;
     wxChoice *m_cpModeChoice;
+    wxChoice* m_zoomChoice;
     wxButton *m_addButton;
     wxButton *m_delButton;
     wxButton* m_actionButton;
+    wxButton* m_finetuneButton;
+    wxButton* m_nextImgButton;
+    wxButton* m_prevImgButton;
     wxCheckBox *m_autoAddCB;
     wxCheckBox *m_fineTuneCB;
     wxCheckBox *m_estimateCB;
@@ -299,10 +303,6 @@ private:
         CP_SCROLL_RIGHT
     } ;
     CPScrollHint m_scrollHint;
-
-
-    // needed for receiving events.
-    DECLARE_EVENT_TABLE();
 
     DECLARE_DYNAMIC_CLASS(CPEditorPanel)
 

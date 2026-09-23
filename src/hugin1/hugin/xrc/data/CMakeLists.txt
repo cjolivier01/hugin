@@ -1,5 +1,5 @@
 
-FILE(GLOB DATAFILES *.htm *.html *.ico *.jpg *.png tips.txt upstream.txt)
+FILE(GLOB DATAFILES *.htm *.html *.ico *.jpg *.png *.svg tips.txt upstream.txt)
 INSTALL(FILES ${DATAFILES} DESTINATION ${HUGINDATADIR}/xrc/data)
 
 # parse contributors list

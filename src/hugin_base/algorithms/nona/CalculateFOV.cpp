@@ -104,12 +104,8 @@ hugin_utils::FDiff2D CalculateFOV::calcFOV(const PanoramaData& panorama)
         // if nothing found, return current fov
         return hugin_utils::FDiff2D(panorama.getOptions().getHFOV(), panorama.getOptions().getVFOV());
     }
-    ul=ul/2.0;
-    lr=lr/2.0;
-    ul.x = ul.x - 180;
-    ul.y = ul.y - 90;
-    lr.x = lr.x - 180;
-    lr.y = lr.y - 90;
+    ul = ul / 2.0 - hugin_utils::FDiff2D(0.5, 0.5) - hugin_utils::FDiff2D(180, 90);
+    lr = lr / 2.0 + hugin_utils::FDiff2D(0.5, 0.5) - hugin_utils::FDiff2D(180, 90);
     hugin_utils::FDiff2D fov(2 * std::max(fabs(ul.x), fabs(lr.x)), 2 * std::max(fabs(ul.y), fabs(lr.y)));
     // the calculation above is done with a resolution of 1 deg
     // for small fov the calculated fov can be a little bit too small

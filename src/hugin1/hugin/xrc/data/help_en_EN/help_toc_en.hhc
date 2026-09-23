@@ -224,6 +224,10 @@
 			<param name="Local" value="Hugin_stacker.html">
 			</OBJECT>
 		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Hugin_toolbox">
+			<param name="Local" value="Hugin_toolbox.html">
+			</OBJECT>
+		<LI> <OBJECT type="text/sitemap">
 			<param name="Name" value="External programs">
 			</OBJECT>
 		<UL>

@@ -36,7 +36,7 @@ public:
         const wxString& label = wxEmptyString,
         const wxPoint& pos = wxDefaultPosition,
         const wxSize& size = wxDefaultSize,
-        const wxString& name = wxT("splitbutton")
+        const wxString& name = "splitbutton"
     )
     {
         Create(parent, id, label, pos, size, name);
@@ -47,7 +47,7 @@ public:
         const wxString& label = wxEmptyString,
         const wxPoint& pos = wxDefaultPosition, 
         const wxSize& size = wxDefaultSize, 
-        const wxString& name = wxT("splitbutton")
+        const wxString& name = "splitbutton"
     );
     ~SplitButton();
     /** returns a pointer to the drop down menu */
@@ -56,8 +56,8 @@ public:
     bool Enable(bool enable = true) override;
     /** returns the currently active bitmap */
     wxBitmap GetBitmap() const;
-    /** sets bitmap and direction */
-    void SetBitmap(const wxBitmap& bitmap);
+    /** sets bitmap bundle */
+    void SetBitmap(const wxBitmapBundle& bitmap);
     /** loads the drop down menu from the XRC ressource */
     wxMenu* LoadMenu(const wxString& name);
     /** set the label string */
@@ -87,7 +87,7 @@ private:
     const int m_arrowButtonWidth = 20;
     wxString m_label;
     wxMenu* m_dropDownMenu = nullptr;
-    wxBitmap m_bitmap;
+    wxBitmapBundle m_bitmap;
 };
 
 /** xrc handler for split button */

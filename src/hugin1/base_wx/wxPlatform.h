@@ -68,9 +68,9 @@ str wxQuoteString(const str & arg)
 #ifdef _WIN32
     // escape all strange chars with ^
     // is this true for create process?
-    return wxQuoteStringInternal(arg, str(wxT("^")), str(wxT("^ \"$|()")));
+    return wxQuoteStringInternal(arg, str("^"), str("^ \"$|()"));
 #else
-    return wxQuoteStringInternal(arg, str(wxT("\\")), str(wxT("\\ ~$\"|'`{}[]()")));
+    return wxQuoteStringInternal(arg, str("\\"), str("\\ ~$\"|'`{}[]()"));
 #endif
 }
 
@@ -84,12 +84,12 @@ str wxQuoteFilename(const str & arg)
 #ifdef _WIN32
     str ret;
     // just a guess
-    ret = wxQuoteStringInternal(arg, str(wxT("^")), str(wxT("\"")));
-    return str(wxT("\"")) + ret + str(wxT("\""));
+    ret = wxQuoteStringInternal(arg, str("^"), str("\""));
+    return str("\"") + ret + str("\"");
 #else
     str ret;
-    ret = wxQuoteStringInternal(arg, str(wxT("\\")), str(wxT("\"")));
-    return str(wxT("\"")) + ret + str(wxT("\""));
+    ret = wxQuoteStringInternal(arg, str("\\"), str("\""));
+    return str("\"") + ret + str("\"");
 #endif
     }
 
@@ -98,25 +98,12 @@ WXIMPEX bool str2double(const wxString& s, double & d);
 
 } // namespace
 
-#if defined __WXMSW__ && !wxCHECK_VERSION(3,1,1)
-  // workaround for wxWidgets bug 14888
-  // see: http://trac.wxwidgets.org/ticket/14888
-  // which results in crashes when calling help on Win 8/10 64 bit
-  // implement a slightly different version for our needs
-#include "wx/msw/helpchm.h"
-class WXIMPEX HuginCHMHelpController :public wxCHMHelpController
-{
-public:
-    void DisplayHelpPage(const wxString& name);
-};
-#endif
-
 #ifndef __WXMSW__
 /** helper function to check window position settings of help window */
 WXIMPEX void FixHelpSettings();
 #endif
 
-#if defined __WXGTK__ && wxCHECK_VERSION(3,1,1)
+#if defined __WXGTK__
 /** function to locate Hugins config file */
 WXIMPEX void CheckConfigFilename();
 #endif

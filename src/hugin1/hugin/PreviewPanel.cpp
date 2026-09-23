@@ -32,6 +32,7 @@
 #include "nona/Stitcher.h"
 
 #include "base_wx/wxImageCache.h"
+#include "base_wx/wxutils.h"
 #include "hugin/PreviewPanel.h"
 #include "hugin/PreviewFrame.h"
 #include "hugin/MainFrame.h"
@@ -44,14 +45,6 @@
 #include <math.h>
 
 typedef vigra::RGBValue<unsigned char> BRGBValue;
-
-BEGIN_EVENT_TABLE(PreviewPanel, wxPanel)
-    EVT_SIZE(PreviewPanel::OnResize)
-    EVT_LEFT_DOWN(PreviewPanel::mousePressLMBEvent)
-    EVT_RIGHT_DOWN(PreviewPanel::mousePressRMBEvent)
-    EVT_MOUSE_EVENTS ( PreviewPanel::OnMouse )
-    EVT_PAINT ( PreviewPanel::OnDraw )
-END_EVENT_TABLE()
 
 PreviewPanel::PreviewPanel()
     : pano(0), m_autoPreview(false),m_panoImgSize(1,1),
@@ -75,12 +68,18 @@ bool PreviewPanel::Create(wxWindow* parent, wxWindowID id,
     DEBUG_DEBUG("m_state_rendering = " << m_state_rendering);
 
 #if defined(__WXMSW__) 
-    wxString cursorPath = huginApp::Get()->GetXRCPath() + wxT("/data/cursor_cp_pick.cur");
+    wxString cursorPath = huginApp::Get()->GetXRCPath() + "/data/cursor_cp_pick.cur";
     m_cursor = new wxCursor(cursorPath, wxBITMAP_TYPE_CUR);
 #else
     m_cursor = new wxCursor(wxCURSOR_CROSS);
 #endif
     SetCursor(*m_cursor);
+    Bind(wxEVT_SIZE, &PreviewPanel::OnResize, this);
+    Bind(wxEVT_LEFT_DOWN, &PreviewPanel::mousePressLMBEvent, this);
+    Bind(wxEVT_RIGHT_DOWN, &PreviewPanel::mousePressRMBEvent, this);
+    Bind(wxEVT_MOTION, &PreviewPanel::OnMouse, this);
+    Bind(wxEVT_PAINT, &PreviewPanel::OnPaint, this);
+
     return true;
 }
 
@@ -319,13 +318,12 @@ void PreviewPanel::updatePreview()
 #endif
 
                 // find min and max
-                vigra::FindMinMax<float> minmax;   // init functor
-                vigra::inspectImageIf(vigra::srcImageRange(panoImg), vigra::srcImage(alpha),
-                                    minmax);
-                double min = std::max(minmax.min, 1e-6f);
-                double max = minmax.max;
+                vigra::FindAverageAndVariance<float> mean;   // init functor
+                vigra::inspectImageIf(vigra::srcImageRange(panoImg, vigra::RGBToGrayAccessor<vigra::RGBValue<float>>()), vigra::srcImage(alpha), mean);
+                double min = std::max(mean.average()-3*sqrt(mean.variance()), 1e-6f);
+                double max = mean.average() + 3 * sqrt(mean.variance());
 
-                int mapping = wxConfigBase::Get()->Read(wxT("/ImageCache/Mapping"), HUGIN_IMGCACHE_MAPPING_FLOAT);
+                int mapping = wxConfigBase::Get()->Read("/ImageCache/Mapping", HUGIN_IMGCACHE_MAPPING_FLOAT);
                 vigra_ext::applyMapping(vigra::srcImageRange(panoImg), vigra::destImage(panoImg8), min, max, mapping);
 
             } else {
@@ -430,13 +428,8 @@ void PreviewPanel::updatePreview()
     } catch (std::exception & e) {
         m_state_rendering = false;
         DEBUG_ERROR("error during stitching: " << e.what());
-        wxMessageBox(wxString::Format(_("Could not stitch preview.\nError: %s\nOne cause could be an invalid or missing image file."), wxString(e.what(), wxConvLocal)),
-#ifdef __WXMSW__
-            wxT("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxOK | wxICON_INFORMATION);
+        hugin_utils::HuginMessageBox(wxString::Format(_("Could not stitch preview.\nError: %s\nOne cause could be an invalid or missing image file."), wxString(e.what(), wxConvLocal)),
+            _("Hugin"), wxOK | wxICON_INFORMATION, this);
     }
 
 
@@ -456,8 +449,7 @@ void PreviewPanel::updatePreview()
 
 
     // always redraw
-    wxClientDC dc(this);
-    DrawPreview(dc);
+    Refresh();
 
     m_state_rendering = false;
     DEBUG_DEBUG("m_state_rendering = false");
@@ -497,8 +489,8 @@ void PreviewPanel::DrawPreview(wxDC & dc)
     dc.SetClippingRegion(offsetX, offsetY,
                          m_panoImgSize.x, m_panoImgSize.y);
 
-    dc.SetPen(wxPen(wxT("BLACK"), 1, wxPENSTYLE_SOLID));
-    dc.SetBrush(wxBrush(wxT("BLACK"), wxBRUSHSTYLE_SOLID));
+    dc.SetPen(wxPen("BLACK", 1, wxPENSTYLE_SOLID));
+    dc.SetBrush(wxBrush("BLACK", wxBRUSHSTYLE_SOLID));
     dc.DrawRectangle(offsetX, offsetY, m_panoImgSize.x, m_panoImgSize.y);
 
 
@@ -573,7 +565,7 @@ void PreviewPanel::DrawPreview(wxDC & dc)
                          m_panoImgSize.x, m_panoImgSize.y);
 
             // draw boundaries
-            dc.SetPen(wxPen(wxT("WHITE"), 1, wxPENSTYLE_SOLID));
+            dc.SetPen(wxPen("WHITE", 1, wxPENSTYLE_SOLID));
             dc.SetLogicalFunction(wxINVERT);
 
             DEBUG_DEBUG("ROI scale factor: " << scale << " screen ROI: " << screenROI);
@@ -596,7 +588,7 @@ void PreviewPanel::DrawPreview(wxDC & dc)
                     m_panoImgSize.x, m_panoImgSize.y);
 
     // draw center lines over display
-    dc.SetPen(wxPen(wxT("WHITE"), 1, wxPENSTYLE_SOLID));
+    dc.SetPen(wxPen("WHITE", 1, wxPENSTYLE_SOLID));
     dc.SetLogicalFunction(wxINVERT);
     dc.DrawLine(offsetX + w/2, offsetY,
                 offsetX + w/2, offsetY + h);
@@ -605,7 +597,7 @@ void PreviewPanel::DrawPreview(wxDC & dc)
 
 }
 
-void PreviewPanel::OnDraw(wxPaintEvent & event)
+void PreviewPanel::OnPaint(wxPaintEvent & event)
 {
     wxPaintDC dc(this);
     DrawPreview(dc);
@@ -686,7 +678,7 @@ void PreviewPanel::OnMouse(wxMouseEvent & e)
     mouse2erect(e.m_x, e.m_y,  yaw, pitch);
 
     parentWindow->SetStatusText(_("Left click to define new center point, right click to move point to horizon."),0);
-    parentWindow->SetStatusText(wxString::Format(wxT("%.1f %.1f"), yaw, pitch), 1);
+    parentWindow->SetStatusText(wxString::Format("%.1f %.1f", yaw, pitch), 1);
 }
 
 void PreviewPanel::mouse2erect(int xm, int ym, double &xd, double & yd)
@@ -740,7 +732,7 @@ wxObject *PreviewPanelXmlHandler::DoCreateResource()
             cp->Create(m_parentAsWindow,
                        GetID(),
                        GetPosition(), GetSize(),
-                       GetStyle(wxT("style")),
+                       GetStyle("style"),
                        GetName());
 
     SetupWindow( cp);
@@ -750,7 +742,7 @@ wxObject *PreviewPanelXmlHandler::DoCreateResource()
 
 bool PreviewPanelXmlHandler::CanHandle(wxXmlNode *node)
 {
-    return IsOfClass(node, wxT("PreviewPanel"));
+    return IsOfClass(node, "PreviewPanel");
 }
 
 IMPLEMENT_DYNAMIC_CLASS(PreviewPanelXmlHandler, wxXmlResourceHandler)

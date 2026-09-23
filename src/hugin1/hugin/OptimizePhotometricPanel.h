@@ -41,7 +41,7 @@ class OptimizePhotometricPanel : public wxPanel, public HuginBase::PanoramaObser
 public:
     OptimizePhotometricPanel();
 
-    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxT("panel"));
+    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = "panel");
 
     void Init(HuginBase::Panorama * pano);
 
@@ -75,7 +75,6 @@ protected:
     HuginBase::Panorama * m_pano;
 
 private:
-    DECLARE_EVENT_TABLE()
     DECLARE_DYNAMIC_CLASS(OptimizePhotometricPanel)
 };
 

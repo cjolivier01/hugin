@@ -20,11 +20,8 @@
  *
  */
 
-#ifdef __WXMAC__
 #include "panoinc_WX.h"
 #include "panoinc.h"
-#endif
-
 #include "TexCoordRemapper.h"
 #include "algorithms/nona/ComputeImageROI.h"
 #include "ViewState.h"

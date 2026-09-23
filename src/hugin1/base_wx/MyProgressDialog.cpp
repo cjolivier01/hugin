@@ -73,20 +73,20 @@ void ProgressReporterDialog::updateProgressDisplay()
         msg = wxGetTranslation(m_wxmessage);
         if (!m_wxfilename.empty())
         {
-            msg.Append(wxT(" "));
+            msg.Append(" ");
             msg.Append(m_wxfilename);
         };
     };
     if (ProgressDisplay::m_maximum == 0)
     {
-        if (!wxProgressDialog::Pulse(msg))
+        if (!Pulse(msg))
         {
             m_canceled = true;
         }
     }
     else
     {
-        if (!wxProgressDialog::Update(m_progress * 100 / ProgressDisplay::m_maximum, msg))
+        if (!Update(m_progress * 100 / ProgressDisplay::m_maximum, msg))
         {
             m_canceled = true;
         }

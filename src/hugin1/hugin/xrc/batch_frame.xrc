@@ -254,7 +254,6 @@
                           </object>
                           <object class="sizeritem">
                             <object class="wxSpinCtrl" name="find_pano_min_number_images">
-                              <size>80,-1</size>
                               <value>2</value>
                               <min>2</min>
                               <max>100</max>
@@ -273,7 +272,6 @@
                             <object class="wxBoxSizer">
                               <object class="sizeritem">
                                 <object class="wxSpinCtrl" name="find_pano_max_time_diff">
-                                  <size>80,-1</size>
                                   <value>30</value>
                                   <min>1</min>
                                   <max>3600</max>

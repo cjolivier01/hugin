@@ -34,6 +34,7 @@
 
 #include "base_wx/platform.h"
 #include "base_wx/wxPlatform.h"
+#include "base_wx/wxutils.h"
 
 #include "vigra/imageinfo.hxx"
 #include "vigra_ext/Correlation.h"
@@ -93,6 +94,7 @@ public:
     {
         SetExtraStyle(GetExtraStyle() | wxWS_EX_TRANSIENT);
         wxSizer* topSizer=new wxBoxSizer(wxVERTICAL);
+        bitmap.SetScaleFactor(GetDPIScaleFactor());
         wxStaticBitmap* staticBitmap=new wxStaticBitmap(this,wxID_ANY,bitmap);
         topSizer->Add(staticBitmap,1,wxEXPAND);
         SetSizerAndFit(topSizer);
@@ -109,12 +111,9 @@ public:
 #endif
     };
     DECLARE_DYNAMIC_CLASS(HuginSplashScreen)
-    DECLARE_EVENT_TABLE()
 };
 
 IMPLEMENT_DYNAMIC_CLASS(HuginSplashScreen, wxFrame)
-BEGIN_EVENT_TABLE(HuginSplashScreen, wxFrame)
-END_EVENT_TABLE()
 
 /** file drag and drop handler method */
 bool PanoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames)
@@ -125,9 +124,9 @@ bool PanoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& file
 
     if (!m_imageOnly && filenames.GetCount() == 1) {
         wxFileName file(filenames[0]);
-        if (file.GetExt().CmpNoCase(wxT("pto")) == 0 ||
-            file.GetExt().CmpNoCase(wxT("ptp")) == 0 ||
-            file.GetExt().CmpNoCase(wxT("pts")) == 0 )
+        if (file.GetExt().CmpNoCase("pto") == 0 ||
+            file.GetExt().CmpNoCase("ptp") == 0 ||
+            file.GetExt().CmpNoCase("pts") == 0 )
         {
             // load project
             if (mf->CloseProject(true, MainFrame::LOAD_NEW_PROJECT))
@@ -203,15 +202,10 @@ bool PanoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& file
     {
         if (rawFilesv.size() == 1)
         {
-            wxMessageDialog message(mf, _("You selected only one raw file. This is not recommended.\nAll raw files should be converted at once."),
-#ifdef _WIN32
-                _("Hugin"),
-#else
-                wxT(""),
-#endif
-                wxICON_EXCLAMATION | wxOK | wxCANCEL);
-            message.SetOKLabel(_("Convert anyway."));
-            if (message.ShowModal() != wxID_OK)
+            hugin_utils::MessageDialog message = hugin_utils::GetMessageDialog(_("You selected only one raw file. This is not recommended.\nAll raw files should be converted at once."),
+                _("Hugin"), wxICON_EXCLAMATION | wxOK | wxCANCEL, mf);
+            message->SetOKLabel(_("Convert anyway."));
+            if (message->ShowModal() != wxID_OK)
             {
                 return true;
             };
@@ -230,82 +224,7 @@ bool PanoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& file
     return true;
 }
 
-
-#if defined _WIN32 && defined Hugin_shared
-DEFINE_LOCAL_EVENT_TYPE(EVT_LOADING_FAILED)
-#else
-DEFINE_EVENT_TYPE(EVT_LOADING_FAILED)
-#endif
-
-// event table. this frame will recieve mostly global commands.
-BEGIN_EVENT_TABLE(MainFrame, wxFrame)
-    EVT_MENU(XRCID("action_new_project"),  MainFrame::OnNewProject)
-    EVT_MENU(XRCID("action_load_project"),  MainFrame::OnLoadProject)
-    EVT_MENU(XRCID("action_browse_projects"), MainFrame::OnBrowseProjects)
-    EVT_MENU(XRCID("action_save_project"),  MainFrame::OnSaveProject)
-    EVT_MENU(XRCID("action_save_as_project"),  MainFrame::OnSaveProjectAs)
-    EVT_MENU(XRCID("action_save_as_ptstitcher"),  MainFrame::OnSavePTStitcherAs)
-    EVT_MENU(XRCID("action_open_batch_processor"),  MainFrame::OnOpenPTBatcher)
-    EVT_MENU(XRCID("action_import_project"), MainFrame::OnMergeProject)
-    EVT_MENU(XRCID("action_import_papywizard"), MainFrame::OnReadPapywizard)
-    EVT_MENU(XRCID("action_apply_template"),  MainFrame::OnApplyTemplate)
-    EVT_MENU(XRCID("action_exit_hugin"),  MainFrame::OnUserQuit)
-    EVT_MENU_RANGE(wxID_FILE1, wxID_FILE9, MainFrame::OnMRUFiles)
-    EVT_MENU(XRCID("action_show_about"),  MainFrame::OnAbout)
-    EVT_MENU(XRCID("action_show_help"),  MainFrame::OnHelp)
-    EVT_MENU(XRCID("action_show_tip"),  MainFrame::OnTipOfDay)
-    EVT_MENU(XRCID("action_show_shortcuts"),  MainFrame::OnKeyboardHelp)
-    EVT_MENU(XRCID("action_show_faq"),  MainFrame::OnFAQ)
-    EVT_MENU(XRCID("action_show_prefs"), MainFrame::OnShowPrefs)
-    EVT_MENU(XRCID("action_assistant"), MainFrame::OnRunAssistant)
-    EVT_MENU(XRCID("action_batch_assistant"), MainFrame::OnSendToAssistantQueue)
-    EVT_MENU(XRCID("action_gui_simple"), MainFrame::OnSetGuiSimple)
-    EVT_MENU(XRCID("action_gui_advanced"), MainFrame::OnSetGuiAdvanced)
-    EVT_MENU(XRCID("action_gui_expert"), MainFrame::OnSetGuiExpert)
-#ifdef HUGIN_HSI
-    EVT_MENU(XRCID("action_python_script"), MainFrame::OnPythonScript)
-#endif
-    EVT_MENU(XRCID("ID_EDITUNDO"), MainFrame::OnUndo)
-    EVT_MENU(XRCID("ID_EDITREDO"), MainFrame::OnRedo)
-    EVT_MENU(XRCID("ID_SHOW_FULL_SCREEN"), MainFrame::OnFullScreen)
-    EVT_MENU(XRCID("ID_SHOW_PREVIEW_FRAME"), MainFrame::OnTogglePreviewFrame)
-    EVT_MENU(XRCID("ID_SHOW_GL_PREVIEW_FRAME"), MainFrame::OnToggleGLPreviewFrame)
-    EVT_BUTTON(XRCID("ID_SHOW_PREVIEW_FRAME"),MainFrame::OnTogglePreviewFrame)
-    EVT_BUTTON(XRCID("ID_SHOW_GL_PREVIEW_FRAME"), MainFrame::OnToggleGLPreviewFrame)
-
-    EVT_MENU(XRCID("action_optimize"),  MainFrame::OnOptimize)
-    EVT_MENU(XRCID("action_optimize_only_active"), MainFrame::OnOnlyActiveImages)
-    EVT_MENU(XRCID("action_optimize_ignore_line_cp"), MainFrame::OnIgnoreLineCp)
-    EVT_BUTTON(XRCID("action_optimize"),  MainFrame::OnOptimize)
-    EVT_MENU(XRCID("action_finetune_all_cp"), MainFrame::OnFineTuneAll)
-//    EVT_BUTTON(XRCID("action_finetune_all_cp"), MainFrame::OnFineTuneAll)
-    EVT_MENU(XRCID("action_remove_cp_in_masks"), MainFrame::OnRemoveCPinMasks)
-
-    EVT_MENU(XRCID("ID_CP_TABLE"), MainFrame::OnShowCPFrame)
-    EVT_BUTTON(XRCID("ID_CP_TABLE"),MainFrame::OnShowCPFrame)
-
-    EVT_MENU(XRCID("ID_SHOW_PANEL_IMAGES"), MainFrame::OnShowPanel)
-    EVT_MENU(XRCID("ID_SHOW_PANEL_MASK"), MainFrame::OnShowPanel)
-    EVT_MENU(XRCID("ID_SHOW_PANEL_CP_EDITOR"), MainFrame::OnShowPanel)
-    EVT_MENU(XRCID("ID_SHOW_PANEL_OPTIMIZER"), MainFrame::OnShowPanel)
-    EVT_MENU(XRCID("ID_SHOW_PANEL_OPTIMIZER_PHOTOMETRIC"), MainFrame::OnShowPanel)
-    EVT_MENU(XRCID("ID_SHOW_PANEL_PANORAMA"), MainFrame::OnShowPanel)
-    EVT_MENU(XRCID("action_stitch"), MainFrame::OnDoStitch)
-    EVT_MENU(XRCID("action_stitch_userdefined"), MainFrame::OnUserDefinedStitch)
-    EVT_MENU(XRCID("action_add_images"),  MainFrame::OnAddImages)
-    EVT_BUTTON(XRCID("action_add_images"),  MainFrame::OnAddImages)
-    EVT_MENU(XRCID("action_add_time_images"),  MainFrame::OnAddTimeImages)
-    EVT_BUTTON(XRCID("action_add_time_images"),  MainFrame::OnAddTimeImages)
-    EVT_CLOSE(  MainFrame::OnExit)
-    EVT_SIZE(MainFrame::OnSize)
-    EVT_COMMAND(wxID_ANY, EVT_LOADING_FAILED, MainFrame::OnLoadingFailed)
-END_EVENT_TABLE()
-
-// change this variable definition
-//wxTextCtrl *itemProjTextMemo;
-// image preview
-//wxBitmap *p_img = (wxBitmap *) NULL;
-//WX_DEFINE_ARRAY()
+wxDEFINE_EVENT(EVT_LOADING_FAILED, wxCommandEvent);
 
 enum
 {
@@ -324,8 +243,8 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
     if(wxGetKeyState(WXK_COMMAND))
     {
         wxDialog dlg;
-        wxXmlResource::Get()->LoadDialog(&dlg, NULL, wxT("disable_opengl_dlg"));
-        long noOpenGL=wxConfigBase::Get()->Read(wxT("DisableOpenGL"), 0l);
+        wxXmlResource::Get()->LoadDialog(&dlg, NULL, "disable_opengl_dlg");
+        long noOpenGL=wxConfigBase::Get()->Read("DisableOpenGL", 0l);
         if(noOpenGL==1)
         {
             XRCCTRL(dlg, "disable_dont_ask_checkbox", wxCheckBox)->SetValue(true);
@@ -334,22 +253,22 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
         {
             if(XRCCTRL(dlg, "disable_dont_ask_checkbox", wxCheckBox)->IsChecked())
             {
-                wxConfigBase::Get()->Write(wxT("DisableOpenGL"), 1l);
+                wxConfigBase::Get()->Write("DisableOpenGL", 1l);
             }
             else
             {
-                wxConfigBase::Get()->Write(wxT("DisableOpenGL"), 0l);
+                wxConfigBase::Get()->Write("DisableOpenGL", 0l);
             };
             disableOpenGL=true;
         }
         else
         {
-            wxConfigBase::Get()->Write(wxT("DisableOpenGL"), 0l);
+            wxConfigBase::Get()->Write("DisableOpenGL", 0l);
         };
     }
     else
     {
-        long noOpenGL=wxConfigBase::Get()->Read(wxT("DisableOpenGL"), 0l);
+        long noOpenGL=wxConfigBase::Get()->Read("DisableOpenGL", 0l);
         disableOpenGL=(noOpenGL==1);
     };
 
@@ -357,7 +276,7 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
     HuginSplashScreen* splash = 0;
     wxYield();
 
-    if (bitmap.LoadFile(huginApp::Get()->GetXRCPath() + wxT("data/splash.png"), wxBITMAP_TYPE_PNG))
+    if (bitmap.LoadFile(huginApp::Get()->GetXRCPath() + "data/splash.png", wxBITMAP_TYPE_PNG))
     {
         // embed package version into string.
         {
@@ -379,9 +298,6 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
             dc.DrawText(version, bitmap.GetWidth() - tw - 3, bitmap.GetHeight() - th - 3);
             dc.SelectObject(wxNullBitmap);
         }
-#if wxCHECK_VERSION(3,1,6)
-        bitmap.SetScaleFactor(GetDPIScaleFactor());
-#endif
         splash = new HuginSplashScreen(NULL, bitmap);
     } else {
         wxLogFatalError(_("Fatal installation error\nThe file data/splash.png was not found at:") + huginApp::Get()->GetXRCPath());
@@ -396,7 +312,7 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
     DEBUG_TRACE("");
     // load our children. some children might need special
     // initialization. this will be done later.
-    wxXmlResource::Get()->LoadFrame(this, parent, wxT("main_frame"));
+    wxXmlResource::Get()->LoadFrame(this, parent, "main_frame");
     DEBUG_TRACE("");
 
     // load our menu bar
@@ -406,12 +322,12 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
     wxApp::s_macExitMenuItemId = XRCID("action_exit_hugin");
     wxApp::s_macHelpMenuTitleName = _("&Help");
 #endif
-    wxMenuBar* mainMenu=wxXmlResource::Get()->LoadMenuBar(this, wxT("main_menubar"));
-    m_menu_file_simple=wxXmlResource::Get()->LoadMenu(wxT("file_menu_simple"));
-    m_menu_file_advanced=wxXmlResource::Get()->LoadMenu(wxT("file_menu_advanced"));
+    wxMenuBar* mainMenu=wxXmlResource::Get()->LoadMenuBar(this, "main_menubar");
+    m_menu_file_simple=wxXmlResource::Get()->LoadMenu("file_menu_simple");
+    m_menu_file_advanced=wxXmlResource::Get()->LoadMenu("file_menu_advanced");
     mainMenu->Insert(0, m_menu_file_simple, _("&File"));
     SetMenuBar(mainMenu);
-    m_optOnlyActiveImages = (wxConfigBase::Get()->Read(wxT("/OptimizePanel/OnlyActiveImages"), 1l) != 0);
+    m_optOnlyActiveImages = (wxConfigBase::Get()->Read("/OptimizePanel/OnlyActiveImages", 1l) != 0);
     m_optIgnoreLineCp = false;
     // observe the panorama, this should be the first observer
     pano.addObserver(this);
@@ -421,11 +337,11 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
     // the plugin menu will be generated dynamically
     wxMenu *pluginMenu=new wxMenu();
     // search for all .py files in plugins directory
-    wxDir dir(GetDataPath()+wxT("plugins"));
+    wxDir dir(GetDataPath()+"plugins");
     if (dir.IsOpened())
     {
         wxString filename;
-        bool cont = dir.GetFirst(&filename, wxT("*.py"), wxDIR_FILES | wxDIR_HIDDEN);
+        bool cont = dir.GetFirst(&filename, "*.py", wxDIR_FILES | wxDIR_HIDDEN);
         PluginItems items;
         while (cont)
         {
@@ -457,7 +373,7 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
             };
             categoryMenu->Append(pluginID, item.GetName(), item.GetDescription());
             m_plugins[pluginID] = item.GetFilename();
-            Connect(pluginID, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OnPlugin));
+            Bind(wxEVT_MENU, &MainFrame::OnPlugin, this, pluginID);
             pluginID++;
         };
         // show the new menu
@@ -471,7 +387,7 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
 #endif
 
     // create tool bar
-    SetToolBar(wxXmlResource::Get()->LoadToolBar(this, wxT("main_toolbar")));
+    SetToolBar(wxXmlResource::Get()->LoadToolBar(this, "main_toolbar"));
 
     // Disable tools by default
     enableTools(false);
@@ -540,9 +456,9 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
     {
         wxArrayString files;
         // search all .executor files, do not follow links
-        wxDir::GetAllFiles(GetDataPath()+"output", &files, wxT("*.executor"), wxDIR_FILES | wxDIR_HIDDEN | wxDIR_NO_FOLLOW);
+        wxDir::GetAllFiles(GetDataPath()+"output", &files, "*.executor", wxDIR_FILES | wxDIR_HIDDEN | wxDIR_NO_FOLLOW);
         const size_t nrAllUserSequences = files.size();
-        wxDir::GetAllFiles(hugin_utils::GetUserAppDataDir(), &files, wxT("*.executor"), wxDIR_FILES | wxDIR_HIDDEN | wxDIR_NO_FOLLOW);
+        wxDir::GetAllFiles(hugin_utils::GetUserAppDataDir(), &files, "*.executor", wxDIR_FILES | wxDIR_HIDDEN | wxDIR_NO_FOLLOW);
         if (!files.IsEmpty())
         {
             // we found some files
@@ -569,8 +485,8 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
                     {
                         // read descriptions from file
                         wxFileConfig executorFile(inputStream);
-                        wxString desc = HuginQueue::GetSettingStringTranslated(&executorFile, wxT("/General/Description"), wxEmptyString);
-                        wxString help = HuginQueue::GetSettingStringTranslated(&executorFile, wxT("/General/Help"), wxEmptyString);
+                        wxString desc = HuginQueue::GetSettingStringTranslated(&executorFile, "/General/Description", wxEmptyString);
+                        wxString help = HuginQueue::GetSettingStringTranslated(&executorFile, "/General/Help", wxEmptyString);
                         if (help.IsEmpty())
                         {
                             help = wxString::Format(_("User defined sequence: %s"), file);
@@ -607,9 +523,9 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
     {
         wxArrayString files;
         // search all .assistant files, do not follow links
-        wxDir::GetAllFiles(GetDataPath() + "assistant", &files, wxT("*.assistant"), wxDIR_FILES | wxDIR_HIDDEN | wxDIR_NO_FOLLOW);
+        wxDir::GetAllFiles(GetDataPath() + "assistant", &files, "*.assistant", wxDIR_FILES | wxDIR_HIDDEN | wxDIR_NO_FOLLOW);
         const size_t nrAllUserSequences = files.size();
-        wxDir::GetAllFiles(hugin_utils::GetUserAppDataDir(), &files, wxT("*.assistant"), wxDIR_FILES | wxDIR_HIDDEN | wxDIR_NO_FOLLOW);
+        wxDir::GetAllFiles(hugin_utils::GetUserAppDataDir(), &files, "*.assistant", wxDIR_FILES | wxDIR_HIDDEN | wxDIR_NO_FOLLOW);
         if (!files.IsEmpty())
         {
             // we found some files
@@ -635,8 +551,8 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
                     {
                         // read descriptions from file
                         wxFileConfig assistantFile(inputStream);
-                        wxString desc = HuginQueue::GetSettingStringTranslated(&assistantFile, wxT("/General/Description"), wxEmptyString);
-                        wxString help = HuginQueue::GetSettingStringTranslated(&assistantFile, wxT("/General/Help"), wxEmptyString);
+                        wxString desc = HuginQueue::GetSettingStringTranslated(&assistantFile, "/General/Description", wxEmptyString);
+                        wxString help = HuginQueue::GetSettingStringTranslated(&assistantFile, "/General/Help", wxEmptyString);
                         help = help.Trim(true).Trim(false);
                         if (help.IsEmpty())
                         {
@@ -673,10 +589,10 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
 
     // set the minimize icon
 #ifdef __WXMSW__
-    wxIconBundle myIcons(GetXRCPath() + wxT("data/hugin.ico"), wxBITMAP_TYPE_ICO);
+    wxIconBundle myIcons(GetXRCPath() + "data/hugin.ico", wxBITMAP_TYPE_ICO);
     SetIcons(myIcons);
 #else
-    wxIcon myIcon(GetXRCPath() + wxT("data/hugin.png"),wxBITMAP_TYPE_PNG);
+    wxIcon myIcon(GetXRCPath() + "data/hugin.png",wxBITMAP_TYPE_PNG);
     SetIcon(myIcon);
 #endif
 
@@ -709,8 +625,8 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
     ImageCache::getInstance().setProgressDisplay(this);
 #if defined __WXMSW__
     unsigned long long mem = HUGIN_IMGCACHE_UPPERBOUND;
-    unsigned long mem_low = wxConfigBase::Get()->Read(wxT("/ImageCache/UpperBound"), HUGIN_IMGCACHE_UPPERBOUND);
-    unsigned long mem_high = wxConfigBase::Get()->Read(wxT("/ImageCache/UpperBoundHigh"), (long) 0);
+    unsigned long mem_low = wxConfigBase::Get()->Read("/ImageCache/UpperBound", HUGIN_IMGCACHE_UPPERBOUND);
+    unsigned long mem_high = wxConfigBase::Get()->Read("/ImageCache/UpperBoundHigh", (long) 0);
     if (mem_high > 0) {
       mem = ((unsigned long long) mem_high << 32) + mem_low;
     }
@@ -719,7 +635,7 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
     }
     ImageCache::getInstance().SetUpperLimit(mem);
 #else
-    ImageCache::getInstance().SetUpperLimit(wxConfigBase::Get()->Read(wxT("/ImageCache/UpperBound"), HUGIN_IMGCACHE_UPPERBOUND));
+    ImageCache::getInstance().SetUpperLimit(wxConfigBase::Get()->Read("/ImageCache/UpperBound", HUGIN_IMGCACHE_UPPERBOUND));
 #endif
 
     if(splash) {
@@ -731,12 +647,6 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
     // disable automatic Layout() calls, to it by hand
     SetAutoLayout(false);
     SetOptimizeOnlyActiveImages(m_optOnlyActiveImages);
-
-
-#ifdef __WXMSW__
-    // wxFrame does have a strange background color on Windows, copy color from a child widget
-    this->SetBackgroundColour(images_panel->GetBackgroundColour());
-#endif
 
 // By using /SUBSYSTEM:CONSOLE /ENTRY:"WinMainCRTStartup" in the linker
 // options for the debug build, a console window will be used for stdout
@@ -755,7 +665,7 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
 #endif
     //reload gui level
     m_guiLevel=GUI_ADVANCED;
-    long guiLevel=config->Read(wxT("/GuiLevel"),(long)0);
+    long guiLevel=config->Read("/GuiLevel",(long)0);
     guiLevel = std::max<long>(0, std::min<long>(2, guiLevel));
     if(guiLevel==GUI_SIMPLE && disableOpenGL)
     {
@@ -767,6 +677,69 @@ MainFrame::MainFrame(wxWindow* parent, HuginBase::Panorama & pano)
     // check settings of help window and fix when needed
     FixHelpSettings();
 #endif
+    // bind handler for menu items
+    Bind(wxEVT_MENU, &MainFrame::OnNewProject, this, XRCID("action_new_project"));
+    Bind(wxEVT_MENU, &MainFrame::OnLoadProject, this, XRCID("action_load_project"));
+    Bind(wxEVT_MENU, &MainFrame::OnBrowseProjects, this, XRCID("action_browse_projects"));
+    Bind(wxEVT_MENU, &MainFrame::OnSaveProject, this, XRCID("action_save_project"));
+    Bind(wxEVT_MENU, &MainFrame::OnSaveProjectAs, this, XRCID("action_save_as_project"));
+    Bind(wxEVT_MENU, &MainFrame::OnSavePTStitcherAs, this, XRCID("action_save_as_ptstitcher"));
+    Bind(wxEVT_MENU, &MainFrame::OnOpenPTBatcher, this, XRCID("action_open_batch_processor"));
+    Bind(wxEVT_MENU, &MainFrame::OnMergeProject, this, XRCID("action_import_project"));
+    Bind(wxEVT_MENU, &MainFrame::OnReadPapywizard, this, XRCID("action_import_papywizard"));
+    Bind(wxEVT_MENU, &MainFrame::OnApplyTemplate, this, XRCID("action_apply_template"));
+    Bind(wxEVT_MENU, &MainFrame::OnUserQuit, this, XRCID("action_exit_hugin"));
+    for (int i = 0; i < 9; ++i)
+    {
+        Bind(wxEVT_MENU, &MainFrame::OnMRUFiles, this, wxID_FILE1 + i);
+    }
+    Bind(wxEVT_MENU, &MainFrame::OnAbout, this, XRCID("action_show_about"));
+    Bind(wxEVT_MENU, &MainFrame::OnHelp, this, XRCID("action_show_help"));
+    Bind(wxEVT_MENU, &MainFrame::OnTipOfDay, this, XRCID("action_show_tip"));
+    Bind(wxEVT_MENU, &MainFrame::OnKeyboardHelp, this, XRCID("action_show_shortcuts"));
+    Bind(wxEVT_MENU, &MainFrame::OnFAQ, this, XRCID("action_show_faq"));
+    Bind(wxEVT_MENU, &MainFrame::OnShowPrefs, this, XRCID("action_show_prefs"));
+    Bind(wxEVT_MENU, &MainFrame::OnRunAssistant, this, XRCID("action_assistant"));
+    Bind(wxEVT_MENU, &MainFrame::OnSendToAssistantQueue, this, XRCID("action_batch_assistant"));
+    Bind(wxEVT_MENU, &MainFrame::OnSetGuiSimple, this, XRCID("action_gui_simple"));
+    Bind(wxEVT_MENU, &MainFrame::OnSetGuiAdvanced, this, XRCID("action_gui_advanced"));
+    Bind(wxEVT_MENU, &MainFrame::OnSetGuiExpert, this, XRCID("action_gui_expert"));
+#ifdef HUGIN_HSI
+    Bind(wxEVT_MENU, &MainFrame::OnPythonScript, this, XRCID("action_python_script"));
+#endif
+    Bind(wxEVT_MENU, &MainFrame::OnUndo, this, XRCID("ID_EDITUNDO"));
+    Bind(wxEVT_MENU, &MainFrame::OnRedo, this, XRCID("ID_EDITREDO"));
+    Bind(wxEVT_MENU, &MainFrame::OnFullScreen, this, XRCID("ID_SHOW_FULL_SCREEN"));
+    Bind(wxEVT_MENU, &MainFrame::OnTogglePreviewFrame, this, XRCID("ID_SHOW_PREVIEW_FRAME"));
+    Bind(wxEVT_MENU, &MainFrame::OnToggleGLPreviewFrame, this, XRCID("ID_SHOW_GL_PREVIEW_FRAME"));
+    Bind(wxEVT_BUTTON, &MainFrame::OnTogglePreviewFrame, this, XRCID("ID_SHOW_PREVIEW_FRAME"));
+    Bind(wxEVT_BUTTON, &MainFrame::OnToggleGLPreviewFrame, this, XRCID("ID_SHOW_GL_PREVIEW_FRAME"));
+
+    Bind(wxEVT_MENU, &MainFrame::OnOptimize, this, XRCID("action_optimize"));
+    Bind(wxEVT_MENU, &MainFrame::OnOnlyActiveImages, this, XRCID("action_optimize_only_active"));
+    Bind(wxEVT_MENU, &MainFrame::OnIgnoreLineCp, this, XRCID("action_optimize_ignore_line_cp"));
+    Bind(wxEVT_BUTTON, &MainFrame::OnOptimize, this, XRCID("action_optimize"));
+    Bind(wxEVT_MENU, &MainFrame::OnFineTuneAll, this, XRCID("action_finetune_all_cp"));
+    Bind(wxEVT_MENU, &MainFrame::OnRemoveCPinMasks, this, XRCID("action_remove_cp_in_masks"));
+
+    Bind(wxEVT_MENU, &MainFrame::OnShowCPFrame, this, XRCID("ID_CP_TABLE"));
+    Bind(wxEVT_BUTTON, &MainFrame::OnShowCPFrame, this, XRCID("ID_CP_TABLE"));
+
+    Bind(wxEVT_MENU, &MainFrame::OnShowPanel, this, XRCID("ID_SHOW_PANEL_IMAGES"));
+    Bind(wxEVT_MENU, &MainFrame::OnShowPanel, this, XRCID("ID_SHOW_PANEL_MASK"));
+    Bind(wxEVT_MENU, &MainFrame::OnShowPanel, this, XRCID("ID_SHOW_PANEL_CP_EDITOR"));
+    Bind(wxEVT_MENU, &MainFrame::OnShowPanel, this, XRCID("ID_SHOW_PANEL_OPTIMIZER"));
+    Bind(wxEVT_MENU, &MainFrame::OnShowPanel, this, XRCID("ID_SHOW_PANEL_OPTIMIZER_PHOTOMETRIC"));
+    Bind(wxEVT_MENU, &MainFrame::OnShowPanel, this, XRCID("ID_SHOW_PANEL_PANORAMA"));
+    Bind(wxEVT_MENU, &MainFrame::OnDoStitch, this, XRCID("action_stitch"));
+    Bind(wxEVT_MENU, &MainFrame::OnUserDefinedStitch, this, XRCID("action_stitch_userdefined"));
+    Bind(wxEVT_MENU, &MainFrame::OnAddImages, this, XRCID("action_add_images"));
+    Bind(wxEVT_BUTTON, &MainFrame::OnAddImages, this, XRCID("action_add_images"));
+    Bind(wxEVT_MENU, &MainFrame::OnAddTimeImages, this, XRCID("action_add_time_images"));
+    Bind(wxEVT_BUTTON, &MainFrame::OnAddTimeImages, this, XRCID("action_add_time_images"));
+    Bind(wxEVT_CLOSE_WINDOW, &MainFrame::OnExit, this);
+    Bind(wxEVT_SIZE, &MainFrame::OnSize, this);
+    Bind(EVT_LOADING_FAILED, &MainFrame::OnLoadingFailed, this);
 
     DEBUG_TRACE("");
 }
@@ -793,12 +766,12 @@ MainFrame::~MainFrame()
     // get the global config object
     wxConfigBase* config = wxConfigBase::Get();
 
-    StoreFramePosition(this, wxT("MainFrame"));
+    hugin_utils::StoreFramePosition(this, "MainFrame");
 
     //store most recently used files
     m_mruFiles.Save(*config);
     //store gui level
-    config->Write(wxT("/GuiLevel"),(long)m_guiLevel);
+    config->Write("/GuiLevel",(long)m_guiLevel);
     // store optimize only active images
     config->Write("/OptimizePanel/OnlyActiveImages", m_optOnlyActiveImages ? 1l : 0l);
 
@@ -905,35 +878,30 @@ bool MainFrame::CloseProject(bool cancelable, CloseReason reason)
                 messageString = _("Save changes to the project file before closing?");
                 break;
         };
-                wxMessageDialog message(wxGetActiveWindow(), messageString,
-#ifdef _WIN32
-                                _("Hugin"),
-#else
-                                wxT(""),
-#endif
-                                wxICON_EXCLAMATION | wxYES_NO | (cancelable? (wxCANCEL):0));
+        hugin_utils::MessageDialog message = hugin_utils::GetMessageDialog(messageString, _("Hugin"), wxICON_EXCLAMATION | wxYES_NO | (cancelable ? (wxCANCEL) : 0), wxGetActiveWindow());
         switch(reason)
         {
             case LOAD_NEW_PROJECT:
-                message.SetExtendedMessage(_("If you load another project without saving, your changes since last save will be discarded."));
+                message->SetExtendedMessage(_("If you load another project without saving, your changes since last save will be discarded."));
                 break;
             case NEW_PROJECT:
-                message.SetExtendedMessage(_("If you start a new project without saving, your changes since last save will be discarded."));
+                message->SetExtendedMessage(_("If you start a new project without saving, your changes since last save will be discarded."));
                 break;
             case CLOSE_PROGRAM:
             default:
-                message.SetExtendedMessage(_("If you close without saving, your changes since your last save will be discarded."));
+                message->SetExtendedMessage(_("If you close without saving, your changes since your last save will be discarded."));
                 break;
         };
     #if defined __WXMAC__ || defined __WXMSW__
         // Apple human interface guidelines and Windows user experience interaction guidelines
-        message.SetYesNoLabels(wxID_SAVE, _("Don't Save"));
+        message->SetYesNoLabels(wxID_SAVE, _("Do&n't Save"));
     #else
         // Gnome human interface guidelines:
-        message.SetYesNoLabels(wxID_SAVE, _("Close without saving"));
+        message->SetYesNoLabels(wxID_SAVE, _("&Close without saving"));
     #endif
-        int answer = message.ShowModal();
-        switch (answer){
+        const int answer = message->ShowModal();
+        switch (answer)
+        {
             case wxID_YES:
             {
                 wxCommandEvent dummy;
@@ -1000,7 +968,7 @@ void MainFrame::OnSaveProject(wxCommandEvent & e)
     DEBUG_TRACE("");
     try {
     wxFileName scriptName = m_filename;
-    if (m_filename == wxT("")) {
+    if (m_filename == wxEmptyString) {
         OnSaveProjectAs(e);
         scriptName = m_filename;
     } else {
@@ -1014,20 +982,21 @@ void MainFrame::OnSaveProject(wxCommandEvent & e)
         {
             if(gl_preview_frame)
             {
-                gl_preview_frame->SetTitle(scriptName.GetName() + wxT(".") + scriptName.GetExt() + wxT(" - ") + _("Hugin - Panorama Creator"));
+                gl_preview_frame->SetTitle(scriptName.GetName() + "." + scriptName.GetExt() + " - " + _("Hugin - Panorama Creator"));
             };
-            SetTitle(scriptName.GetName() + wxT(".") + scriptName.GetExt() + wxT(" - ") + _("Panorama editor"));
+            SetTitle(scriptName.GetName() + "." + scriptName.GetExt() + " - " + _("Panorama editor"));
         }
         else
         {
-            SetTitle(scriptName.GetName() + wxT(".") + scriptName.GetExt() + wxT(" - ") + _("Hugin - Panorama Creator"));
+            SetTitle(scriptName.GetName() + "." + scriptName.GetExt() + " - " + _("Hugin - Panorama Creator"));
         };
 
         pano.clearDirty();
     }
     } catch (std::exception & e) {
         wxString err(e.what(), wxConvLocal);
-            wxMessageBox(wxString::Format(_("Could not save project file \"%s\".\nMaybe the file or the folder is read-only.\n\n(Error code: %s)"),m_filename.c_str(),err.c_str()),_("Error"),wxOK|wxICON_ERROR);
+            hugin_utils::HuginMessageBox(wxString::Format(_("Could not save project file \"%s\".\nMaybe the file or the folder is read-only.\n\n(Error code: %s)"),m_filename,err),
+                _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
     }
 }
 
@@ -1037,7 +1006,7 @@ void MainFrame::OnSaveProjectAs(wxCommandEvent & e)
     wxFileName scriptName;
     if (m_filename.IsEmpty())
     {
-        scriptName.Assign(getDefaultProjectName(pano) + wxT(".pto"));
+        scriptName.Assign(getDefaultProjectName(pano) + ".pto");
     }
     else
     {
@@ -1050,15 +1019,14 @@ void MainFrame::OnSaveProjectAs(wxCommandEvent & e)
                      _("Project files (*.pto)|*.pto|All files (*)|*"),
                      wxFD_SAVE | wxFD_OVERWRITE_PROMPT, wxDefaultPosition);
     if (dlg.ShowModal() == wxID_OK) {
-        wxConfig::Get()->Write(wxT("/actualPath"), dlg.GetDirectory());  // remember for later
+        wxConfig::Get()->Write("/actualPath", dlg.GetDirectory());  // remember for later
         wxString fn = dlg.GetPath();
-        if (fn.Right(4).CmpNoCase(wxT(".pto"))!=0)
+        if (fn.Right(4).CmpNoCase(".pto")!=0)
         {
-            fn.Append(wxT(".pto"));
+            fn.Append(".pto");
             if (wxFile::Exists(fn)) {
-                int d = wxMessageBox(wxString::Format(_("File %s exists. Overwrite?"), fn.c_str()),
-                    _("Save project"), wxYES_NO | wxICON_QUESTION);
-                if (d != wxYES) {
+                if (!hugin_utils::AskUserOverwrite(fn, _("Hugin"), wxGetActiveWindow()))
+                {
                     return;
                 }
             }
@@ -1073,14 +1041,14 @@ void MainFrame::OnSavePTStitcherAs(wxCommandEvent & e)
 {
     DEBUG_TRACE("");
     wxString scriptName = m_filename;
-    if (m_filename == wxT("")) {
+    if (m_filename == wxEmptyString) {
         scriptName = getDefaultProjectName(pano);
     }
     wxFileName scriptNameFN(scriptName);
-    wxString fn = scriptNameFN.GetName() + wxT(".txt");
+    wxString fn = scriptNameFN.GetName() + ".txt";
     wxFileDialog dlg(wxGetActiveWindow(),
                      _("Save PTmender script file"),
-                     wxConfigBase::Get()->Read(wxT("/actualPath"),wxT("")), fn,
+                     wxConfigBase::Get()->Read("/actualPath",wxEmptyString), fn,
                      _("PTmender files (*.txt)|*.txt"),
                      wxFD_SAVE | wxFD_OVERWRITE_PROMPT, wxDefaultPosition);
     if (dlg.ShowModal() == wxID_OK) {
@@ -1120,7 +1088,7 @@ void MainFrame::LoadProjectFile(const wxString & filename)
            );
         if (!PanoCommand::GlobalCmdHist::getInstance().getLastCommand()->wasSuccessful())
         {
-            wxMessageBox(wxString::Format(_("Could not load project file \"%s\".\nIt is not a valid pto file."), filename), _("Error"), wxOK | wxICON_ERROR);
+            hugin_utils::HuginMessageBox(wxString::Format(_("Could not load project file \"%s\".\nIt is not a valid pto file."), filename), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
             PanoCommand::GlobalCmdHist::getInstance().undo();
             PanoCommand::GlobalCmdHist::getInstance().clearRedoQueue();
             panoramaChanged(pano);
@@ -1142,13 +1110,13 @@ void MainFrame::LoadProjectFile(const wxString & filename)
             {
                 if (gl_preview_frame)
                 {
-                    gl_preview_frame->SetTitle(fname.GetName() + wxT(".") + fname.GetExt() + wxT(" - ") + _("Hugin - Panorama Stitcher"));
+                    gl_preview_frame->SetTitle(fname.GetName() + "." + fname.GetExt() + " - " + _("Hugin - Panorama Stitcher"));
                 };
-                SetTitle(fname.GetName() + wxT(".") + fname.GetExt() + wxT(" - ") + _("Panorama editor"));
+                SetTitle(fname.GetName() + "." + fname.GetExt() + " - " + _("Panorama editor"));
             }
             else
             {
-                SetTitle(fname.GetName() + wxT(".") + fname.GetExt() + wxT(" - ") + _("Hugin - Panorama Stitcher"));
+                SetTitle(fname.GetName() + "." + fname.GetExt() + " - " + _("Hugin - Panorama Stitcher"));
             };
         }
         else
@@ -1168,15 +1136,15 @@ void MainFrame::LoadProjectFile(const wxString & filename)
                 SetTitle(_("Hugin - Panorama Stitcher"));
             };
         };
-        if (! (fname.GetExt() == wxT("pto"))) {
+        if (! (fname.GetExt() == "pto")) {
             // do not remember filename if its not a hugin project
             // to avoid overwriting the original project with an
             // incompatible one
-            m_filename = wxT("");
+            m_filename = wxEmptyString;
         }
         // get the global config object
         wxConfigBase* config = wxConfigBase::Get();
-        config->Write(wxT("/actualPath"), path);  // remember for later
+        config->Write("/actualPath", path);  // remember for later
     } else {
         SetStatusText( _("Error opening project:   ") + filename);
         DEBUG_ERROR("Could not open file " << filename);
@@ -1212,10 +1180,10 @@ void MainFrame::OnLoadProject(wxCommandEvent & e)
         // get the global config object
         wxConfigBase* config = wxConfigBase::Get();
 
-        wxString defaultdir = config->Read(wxT("/actualPath"),wxT(""));
+        wxString defaultdir = config->Read("/actualPath",wxEmptyString);
         wxFileDialog dlg(wxGetActiveWindow(),
                          _("Open project file"),
-                         defaultdir, wxT(""),
+                         defaultdir, wxEmptyString,
                          _("Project files (*.pto)|*.pto|All files (*)|*"),
                          wxFD_OPEN, wxDefaultPosition);
         dlg.SetDirectory(defaultdir);
@@ -1224,13 +1192,8 @@ void MainFrame::OnLoadProject(wxCommandEvent & e)
             wxString filename = dlg.GetPath();
             if(vigra::isImage(filename.mb_str(HUGIN_CONV_FILENAME)))
             {
-                if(wxMessageBox(wxString::Format(_("File %s is an image file and not a project file.\nThis file can't be open with File, Open.\nDo you want to add this image file to the current project?"),filename.c_str()),
-#ifdef __WXMSW__
-                    _("Hugin"),
-#else
-                    wxT(""),
-#endif
-                    wxYES_NO | wxICON_QUESTION)==wxYES)
+                if (hugin_utils::HuginMessageBox(wxString::Format(_("File %s is an image file and not a project file.\nThis file can't be open with File, Open.\nDo you want to add this image file to the current project?"), filename.c_str()),
+                    _("Hugin"), wxYES_NO | wxICON_QUESTION, wxGetActiveWindow()) == wxYES)
                 {
                     wxArrayString filenameArray;
                     filenameArray.Add(filename);
@@ -1278,7 +1241,7 @@ void MainFrame::OnNewProject(wxCommandEvent & e)
 {
     if(!CloseProject(true, NEW_PROJECT)) return; //if closing current project is canceled
 
-    m_filename = wxT("");
+    m_filename = wxEmptyString;
     PanoCommand::GlobalCmdHist::getInstance().addCommand(new PanoCommand::wxNewProjectCmd(pano));
     PanoCommand::GlobalCmdHist::getInstance().clear();
     // remove old images from cache
@@ -1413,24 +1376,14 @@ void MainFrame::OnLoadingFailed(wxCommandEvent & e)
     if (wxFileExists(e.GetString()))
     {
         // file exists, but could not loaded
-        wxMessageBox(wxString::Format(_("Could not load image \"%s\".\nThis file is not a valid image.\nThis file will be removed from the project."), e.GetString()),
-#ifdef _WIN32
-            _("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxOK | wxICON_ERROR);
+        hugin_utils::HuginMessageBox(wxString::Format(_("Could not load image \"%s\".\nThis file is not a valid image.\nThis file will be removed from the project."), e.GetString()),
+            _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
     }
     else
     {
         // file does not exists
-        wxMessageBox(wxString::Format(_("Could not load image \"%s\".\nThis file was renamed, deleted or is on a non-accessible drive.\nThis file will be removed from the project."), e.GetString()),
-#ifdef _WIN32
-            _("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxOK | wxICON_ERROR);
+        hugin_utils::HuginMessageBox(wxString::Format(_("Could not load image \"%s\".\nThis file was renamed, deleted or is on a non-accessible drive.\nThis file will be removed from the project."), e.GetString()),
+            _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
     };
     // now remove the file from the pano
     const std::string filename(e.GetString().mb_str(HUGIN_CONV_FILENAME));
@@ -1463,19 +1416,19 @@ void MainFrame::OnAbout(wxCommandEvent & e)
 	wxString strFile;
 	wxString langCode;
 
-    wxXmlResource::Get()->LoadDialog(&dlg, this, wxT("about_dlg"));
+    wxXmlResource::Get()->LoadDialog(&dlg, this, "about_dlg");
 
 #if __WXMAC__ && defined MAC_SELF_CONTAINED_BUNDLE
     //rely on the system's locale choice
     strFile = MacGetPathToBundledResourceFile(CFSTR("about.htm"));
-    if(strFile!=wxT("")) XRCCTRL(dlg,"about_html",wxHtmlWindow)->LoadPage(strFile);
+    if(strFile!=wxEmptyString) XRCCTRL(dlg,"about_html",wxHtmlWindow)->LoadPage(strFile);
 #else
     //if the language is not default, load custom About file (if exists)
     langCode = huginApp::Get()->GetLocale().GetName().Left(2).Lower();
     DEBUG_INFO("Lang Code: " << langCode.mb_str(wxConvLocal));
-    if(langCode != wxString(wxT("en")))
+    if(langCode != wxString("en"))
     {
-        strFile = GetXRCPath() + wxT("data/about_") + langCode + wxT(".htm");
+        strFile = GetXRCPath() + "data/about_" + langCode + ".htm";
         if(wxFile::Exists(strFile))
         {
             DEBUG_TRACE("Using About: " << strFile.mb_str(wxConvLocal));
@@ -1494,12 +1447,12 @@ void MainFrame::OnHelp(wxCommandEvent & e)
 
 void MainFrame::OnKeyboardHelp(wxCommandEvent & e)
 {
-    DisplayHelp(wxT("Hugin_Keyboard_shortcuts.html"));
+    DisplayHelp("Hugin_Keyboard_shortcuts.html");
 }
 
 void MainFrame::OnFAQ(wxCommandEvent & e)
 {
-    DisplayHelp(wxT("Hugin_FAQ.html"));
+    DisplayHelp("Hugin_FAQ.html");
 }
 
 
@@ -1511,14 +1464,7 @@ void MainFrame::DisplayHelp(wxString section)
     }
     else
     {
-#if defined __wxMSW__ && !(wxCHECK_VERSION(3,1,1))
-        // wxWidgets 3.x has a bug, that prevents DisplaySection to work on Win8/10 64 bit
-        // see: http://trac.wxwidgets.org/ticket/14888
-        // so using DisplayContents() and our own implementation of HuginCHMHelpController
-        GetHelpController().DisplayHelpPage(section);
-#else
         GetHelpController().DisplaySection(section);
-#endif
     };
 }
 
@@ -1531,11 +1477,11 @@ void MainFrame::OnTipOfDay(wxCommandEvent& WXUNUSED(e))
     int nValue;
 
     wxConfigBase * config = wxConfigBase::Get();
-    nValue = config->Read(wxT("/MainFrame/ShowStartTip"),1l);
+    nValue = config->Read("/MainFrame/ShowStartTip",1l);
 
     //TODO: tips not localisable
     DEBUG_INFO("Tip index: " << nValue);
-    strFile = GetXRCPath() + wxT("data/tips.txt");  //load default file
+    strFile = GetXRCPath() + "data/tips.txt";  //load default file
 
     DEBUG_INFO("Reading tips from " << strFile.mb_str(wxConvLocal));
     wxTipProvider *tipProvider = new LocalizedFileTipProvider(strFile, nValue);
@@ -1544,7 +1490,7 @@ void MainFrame::OnTipOfDay(wxCommandEvent& WXUNUSED(e))
     //store startup preferences
     nValue = (bShowAtStartup ? tipProvider->GetCurrentTip() : 0);
     DEBUG_INFO("Writing tip index: " << nValue);
-    config->Write(wxT("/MainFrame/ShowStartTip"), nValue);
+    config->Write("/MainFrame/ShowStartTip", nValue);
     delete tipProvider;
 }
 
@@ -1558,8 +1504,8 @@ void MainFrame::OnShowPrefs(wxCommandEvent & e)
     wxConfigBase* cfg=wxConfigBase::Get();
 #if defined __WXMSW__
     unsigned long long mem = HUGIN_IMGCACHE_UPPERBOUND;
-    unsigned long mem_low = cfg->Read(wxT("/ImageCache/UpperBound"), HUGIN_IMGCACHE_UPPERBOUND);
-    unsigned long mem_high = cfg->Read(wxT("/ImageCache/UpperBoundHigh"), (long) 0);
+    unsigned long mem_low = cfg->Read("/ImageCache/UpperBound", HUGIN_IMGCACHE_UPPERBOUND);
+    unsigned long mem_high = cfg->Read("/ImageCache/UpperBoundHigh", (long) 0);
     if (mem_high > 0)
     {
       mem = ((unsigned long long) mem_high << 32) + mem_low;
@@ -1570,12 +1516,12 @@ void MainFrame::OnShowPrefs(wxCommandEvent & e)
     }
     ImageCache::getInstance().SetUpperLimit(mem);
 #else
-    ImageCache::getInstance().SetUpperLimit(cfg->Read(wxT("/ImageCache/UpperBound"), HUGIN_IMGCACHE_UPPERBOUND));
+    ImageCache::getInstance().SetUpperLimit(cfg->Read("/ImageCache/UpperBound", HUGIN_IMGCACHE_UPPERBOUND));
 #endif
     images_panel->ReloadCPDetectorSettings();
     if(gl_preview_frame)
     {
-        gl_preview_frame->SetShowProjectionHints(cfg->Read(wxT("/GLPreviewFrame/ShowProjectionHints"),HUGIN_SHOW_PROJECTION_HINTS)!=0);
+        gl_preview_frame->SetShowProjectionHints(cfg->Read("/GLPreviewFrame/ShowProjectionHints",HUGIN_SHOW_PROJECTION_HINTS)!=0);
     };
 }
 
@@ -1705,8 +1651,9 @@ void MainFrame::OnPhotometricOptimize(wxCommandEvent & e)
 void MainFrame::OnDoStitch(wxCommandEvent & e)
 {
     DEBUG_TRACE("");
-    wxCommandEvent cmdEvt(wxEVT_COMMAND_BUTTON_CLICKED,XRCID("pano_button_stitch"));
-    pano_panel->GetEventHandler()->AddPendingEvent(cmdEvt);
+    wxButton* stitchButton = pano_panel->GetStitchButton();
+    wxCommandEvent cmdEvt(wxEVT_BUTTON, stitchButton->GetId());
+    stitchButton->GetEventHandler()->AddPendingEvent(cmdEvt);
 }
 
 void MainFrame::OnUserDefinedStitch(wxCommandEvent & e)
@@ -1732,10 +1679,10 @@ void MainFrame::OnMergeProject(wxCommandEvent & e)
     // get the global config object
     wxConfigBase* config = wxConfigBase::Get();
 
-    wxString defaultdir = config->Read(wxT("/actualPath"),wxT(""));
+    wxString defaultdir = config->Read("/actualPath",wxEmptyString);
     wxFileDialog dlg(wxGetActiveWindow(),
                      _("Open project file"),
-                     defaultdir, wxT(""),
+                     defaultdir, wxEmptyString,
                      _("Project files (*.pto)|*.pto|All files (*)|*"),
                      wxFD_OPEN, wxDefaultPosition);
     dlg.SetDirectory(defaultdir);
@@ -1767,7 +1714,7 @@ void MainFrame::OnMergeProject(wxCommandEvent & e)
             }
             else
             {
-                wxMessageBox(wxString::Format(_("Could not read project file %s."),fname.GetFullPath().c_str()),_("Error"),wxOK|wxICON_ERROR);
+                hugin_utils::HuginMessageBox(wxString::Format(_("Could not read project file %s."), fname.GetFullPath()), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
             };
         };
     }
@@ -1775,14 +1722,14 @@ void MainFrame::OnMergeProject(wxCommandEvent & e)
 
 void MainFrame::OnReadPapywizard(wxCommandEvent & e)
 {
-    wxString currentDir = wxConfigBase::Get()->Read(wxT("/actualPath"), wxT(""));
+    wxString currentDir = wxConfigBase::Get()->Read("/actualPath", wxEmptyString);
     wxFileDialog dlg(wxGetActiveWindow(), _("Open Papywizard xml file"),
-        currentDir, wxT(""), _("Papywizard xml files (*.xml)|*.xml|All files (*)|*"),
+        currentDir, wxEmptyString, _("Papywizard xml files (*.xml)|*.xml|All files (*)|*"),
         wxFD_OPEN, wxDefaultPosition);
     dlg.SetDirectory(currentDir);
     if (dlg.ShowModal() == wxID_OK)
     {
-        wxConfigBase::Get()->Write(wxT("/actualPath"), dlg.GetDirectory());
+        wxConfigBase::Get()->Write("/actualPath", dlg.GetDirectory());
         Papywizard::ImportPapywizardFile(dlg.GetPath(), pano);
     };
 };
@@ -1794,13 +1741,13 @@ void MainFrame::OnApplyTemplate(wxCommandEvent & e)
 
     wxFileDialog dlg(wxGetActiveWindow(),
                      _("Choose template project"),
-                     config->Read(wxT("/templatePath"),wxT("")), wxT(""),
+                     config->Read("/templatePath",wxEmptyString), wxEmptyString,
                      _("Project files (*.pto)|*.pto|All files (*)|*"),
                      wxFD_OPEN, wxDefaultPosition);
-    dlg.SetDirectory(wxConfigBase::Get()->Read(wxT("/templatePath"),wxT("")));
+    dlg.SetDirectory(wxConfigBase::Get()->Read("/templatePath",wxEmptyString));
     if (dlg.ShowModal() == wxID_OK) {
         wxString filename = dlg.GetPath();
-        wxConfig::Get()->Write(wxT("/templatePath"), dlg.GetDirectory());  // remember for later
+        wxConfig::Get()->Write("/templatePath", dlg.GetDirectory());  // remember for later
 
         std::ifstream file((const char *)filename.mb_str(HUGIN_CONV_FILENAME));
 
@@ -1829,7 +1776,7 @@ void MainFrame::OnOpenPTBatcher(wxCommandEvent & e)
 								   NULL);
 	if (err != noErr) {
 		// error, can't find PTBatcherGUI
-		wxMessageBox(wxString::Format(_("External program %s not found in the bundle, reverting to system path"), wxT("open")), _("Error"));
+        hugin_utils::HuginMessageBox(wxString::Format(_("External program %s not found in the bundle, reverting to system path"), "open"), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
 		// Possibly a silly attempt otherwise the previous would have worked as well, but just try it.
 		wxExecute(_T("open -b net.sourceforge.hugin.PTBatcherGUI"));
 	}
@@ -1861,12 +1808,12 @@ void MainFrame::OnFineTuneAll(wxCommandEvent & e)
 
     wxConfigBase *cfg = wxConfigBase::Get();
     double corrThresh=HUGIN_FT_CORR_THRESHOLD;
-    cfg->Read(wxT("/Finetune/CorrThreshold"), &corrThresh, HUGIN_FT_CORR_THRESHOLD);
+    cfg->Read("/Finetune/CorrThreshold", &corrThresh, HUGIN_FT_CORR_THRESHOLD);
     double curvThresh = HUGIN_FT_CURV_THRESHOLD;
-    cfg->Read(wxT("/Finetune/CurvThreshold"),&curvThresh, HUGIN_FT_CURV_THRESHOLD);
+    cfg->Read("/Finetune/CurvThreshold",&curvThresh, HUGIN_FT_CURV_THRESHOLD);
     // load parameters
-    const long templWidth = cfg->Read(wxT("/Finetune/TemplateSize"), HUGIN_FT_TEMPLATE_SIZE);
-    const long sWidth = templWidth + cfg->Read(wxT("/Finetune/LocalSearchWidth"), HUGIN_FT_LOCAL_SEARCH_WIDTH);
+    const long templWidth = cfg->Read("/Finetune/TemplateSize", HUGIN_FT_TEMPLATE_SIZE);
+    const long sWidth = templWidth + cfg->Read("/Finetune/LocalSearchWidth", HUGIN_FT_LOCAL_SEARCH_WIDTH);
 
     {
         ProgressReporterDialog progress(unoptimized.size(), _("Fine-tuning all points"), _("Fine-tuning"), wxGetActiveWindow());
@@ -1948,7 +1895,7 @@ void MainFrame::OnFineTuneAll(wxCommandEvent & e)
     wxString result;
     result.Printf(_("%d points fine-tuned, %d points not updated due to low correlation\n\nHint: The errors of the fine-tuned points have been set to the correlation coefficient\nProblematic points can be spotted (just after fine-tune, before optimizing)\nby an error <= %.3f.\nThe error of points without a well defined peak (typically in regions with uniform color)\nwill be set to 0\n\nUse the Control Point list (F3) to see all points of the current project\n"),
                   nGood, nBad, corrThresh);
-    wxMessageBox(result, _("Fine-tune result"), wxOK);
+    hugin_utils::HuginMessageBox(result, _("Hugin"), wxOK, this);
     // set newly optimized points
     PanoCommand::GlobalCmdHist::getInstance().addCommand(
         new PanoCommand::UpdateCPsCmd(pano, cps, false)
@@ -1965,8 +1912,8 @@ void MainFrame::OnRemoveCPinMasks(wxCommandEvent & e)
         PanoCommand::GlobalCmdHist::getInstance().addCommand(
                     new PanoCommand::RemoveCtrlPointsCmd(pano,cps)
                     );
-        wxMessageBox(wxString::Format(_("Removed %lu control points"), static_cast<unsigned long>(cps.size())),
-                   _("Removing control points in masks"),wxOK|wxICON_INFORMATION);
+        hugin_utils::HuginMessageBox(wxString::Format(_("Removed %lu control points"), static_cast<unsigned long>(cps.size())),
+            _("Hugin"), wxOK | wxICON_INFORMATION, this);
     };
 }
 
@@ -1976,15 +1923,15 @@ void MainFrame::OnPythonScript(wxCommandEvent & e)
     wxString fname;
     wxFileDialog dlg(wxGetActiveWindow(),
             _("Select python script"),
-            wxConfigBase::Get()->Read(wxT("/lensPath"),wxT("")), wxT(""),
+            wxConfigBase::Get()->Read("/lensPath",wxEmptyString), wxEmptyString,
             _("Python script (*.py)|*.py|All files (*.*)|*.*"),
             wxFD_OPEN, wxDefaultPosition);
-    dlg.SetDirectory(wxConfigBase::Get()->Read(wxT("/pythonScriptPath"),wxT("")));
+    dlg.SetDirectory(wxConfigBase::Get()->Read("/pythonScriptPath",wxEmptyString));
 
     if (dlg.ShowModal() == wxID_OK)
     {
         wxString filename = dlg.GetPath();
-        wxConfig::Get()->Write(wxT("/pythonScriptPath"), dlg.GetDirectory());
+        wxConfig::Get()->Write("/pythonScriptPath", dlg.GetDirectory());
         std::string scriptfile((const char *)filename.mb_str(HUGIN_CONV_FILENAME));
         PanoCommand::GlobalCmdHist::getInstance().addCommand(
             new PanoCommand::PythonScriptPanoCmd(pano,scriptfile)
@@ -2004,7 +1951,7 @@ void MainFrame::OnPlugin(wxCommandEvent & e)
     }
     else
     {
-        wxMessageBox(wxString::Format(wxT("Python-Script %s not found.\nStopping processing."),file.GetFullPath().c_str()),_("Warning"),wxOK|wxICON_INFORMATION);
+        hugin_utils::HuginMessageBox(wxString::Format("Python-Script %s not found.\nStopping processing.", file.GetFullPath()), _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
     };
 }
 
@@ -2095,7 +2042,7 @@ void MainFrame::updateProgressDisplay()
         msg = wxGetTranslation(wxString(m_message.c_str(), wxConvLocal));
         if (!m_filename.empty())
         {
-            msg.Append(wxT(" "));
+            msg.Append(" ");
             msg.Append(wxString(ProgressDisplay::m_filename.c_str(), HUGIN_CONV_FILENAME));
         };
     };
@@ -2222,8 +2169,8 @@ void MainFrame::OnMRUFiles(wxCommandEvent &e)
         else
         {
             m_mruFiles.RemoveFileFromHistory(index);
-            wxMessageBox(wxString::Format(_("File \"%s\" not found.\nMaybe file was renamed, moved or deleted."),f.c_str()),
-                _("Error!"),wxOK | wxICON_INFORMATION );
+            hugin_utils::HuginMessageBox(wxString::Format(_("File \"%s\" not found.\nMaybe file was renamed, moved or deleted."),f.c_str()),
+                _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
         };
     };
 }
@@ -2243,18 +2190,18 @@ struct celeste::svm_model* MainFrame::GetSVMModel()
     {
         // determine file name of SVM model file
         // get XRC path from application
-        wxString wxstrModelFileName = huginApp::Get()->GetDataPath() + wxT(HUGIN_CELESTE_MODEL);
+        wxString wxstrModelFileName = huginApp::Get()->GetDataPath() + HUGIN_CELESTE_MODEL;
         // convert wxString to string
         std::string strModelFileName(wxstrModelFileName.mb_str(HUGIN_CONV_FILENAME));
 
         // SVM model file
         if (! wxFile::Exists(wxstrModelFileName) ) {
-            wxMessageBox(wxString::Format(_("Celeste model expected in %s not found, Hugin needs to be properly installed."),wxstrModelFileName.c_str()), _("Fatal Error"));
+            hugin_utils::HuginMessageBox(wxString::Format(_("Celeste model expected in %s not found, Hugin needs to be properly installed."), wxstrModelFileName), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
             return NULL;
         }
         if(!celeste::loadSVMmodel(svmModel,strModelFileName))
         {
-            wxMessageBox(wxString::Format(_("Could not load Celeste model file %s"),wxstrModelFileName.c_str()),_("Error"));
+            hugin_utils::HuginMessageBox(wxString::Format(_("Could not load Celeste model file %s"), wxstrModelFileName), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
             svmModel=NULL;
         };
     }
@@ -2351,8 +2298,8 @@ void MainFrame::SetGuiLevel(GuiLevel newLevel)
         else
         {
             wxFileName scriptName = m_filename;
-            gl_preview_frame->SetTitle(scriptName.GetName() + wxT(".") + scriptName.GetExt() + wxT(" - ") + _("Hugin - Panorama Stitcher"));
-            SetTitle(scriptName.GetName() + wxT(".") + scriptName.GetExt() + wxT(" - ") + _("Panorama editor"));
+            gl_preview_frame->SetTitle(scriptName.GetName() + "." + scriptName.GetExt() + " - " + _("Hugin - Panorama Stitcher"));
+            SetTitle(scriptName.GetName() + "." + scriptName.GetExt() + " - " + _("Panorama editor"));
         };
         Hide();
     }
@@ -2368,7 +2315,7 @@ void MainFrame::SetGuiLevel(GuiLevel newLevel)
         else
         {
             wxFileName scriptName = m_filename;
-            SetTitle(scriptName.GetName() + wxT(".") + scriptName.GetExt() + wxT(" - ") + _("Hugin - Panorama Stitcher"));
+            SetTitle(scriptName.GetName() + "." + scriptName.GetExt() + " - " + _("Hugin - Panorama Stitcher"));
         };
         if(!IsShown())
         {
@@ -2388,23 +2335,13 @@ void MainFrame::OnSetGuiSimple(wxCommandEvent & e)
     {
         if(reqGuiLevel==GUI_ADVANCED)
         {
-            wxMessageBox(_("Can't switch to simple interface. The project is using stacks and/or vignetting center shift.\nThese features are not supported in simple interface."),
-#ifdef __WXMSW__
-                         wxT("Hugin"),
-#else
-                         wxT(""),
-#endif
-                         wxOK | wxICON_INFORMATION);
+            hugin_utils::HuginMessageBox(_("Can't switch to simple interface. The project is using stacks and/or vignetting center shift.\nThese features are not supported in simple interface."),
+                _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
         }
         else
         {
-            wxMessageBox(_("Can't switch to simple interface. The project is using translation or shear parameters.\nThese parameters are not supported in simple interface."),
-#ifdef __WXMSW__
-                         wxT("Hugin"),
-#else
-                         wxT(""),
-#endif
-                         wxOK | wxICON_INFORMATION);
+            hugin_utils::HuginMessageBox(_("Can't switch to simple interface. The project is using translation or shear parameters.\nThese parameters are not supported in simple interface."),
+                _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
         }
         SetGuiLevel(m_guiLevel);
     };
@@ -2419,13 +2356,8 @@ void MainFrame::OnSetGuiAdvanced(wxCommandEvent & e)
     }
     else
     {
-        wxMessageBox(_("Can't switch to advanced interface. The project is using translation or shear parameters.\nThese parameters are not supported in advanced interface."),
-#ifdef __WXMSW__
-                     wxT("Hugin"),
-#else
-                     wxT(""),
-#endif
-                     wxOK | wxICON_INFORMATION);
+        hugin_utils::HuginMessageBox(_("Can't switch to advanced interface. The project is using translation or shear parameters.\nThese parameters are not supported in advanced interface."),
+            _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
         SetGuiLevel(GUI_EXPERT);
     };
 };
@@ -2445,7 +2377,7 @@ void MainFrame::DisableOpenGLTools()
 void MainFrame::RunAssistant(wxWindow* mainWin, const wxString& userdefinedAssistant)
 {
     //save project into temp directory
-    wxString tempDir= wxConfig::Get()->Read(wxT("tempDir"),wxT(""));
+    wxString tempDir= wxConfig::Get()->Read("tempDir",wxEmptyString);
     if(!tempDir.IsEmpty())
     {
         if(tempDir.Last()!=wxFileName::GetPathSeparator())
@@ -2453,7 +2385,7 @@ void MainFrame::RunAssistant(wxWindow* mainWin, const wxString& userdefinedAssis
             tempDir.Append(wxFileName::GetPathSeparator());
         }
     };
-    wxFileName scriptFileName(wxFileName::CreateTempFileName(tempDir+wxT("ha")));
+    wxFileName scriptFileName(wxFileName::CreateTempFileName(tempDir+"ha"));
     const std::string script(scriptFileName.GetFullPath().mb_str(HUGIN_CONV_FILENAME));
     pano.WritePTOFile(script, hugin_utils::getPathPrefix(script));
 
@@ -2471,8 +2403,8 @@ void MainFrame::RunAssistant(wxWindow* mainWin, const wxString& userdefinedAssis
         commands = HuginQueue::GetAssistantCommandQueueUserDefined(pano, exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR), scriptFileName.GetFullPath(), userdefinedAssistant, tempfiles, errors);
         if (commands->empty())
         {
-            wxMessageBox(_("The assistant queue is empty. This indicates an error in the user defined assistant file.") + "\n\n" + wxString(errors.str()),
-                _("Error"), wxOK | wxICON_ERROR, mainWin);
+            hugin_utils::HuginMessageBox(_("The assistant queue is empty. This indicates an error in the user defined assistant file.") + "\n\n" + wxString(errors.str()),
+                _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
             //delete temporary files
             wxRemoveFile(scriptFileName.GetFullPath());
             return;
@@ -2509,8 +2441,8 @@ void MainFrame::RunAssistant(wxWindow* mainWin, const wxString& userdefinedAssis
         {
             if (pano.getNrOfImages() == 1)
             {
-                wxMessageBox(_("The assistant could not find vertical lines. Please add vertical lines in the panorama editor and optimize project manually."),
-                    _("Warning"), wxOK | wxICON_INFORMATION, mainWin);
+                hugin_utils::HuginMessageBox(_("The assistant could not find vertical lines. Please add vertical lines in the panorama editor and optimize project manually."),
+                    _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
             }
             else
             {
@@ -2524,18 +2456,18 @@ void MainFrame::RunAssistant(wxWindow* mainWin, const wxString& userdefinedAssis
                     unsigned i2 = *(comps[1].begin());
                     ShowCtrlPointEditor(i1, i2);
                     // display message box with 
-                    wxMessageBox(wxString::Format(_("Warning %d unconnected image groups found:"), static_cast<int>(comps.size())) + Components2Str(comps) + wxT("\n")
+                    hugin_utils::HuginMessageBox(wxString::Format(_("Warning %d unconnected image groups found:"), static_cast<int>(comps.size())) + Components2Str(comps) + "\n"
                         + _("Please create control points between unconnected images using the Control Points tab in the panorama editor.\n\nAfter adding the points, press the \"Align\" button again"), _("Error"), wxOK, mainWin);
                     return;
                 };
-                wxMessageBox(_("The assistant did not complete successfully. Please check the resulting project file."),
-                    _("Warning"), wxOK | wxICON_INFORMATION, mainWin);
+                hugin_utils::HuginMessageBox(_("The assistant did not complete successfully. Please check the resulting project file."),
+                    _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
             };
         }
         else
         {
-            wxMessageBox(_("The assistant did not complete successfully. Please check the resulting project file."),
-                _("Warning"), wxOK | wxICON_INFORMATION, mainWin);
+            hugin_utils::HuginMessageBox(_("The assistant did not complete successfully. Please check the resulting project file."),
+                _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
         };
     };
 };
@@ -2583,7 +2515,7 @@ void MainFrame::OnSendToAssistantQueue(wxCommandEvent &e)
         if (err != noErr)
         {
             // error, can't find PTBatcherGUI
-            wxMessageBox(wxString::Format(_("External program %s not found in the bundle, reverting to system path"), wxT("open")), _("Error"));
+            hugin_utils::HuginMessageBox(wxString::Format(_("External program %s not found in the bundle, reverting to system path"), "open"), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
             // Possibly a silly attempt otherwise the previous would have worked as well, but just try it.
             wxExecute(_T("open -b net.sourceforge.hugin.PTBatcherGUI ")+hugin_utils::wxQuoteFilename(projectFile));
             return;
@@ -2595,7 +2527,7 @@ void MainFrame::OnSendToAssistantQueue(wxCommandEvent &e)
         if (err != noErr || isDir)
         {
             // Something went wrong.
-            wxMessageBox(wxString::Format(_("Project file not found"), wxT("open")), _("Error"));
+            hugin_utils::HuginMessageBox(wxString::Format(_("Project file not found"), "open"), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
             return;
         }
         launchSpec.appRef = &appRef;
@@ -2610,7 +2542,7 @@ void MainFrame::OnSendToAssistantQueue(wxCommandEvent &e)
         {  
             // Should be ok if it's in progress... I think. 
             // Launch failed.
-            wxMessageBox(wxString::Format(_("Can't launch PTBatcherGui"), wxT("open")), _("Error"));
+            hugin_utils::HuginMessageBox(wxString::Format(_("Can't launch PTBatcherGui"), "open"), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
             return;
         }
 
@@ -2618,12 +2550,12 @@ void MainFrame::OnSendToAssistantQueue(wxCommandEvent &e)
         if (FSCompareFSRefs(&appRef, &actuallyLaunched) != noErr)
         {
             // error, lauched the wrong thing.
-            wxMessageBox(wxString::Format(_("Launched incorrect programme"), wxT("open")), _("Error"));
+            hugin_utils::HuginMessageBox(wxString::Format(_("Launched incorrect programme"), "open"), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
             return;
         }
 #else
         const wxFileName exePath(wxStandardPaths::Get().GetExecutablePath());
-        wxExecute(exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + wxT("PTBatcherGUI -a ")+hugin_utils::wxQuoteFilename(projectFile));
+        wxExecute(exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + "PTBatcherGUI -a "+hugin_utils::wxQuoteFilename(projectFile));
 #endif
     }
 };

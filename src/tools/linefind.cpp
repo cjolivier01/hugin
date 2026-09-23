@@ -80,18 +80,16 @@ void convertToUInt8(SrcIMG& src, const std::string& origType, vigra::UInt8RGBIma
     dest.resize(src.size());
     long newMax=vigra_ext::getMaxValForPixelType("UINT8");
     // float needs to be from min ... max.
-    if (origType == "FLOAT" || origType == "DOUBLE")
+    if (origType == "FLOAT" || origType == "DOUBLE" || origType == "UINT32" || origType == "INT32")
     {
-        /** @TODO this convert routine scale the input values range into the full scale of UInt16
+        /** @TODO this convert routine scale the input values range into the full scale of UInt8
          *  this is not fully correct
          */
-        vigra::RGBToGrayAccessor<vigra::RGBValue<float> > ga;
-        vigra::FindMinMax<float> minmax;   // init functor
-        vigra::inspectImage(srcImageRange(src, ga),
-                            minmax);
-        double minVal = minmax.min;
-        double maxVal = minmax.max;
-        vigra_ext::applyMapping(srcImageRange(src), destImage(dest), minVal, maxVal, 0);
+        vigra::FindAverageAndVariance<float> mean;   // init functor
+        vigra::inspectImage(srcImageRange(src, vigra::RGBToGrayAccessor<typename SrcIMG::PixelType>()), mean);
+        const double minVal = std::max(mean.average() - 3 * sqrt(mean.variance()), 1e-6f);
+        const double maxVal = mean.average() + 3 * sqrt(mean.variance());
+        vigra_ext::applyMapping(srcImageRange(src), destImage(dest), minVal, maxVal, 1);
     }
     else
     {
@@ -106,16 +104,16 @@ void convertGrayToUInt8(SrcIMG& src, const std::string& origType, vigra::BImage&
     dest.resize(src.size());
     long newMax=vigra_ext::getMaxValForPixelType("UINT8");
     // float needs to be from min ... max.
-    if (origType == "FLOAT" || origType == "DOUBLE")
+    if (origType == "FLOAT" || origType == "DOUBLE" || origType == "UINT32" || origType == "INT32")
     {
         /** @TODO this convert routine scale the input values range into the full scale of UInt16
          *  this is not fully correct
          */
-        vigra::FindMinMax<float> minmax;   // init functor
-        vigra::inspectImage(srcImageRange(src), minmax);
-        double minVal = minmax.min;
-        double maxVal = minmax.max;
-        vigra_ext::applyMapping(srcImageRange(src), destImage(dest), minVal, maxVal, 0);
+        vigra::FindAverageAndVariance<float> mean;   // init functor
+        vigra::inspectImage(srcImageRange(src), mean);
+        const double minVal = std::max(mean.average() - 3 * sqrt(mean.variance()), 1e-6f);
+        const double maxVal = mean.average() + 3 * sqrt(mean.variance());
+        vigra_ext::applyMapping(srcImageRange(src), destImage(dest), minVal, maxVal, 1);
     }
     else
     {

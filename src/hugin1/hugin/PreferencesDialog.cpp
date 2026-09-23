@@ -32,6 +32,7 @@
 
 #include "base_wx/wxPlatform.h"
 #include "base_wx/LensTools.h"
+#include "base_wx/wxutils.h"
 
 #include "hugin/huginApp.h"
 #include "hugin/config_defaults.h"
@@ -56,60 +57,13 @@
 #define MY_G_BOOL_VAL(id)  XRCCTRL(*this, id, wxCheckBox)->GetValue()
 #define MY_G_CHOICE_VAL(id)  XRCCTRL(*this, id, wxChoice)->GetSelection()
 
-
-
-BEGIN_EVENT_TABLE(PreferencesDialog, wxDialog)
-    EVT_BUTTON(wxID_OK, PreferencesDialog::OnOk)
-    EVT_BUTTON(wxID_HELP, PreferencesDialog::OnHelp)
-    EVT_BUTTON(wxID_CANCEL, PreferencesDialog::OnCancel)
-    EVT_BUTTON(XRCID("prefs_defaults"), PreferencesDialog::OnRestoreDefaults)
-    EVT_BUTTON(XRCID("prefs_enblend_select"), PreferencesDialog::OnEnblendExe)
-    EVT_BUTTON(XRCID("prefs_enblend_enfuse_select"), PreferencesDialog::OnEnfuseExe)
-    EVT_BUTTON(XRCID("pref_raw_dcraw_exe_select"), PreferencesDialog::OnDcrawExe)
-    EVT_BUTTON(XRCID("pref_raw_rt_exe_select"), PreferencesDialog::OnRawTherapeeExe)
-    EVT_BUTTON(XRCID("pref_raw_darktable_exe_select"), PreferencesDialog::OnDarktableExe)
-    EVT_BUTTON(XRCID("pref_exiftool_argfile_choose"), PreferencesDialog::OnExifArgfileChoose)
-    EVT_BUTTON(XRCID("pref_exiftool_argfile_edit"), PreferencesDialog::OnExifArgfileEdit)
-    EVT_BUTTON(XRCID("pref_exiftool_argfile2_choose"), PreferencesDialog::OnExifArgfile2Choose)
-    EVT_BUTTON(XRCID("pref_exiftool_argfile2_edit"), PreferencesDialog::OnExifArgfile2Edit)
-    EVT_CHECKBOX(XRCID("pref_exiftool_metadata"), PreferencesDialog::OnExifTool)
-    EVT_CHECKBOX(XRCID("prefs_ft_RotationSearch"), PreferencesDialog::OnRotationCheckBox)
-    EVT_CHECKBOX(XRCID("prefs_enblend_Custom"), PreferencesDialog::OnCustomEnblend)
-    EVT_CHECKBOX(XRCID("prefs_enblend_enfuseCustom"), PreferencesDialog::OnCustomEnfuse)
-    EVT_CHECKBOX(XRCID("pref_ass_output"), PreferencesDialog::OnUserDefinedOutputOptionsCheckBox)
-    EVT_BUTTON(XRCID("pref_ass_change_output"), PreferencesDialog::OnChangeUserDefinedOutputOptions)
-    EVT_BUTTON(XRCID("pref_cpdetector_new"), PreferencesDialog::OnCPDetectorAdd)
-    EVT_BUTTON(XRCID("pref_cpdetector_edit"), PreferencesDialog::OnCPDetectorEdit)
-    EVT_BUTTON(XRCID("pref_cpdetector_del"), PreferencesDialog::OnCPDetectorDelete)
-    EVT_BUTTON(XRCID("pref_cpdetector_moveup"), PreferencesDialog::OnCPDetectorMoveUp)
-    EVT_BUTTON(XRCID("pref_cpdetector_movedown"), PreferencesDialog::OnCPDetectorMoveDown)
-    EVT_BUTTON(XRCID("pref_cpdetector_default"), PreferencesDialog::OnCPDetectorDefault)
-    EVT_LISTBOX_DCLICK(XRCID("pref_cpdetector_list"), PreferencesDialog::OnCPDetectorListDblClick)
-    EVT_BUTTON(XRCID("pref_cpdetector_load"), PreferencesDialog::OnCPDetectorLoad)
-    EVT_BUTTON(XRCID("pref_cpdetector_save"), PreferencesDialog::OnCPDetectorSave)
-    EVT_CHOICE(XRCID("pref_ldr_output_file_format"), PreferencesDialog::OnFileFormatChanged)
-    EVT_CHOICE(XRCID("pref_processor_gui"), PreferencesDialog::OnProcessorChanged)
-    EVT_CHOICE(XRCID("pref_default_blender"), PreferencesDialog::OnBlenderChanged)
-    EVT_TEXT(XRCID("prefs_project_filename"), PreferencesDialog::OnUpdateProjectFilename)
-    EVT_TEXT(XRCID("prefs_output_filename"), PreferencesDialog::OnUpdateOutputFilename)
-END_EVENT_TABLE()
-
-
 PreferencesDialog::PreferencesDialog(wxWindow* parent)
 //: wxDialog(parent, -1, _("Preferences - hugin"))
 {
     DEBUG_TRACE("");
     // load our children. some children might need special
     // initialization. this will be done later.
-    wxXmlResource::Get()->LoadDialog(this, parent, wxT("pref_dialog"));
-
-#ifdef __WXMSW__
-    wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + wxT("data/hugin.ico"),wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(huginApp::Get()->GetXRCPath() + wxT("data/hugin.png"),wxBITMAP_TYPE_PNG);
-    SetIcon(myIcon);
-#endif
+    wxXmlResource::Get()->LoadDialog(this, parent, "pref_dialog");
 
     // Custom setup ( stuff that can not be done in XRC )
     XRCCTRL(*this, "prefs_ft_RotationStartAngle", wxSpinCtrl)->SetRange(-180,0);
@@ -227,25 +181,55 @@ PreferencesDialog::PreferencesDialog(wxWindow* parent)
     // load autopano settings
     wxConfigBase* cfg = wxConfigBase::Get();
     m_CPDetectorList = XRCCTRL(*this, "pref_cpdetector_list", wxListBox);
+    m_CPDetectorList->Bind(wxEVT_LEFT_DCLICK, [this](wxMouseEvent& e) {
+        wxCommandEvent evt; this->OnCPDetectorEdit(evt); });
     cpdetector_config_edit.Read(cfg);
+
+#if defined __APPLE__ && defined __aarch64__
+    {
+        // disable GPU remapping checkbox on ARM Macs, GPU code is not working on these systems
+        wxCheckBox* gpuCheckBox = XRCCTRL(*this, "prefs_nona_useGpu", wxCheckBox);
+        gpuCheckBox->Disable();
+        gpuCheckBox->SetValue(false);
+        cfg->Write("/Nona/UseGPU", false);
+        gpuCheckBox->Hide();
+    }
+#endif
 
     // Load configuration values from wxConfig
     UpdateDisplayData(0);
 
-#ifdef __WXMSW__
-    // wxFrame does have a strange background color on Windows, copy color from a child widget
-    this->SetBackgroundColour(XRCCTRL(*this, "prefs_tab", wxNotebook)->GetBackgroundColour());
-#endif
-
-    wxCheckBox* show_hints=XRCCTRL(*this,"pref_show_projection_hints",wxCheckBox);
-    show_hints->Enable(true);
-    show_hints->Show(true);
-    show_hints->Update();
     Update();
-
     GetSizer()->SetSizeHints(this);
-    //    GetSizer()->Layout();
-
+    // bind all event handler for buttons and boxes
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnEnblendExe, this, XRCID("prefs_enblend_select"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnEnfuseExe, this, XRCID("prefs_enblend_enfuse_select"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnDcrawExe, this, XRCID("pref_raw_dcraw_exe_select"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnRawTherapeeExe, this, XRCID("pref_raw_rt_exe_select"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnDarktableExe, this, XRCID("pref_raw_darktable_exe_select"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnExifArgfileChoose, this, XRCID("pref_exiftool_argfile_choose"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnExifArgfileEdit, this, XRCID("pref_exiftool_argfile_edit"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnExifArgfile2Choose, this, XRCID("pref_exiftool_argfile2_choose"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnExifArgfile2Edit, this, XRCID("pref_exiftool_argfile2_edit"));
+    Bind(wxEVT_CHECKBOX, &PreferencesDialog::OnExifTool, this, XRCID("pref_exiftool_metadata"));
+    Bind(wxEVT_CHECKBOX, &PreferencesDialog::OnRotationCheckBox, this, XRCID("prefs_ft_RotationSearch"));
+    Bind(wxEVT_CHECKBOX, &PreferencesDialog::OnCustomEnblend, this, XRCID("prefs_enblend_Custom"));
+    Bind(wxEVT_CHECKBOX, &PreferencesDialog::OnCustomEnfuse, this, XRCID("prefs_enblend_enfuseCustom"));
+    Bind(wxEVT_CHECKBOX, &PreferencesDialog::OnUserDefinedOutputOptionsCheckBox, this, XRCID("pref_ass_output"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnChangeUserDefinedOutputOptions, this, XRCID("pref_ass_change_output"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnCPDetectorAdd, this, XRCID("pref_cpdetector_new"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnCPDetectorEdit, this, XRCID("pref_cpdetector_edit"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnCPDetectorDelete, this, XRCID("pref_cpdetector_del"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnCPDetectorMoveUp, this, XRCID("pref_cpdetector_moveup"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnCPDetectorMoveDown, this, XRCID("pref_cpdetector_movedown"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnCPDetectorDefault, this, XRCID("pref_cpdetector_default"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnCPDetectorLoad, this, XRCID("pref_cpdetector_load"));
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnCPDetectorSave, this, XRCID("pref_cpdetector_save"));
+    Bind(wxEVT_CHOICE, &PreferencesDialog::OnFileFormatChanged, this, XRCID("pref_ldr_output_file_format"));
+    Bind(wxEVT_CHOICE, &PreferencesDialog::OnProcessorChanged, this, XRCID("pref_processor_gui"));
+    Bind(wxEVT_CHOICE, &PreferencesDialog::OnBlenderChanged, this, XRCID("pref_default_blender"));
+    Bind(wxEVT_TEXT, &PreferencesDialog::OnUpdateProjectFilename, this, XRCID("prefs_project_filename"));
+    Bind(wxEVT_TEXT, &PreferencesDialog::OnUpdateOutputFilename, this, XRCID("prefs_output_filename"));
 
     // only enable bundled if the build is actually bundled.
 #if defined __WXMSW__ || defined MAC_SELF_CONTAINED_BUNDLE
@@ -253,14 +237,18 @@ PreferencesDialog::PreferencesDialog(wxWindow* parent)
 #else
     MY_BOOL_VAL("prefs_enblend_Custom", HUGIN_ENBLEND_EXE_CUSTOM);
     XRCCTRL(*this, "prefs_enblend_Custom", wxCheckBox)->Hide();
-    cfg->Write(wxT("/Enblend/Custom"), HUGIN_ENBLEND_EXE_CUSTOM);
+    cfg->Write("/Enblend/Custom", HUGIN_ENBLEND_EXE_CUSTOM);
 
     MY_BOOL_VAL("prefs_enblend_enfuseCustom", HUGIN_ENFUSE_EXE_CUSTOM);
     XRCCTRL(*this, "prefs_enblend_enfuseCustom", wxCheckBox)->Hide();
-    cfg->Write(wxT("/Enfuse/Custom"), HUGIN_ENFUSE_EXE_CUSTOM);
+    cfg->Write("/Enfuse/Custom", HUGIN_ENFUSE_EXE_CUSTOM);
 #endif
 
-    RestoreFramePosition(this, wxT("PreferencesDialog"));
+    hugin_utils::RestoreFramePosition(this, "PreferencesDialog");
+    // event handler for default buttons
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnOk, this, wxID_OK);
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnHelp, this, wxID_HELP);
+    Bind(wxEVT_BUTTON, &PreferencesDialog::OnRestoreDefaults, this, XRCID("prefs_defaults"));
 }
 
 
@@ -268,7 +256,7 @@ PreferencesDialog::~PreferencesDialog()
 {
     DEBUG_TRACE("begin dtor");
 
-    StoreFramePosition(this, wxT("PreferencesDialog"));
+    hugin_utils::StoreFramePosition(this, "PreferencesDialog");
 
     // delete custom list data
     wxChoice* lang_choice = XRCCTRL(*this, "prefs_gui_language", wxChoice);
@@ -286,14 +274,9 @@ void PreferencesDialog::OnOk(wxCommandEvent& e)
     this->EndModal(wxOK);
 }
 
-void PreferencesDialog::OnCancel(wxCommandEvent& e)
-{
-    this->EndModal(wxCANCEL);
-}
-
 void PreferencesDialog::OnHelp(wxCommandEvent& e)
 {
-    MainFrame::Get()->DisplayHelp(wxT("Hugin_Preferences.html"));
+    MainFrame::Get()->DisplayHelp("Hugin_Preferences.html");
 };
 
 void PreferencesDialog::OnRotationCheckBox(wxCommandEvent& e)
@@ -304,11 +287,11 @@ void PreferencesDialog::OnRotationCheckBox(wxCommandEvent& e)
 void PreferencesDialog::OnEnblendExe(wxCommandEvent& e)
 {
     wxFileDialog dlg(this,_("Select Enblend"),
-                     wxT(""), wxT(HUGIN_ENBLEND_EXE),
+                     wxEmptyString, HUGIN_ENBLEND_EXE,
 #ifdef __WXMSW__
                      _("Executables (*.exe)|*.exe"),
 #else
-                     wxT("*"),
+                     "*",
 #endif
                      wxFD_OPEN, wxDefaultPosition);
     if (dlg.ShowModal() == wxID_OK)
@@ -321,11 +304,11 @@ void PreferencesDialog::OnEnblendExe(wxCommandEvent& e)
 void PreferencesDialog::OnEnfuseExe(wxCommandEvent& e)
 {
     wxFileDialog dlg(this,_("Select Enfuse"),
-                     wxT(""), wxT(HUGIN_ENFUSE_EXE),
+                     wxEmptyString, HUGIN_ENFUSE_EXE,
 #ifdef __WXMSW__
                      _("Executables (*.exe)|*.exe"),
 #else
-                     wxT("*"),
+                     "*",
 #endif
                      wxFD_OPEN, wxDefaultPosition);
     if (dlg.ShowModal() == wxID_OK)
@@ -342,7 +325,7 @@ void PreferencesDialog::OnDcrawExe(wxCommandEvent & e)
 #ifdef __WXMSW__
         _("Executables (*.exe)|*.exe"),
 #else
-        wxT("*"),
+        "*",
 #endif
         wxFD_OPEN, wxDefaultPosition);
     if (dlg.ShowModal() == wxID_OK)
@@ -358,7 +341,7 @@ void PreferencesDialog::OnRawTherapeeExe(wxCommandEvent & e)
 #ifdef __WXMSW__
         _("Executables (*.exe)|*.exe"),
 #else
-        wxT("*"),
+        "*",
 #endif
         wxFD_OPEN, wxDefaultPosition);
     if (dlg.ShowModal() == wxID_OK)
@@ -374,7 +357,7 @@ void PreferencesDialog::OnDarktableExe(wxCommandEvent & e)
 #ifdef __WXMSW__
         _("Executables (*.exe)|*.exe"),
 #else
-        wxT("*"),
+        "*",
 #endif
         wxFD_OPEN, wxDefaultPosition);
     if (dlg.ShowModal() == wxID_OK)
@@ -399,7 +382,7 @@ void PreferencesDialog::OnCustomEnfuse(wxCommandEvent& e)
 void PreferencesDialog::OnExifArgfileChoose(wxCommandEvent & e)
 {
     wxFileDialog dlg(this,_("Select ExifTool argfile"),
-                     wxT(""), XRCCTRL(*this, "pref_exiftool_argfile", wxTextCtrl)->GetValue(), 
+                     wxEmptyString, XRCCTRL(*this, "pref_exiftool_argfile", wxTextCtrl)->GetValue(), 
                      _("ExifTool Argfiles (*.arg)|*.arg|All Files(*)|*"),
                      wxFD_OPEN, wxDefaultPosition);
     if (dlg.ShowModal() == wxID_OK)
@@ -436,13 +419,13 @@ void PreferencesDialog::OnExifArgfileEdit(wxCommandEvent & e)
         file.Normalize(wxPATH_NORM_ABSOLUTE | wxPATH_NORM_DOTS | wxPATH_NORM_TILDE | wxPATH_NORM_SHORTCUT);
         if(!file.Exists())
         {
-            if( wxMessageBox(wxString::Format(_("File %s does not exist.\nShould the argfile be created with default tags?"),filename.c_str()),
-                  _("Exiftool argfile"), wxYES_NO  | wxICON_EXCLAMATION,this)!=wxYES)
+            if (hugin_utils::HuginMessageBox(wxString::Format(_("Argfile %s does not exist.\nShould the argfile be created with default tags?"), filename),
+                _("Hugin"), wxYES_NO | wxICON_EXCLAMATION, this) != wxYES)
             {
                 return;
             };
             filename = file.GetFullPath();
-            CreateNewArgFile(filename, MainFrame::Get()->GetDataPath() + wxT("hugin_exiftool_copy.arg"));
+            CreateNewArgFile(filename, MainFrame::Get()->GetDataPath() + "hugin_exiftool_copy.arg");
         }
         else
         {
@@ -451,13 +434,13 @@ void PreferencesDialog::OnExifArgfileEdit(wxCommandEvent & e)
     }
     else
     {
-        if( wxMessageBox(_("No file selected.\nShould an argfile be created with default tags?"),
-                _("Exiftool argfile"), wxYES_NO  | wxICON_EXCLAMATION,this)!=wxYES)
+        if (hugin_utils::HuginMessageBox(_("No file selected.\nShould an argfile be created with default tags?"),
+            _("Hugin"), wxYES_NO | wxICON_EXCLAMATION, this) != wxYES)
         {
             return;
         };
         wxFileDialog dlg(this,_("Select new ExifTool argfile"),
-            wxStandardPaths::Get().GetUserConfigDir(), wxT(""),
+            wxStandardPaths::Get().GetUserConfigDir(), wxEmptyString,
                          _("ExifTool Argfiles (*.arg)|*.arg|All Files(*)|*"),
                          wxFD_SAVE | wxFD_OVERWRITE_PROMPT, wxDefaultPosition);
         if (dlg.ShowModal() != wxID_OK)
@@ -465,29 +448,29 @@ void PreferencesDialog::OnExifArgfileEdit(wxCommandEvent & e)
             return;
         };
         filename=dlg.GetPath();
-        CreateNewArgFile(filename, MainFrame::Get()->GetDataPath() + wxT("hugin_exiftool_copy.arg"));
+        CreateNewArgFile(filename, MainFrame::Get()->GetDataPath() + "hugin_exiftool_copy.arg");
     };
     XRCCTRL(*this, "pref_exiftool_argfile", wxTextCtrl)->SetValue(filename);
     wxDialog edit_dlg;
-    wxXmlResource::Get()->LoadDialog(&edit_dlg, this, wxT("pref_edit_argfile"));
-    RestoreFramePosition(&edit_dlg, wxT("EditArgfile"));
+    wxXmlResource::Get()->LoadDialog(&edit_dlg, this, "pref_edit_argfile");
+    hugin_utils::RestoreFramePosition(&edit_dlg, "EditArgfile");
     wxTextCtrl* argfileControl=XRCCTRL(edit_dlg, "pref_edit_textcontrol", wxTextCtrl);
     argfileControl->LoadFile(filename);
     if(edit_dlg.ShowModal() == wxID_OK)
     {
         if(!argfileControl->SaveFile(filename))
         {
-            wxMessageBox(wxString::Format(_("Could not save file \"%s\"."), filename.c_str()),
-                _("Error"), wxOK | wxICON_ERROR);
+            hugin_utils::HuginMessageBox(wxString::Format(_("Could not save file \"%s\"."), filename),
+                _("Hugin"), wxOK | wxICON_ERROR, this);
         };
-        StoreFramePosition(&edit_dlg, wxT("EditArgfile"));
+        hugin_utils::StoreFramePosition(&edit_dlg, "EditArgfile");
     };
 };
 
 void PreferencesDialog::OnExifArgfile2Choose(wxCommandEvent & e)
 {
     wxFileDialog dlg(this, _("Select ExifTool argfile"),
-        wxT(""), XRCCTRL(*this, "pref_exiftool_argfile2", wxTextCtrl)->GetValue(),
+        wxEmptyString, XRCCTRL(*this, "pref_exiftool_argfile2", wxTextCtrl)->GetValue(),
         _("ExifTool Argfiles (*.arg)|*.arg|All Files(*)|*"),
         wxFD_OPEN, wxDefaultPosition);
     if (dlg.ShowModal() == wxID_OK)
@@ -506,13 +489,13 @@ void PreferencesDialog::OnExifArgfile2Edit(wxCommandEvent & e)
         file.Normalize(wxPATH_NORM_ABSOLUTE | wxPATH_NORM_DOTS | wxPATH_NORM_TILDE | wxPATH_NORM_SHORTCUT);
         if (!file.Exists())
         {
-            if (wxMessageBox(wxString::Format(_("File %s does not exist.\nShould an example argfile be created?"), filename.c_str()),
-                _("Exiftool argfile"), wxYES_NO | wxICON_EXCLAMATION, this) != wxYES)
+            if (hugin_utils::HuginMessageBox(wxString::Format(_("File %s does not exist.\nShould an example argfile be created?"), filename),
+                _("Hugin"), wxYES_NO | wxICON_EXCLAMATION, this) != wxYES)
             {
                 return;
             };
             filename = file.GetFullPath();
-            CreateNewArgFile(filename, MainFrame::Get()->GetDataPath() + wxT("hugin_exiftool_final_example.arg"));
+            CreateNewArgFile(filename, MainFrame::Get()->GetDataPath() + "hugin_exiftool_final_example.arg");
         }
         else
         {
@@ -521,13 +504,13 @@ void PreferencesDialog::OnExifArgfile2Edit(wxCommandEvent & e)
     }
     else
     {
-        if (wxMessageBox(_("No file selected.\nShould an example argfile be created?"),
-            _("Exiftool argfile"), wxYES_NO | wxICON_EXCLAMATION, this) != wxYES)
+        if (hugin_utils::HuginMessageBox(_("No file selected.\nShould an example argfile be created?"),
+            _("Hugin"), wxYES_NO | wxICON_EXCLAMATION, this) != wxYES)
         {
             return;
         };
         wxFileDialog dlg(this, _("Select new ExifTool argfile"),
-            wxStandardPaths::Get().GetUserConfigDir(), wxT(""),
+            wxStandardPaths::Get().GetUserConfigDir(), wxEmptyString,
             _("ExifTool Argfiles (*.arg)|*.arg|All Files(*)|*"),
             wxFD_SAVE | wxFD_OVERWRITE_PROMPT, wxDefaultPosition);
         if (dlg.ShowModal() != wxID_OK)
@@ -535,22 +518,22 @@ void PreferencesDialog::OnExifArgfile2Edit(wxCommandEvent & e)
             return;
         };
         filename = dlg.GetPath();
-        CreateNewArgFile(filename, MainFrame::Get()->GetDataPath() + wxT("hugin_exiftool_final_example.arg"));
+        CreateNewArgFile(filename, MainFrame::Get()->GetDataPath() + "hugin_exiftool_final_example.arg");
     };
     XRCCTRL(*this, "pref_exiftool_argfile2", wxTextCtrl)->SetValue(filename);
     wxDialog edit_dlg;
-    wxXmlResource::Get()->LoadDialog(&edit_dlg, this, wxT("pref_edit_argfile_placeholders"));
-    RestoreFramePosition(&edit_dlg, wxT("EditArgfilePlaceholders"));
+    wxXmlResource::Get()->LoadDialog(&edit_dlg, this, "pref_edit_argfile_placeholders");
+    hugin_utils::RestoreFramePosition(&edit_dlg, "EditArgfilePlaceholders");
     wxTextCtrl* argfileControl = XRCCTRL(edit_dlg, "pref_edit_textcontrol", wxTextCtrl);
     argfileControl->LoadFile(filename);
     if (edit_dlg.ShowModal() == wxID_OK)
     {
         if (!argfileControl->SaveFile(filename))
         {
-            wxMessageBox(wxString::Format(_("Could not save file \"%s\"."), filename.c_str()),
-                _("Error"), wxOK | wxICON_ERROR);
+            hugin_utils::HuginMessageBox(wxString::Format(_("Could not save file \"%s\"."), filename),
+                _("Hugin"), wxOK | wxICON_ERROR, this);
         };
-        StoreFramePosition(&edit_dlg, wxT("EditArgfilePlaceholders"));
+        hugin_utils::StoreFramePosition(&edit_dlg, "EditArgfilePlaceholders");
     };
 };
 
@@ -588,10 +571,10 @@ void PreferencesDialog::UpdateDisplayData(int panel)
     if (panel==0 || panel == 1)
     {
         // memory setting
-        unsigned long long mem = cfg->Read(wxT("/ImageCache/UpperBound"), HUGIN_IMGCACHE_UPPERBOUND);
+        unsigned long long mem = cfg->Read("/ImageCache/UpperBound", HUGIN_IMGCACHE_UPPERBOUND);
 #ifdef __WXMSW__
-        unsigned long mem_low = cfg->Read(wxT("/ImageCache/UpperBound"), HUGIN_IMGCACHE_UPPERBOUND);
-        unsigned long mem_high = cfg->Read(wxT("/ImageCache/UpperBoundHigh"), (long) 0);
+        unsigned long mem_low = cfg->Read("/ImageCache/UpperBound", HUGIN_IMGCACHE_UPPERBOUND);
+        unsigned long mem_high = cfg->Read("/ImageCache/UpperBoundHigh", (long) 0);
         if (mem_high > 0)
         {
             mem = ((unsigned long long) mem_high << 32) + mem_low;
@@ -606,9 +589,10 @@ void PreferencesDialog::UpdateDisplayData(int panel)
         // language
         // check if current language is in list and activate it then.
         wxChoice* lang_choice = XRCCTRL(*this, "prefs_gui_language", wxChoice);
-        int curlang = cfg->Read(wxT("language"), HUGIN_LANGUAGE);
+        int curlang = cfg->Read("language", HUGIN_LANGUAGE);
         bool found = false;
         int idx = 0;
+        int idxDefault = 0;
         for (int i = 0; i < (int)lang_choice->GetCount(); i++)
         {
             long lang = * static_cast<long*>(lang_choice->GetClientData(i));
@@ -616,6 +600,10 @@ void PreferencesDialog::UpdateDisplayData(int panel)
             {
                 found = true;
                 idx = i;
+            }
+            if (lang == wxLANGUAGE_DEFAULT)
+            {
+                idxDefault=i;
             }
         }
         if (found)
@@ -628,17 +616,19 @@ void PreferencesDialog::UpdateDisplayData(int panel)
         {
             // unknown language selected..
             DEBUG_WARN("Unknown language configured");
+            // select default language
+            lang_choice->SetSelection(idxDefault);
         }
 
         // smart undo
-        t = cfg->Read(wxT("smartUndo"), HUGIN_SMART_UNDO) == 1;
+        t = cfg->Read("smartUndo", HUGIN_SMART_UNDO) == 1;
         MY_BOOL_VAL("prefs_smart_undo", t);
 
         // copy log to clipboard
-        t = cfg->Read(wxT("CopyLogToClipboard"), 0l) == 1;
+        t = cfg->Read("CopyLogToClipboard", 0l) == 1;
         MY_BOOL_VAL("prefs_copy_log", t);
 
-        t = cfg->Read(wxT("/GLPreviewFrame/ShowProjectionHints"), HUGIN_SHOW_PROJECTION_HINTS) == 1;
+        t = cfg->Read("/GLPreviewFrame/ShowProjectionHints", HUGIN_SHOW_PROJECTION_HINTS) == 1;
         MY_BOOL_VAL("pref_show_projection_hints", t);
         // auto-rotate
         t = cfg->Read("/CPEditorPanel/AutoRot", 1l) == 1;
@@ -654,16 +644,16 @@ void PreferencesDialog::UpdateDisplayData(int panel)
     if(panel==0 || panel==2)
     {
         // tempdir
-        MY_STR_VAL("prefs_misc_tempdir", cfg->Read(wxT("tempDir"),wxT("")));
+        MY_STR_VAL("prefs_misc_tempdir", cfg->Read("tempDir",wxEmptyString));
         // default filenames
-        wxString filename=cfg->Read(wxT("ProjectFilename"), wxT(HUGIN_DEFAULT_PROJECT_NAME));
+        wxString filename=cfg->Read("ProjectFilename", HUGIN_DEFAULT_PROJECT_NAME);
 #ifdef __WXMSW__
-        filename.Replace(wxT("/"),wxT("\\"),true);
+        filename.Replace("/","\\",true);
 #endif
         MY_STR_VAL("prefs_project_filename", filename);
-        filename=cfg->Read(wxT("OutputFilename"), wxT(HUGIN_DEFAULT_OUTPUT_NAME));
+        filename=cfg->Read("OutputFilename", HUGIN_DEFAULT_OUTPUT_NAME);
 #ifdef __WXMSW__
-        filename.Replace(wxT("/"),wxT("\\"),true);
+        filename.Replace("/","\\",true);
 #endif
         MY_STR_VAL("prefs_output_filename", filename);
     }
@@ -671,22 +661,22 @@ void PreferencesDialog::UpdateDisplayData(int panel)
     if (panel==0 || panel == 3)
     {
         // Assistant settings
-        t = cfg->Read(wxT("/Assistant/autoAlign"), HUGIN_ASS_AUTO_ALIGN) == 1;
+        t = cfg->Read("/Assistant/autoAlign", HUGIN_ASS_AUTO_ALIGN) == 1;
         MY_BOOL_VAL("prefs_ass_autoAlign", t);
-        t = cfg->Read(wxT("/General/IgnoreFovRectilinearOnAdd"), 1l) == 1l;
+        t = cfg->Read("/General/IgnoreFovRectilinearOnAdd", 1l) == 1l;
         MY_BOOL_VAL("prefs_ass_loadFovRectilinear", !t);
         MY_SPIN_VAL("prefs_ass_nControlPoints",
-                    cfg->Read(wxT("/Assistant/nControlPoints"), HUGIN_ASS_NCONTROLPOINTS));
+                    cfg->Read("/Assistant/nControlPoints", HUGIN_ASS_NCONTROLPOINTS));
         double factor = HUGIN_ASS_PANO_DOWNSIZE_FACTOR;
-        cfg->Read(wxT("/Assistant/panoDownsizeFactor"), &factor);
+        cfg->Read("/Assistant/panoDownsizeFactor", &factor);
         MY_SPIN_VAL("prefs_ass_panoDownsizeFactor",(int)(factor*100.0));
-        t = cfg->Read(wxT("/Assistant/Linefind"), HUGIN_ASS_LINEFIND) == 1;
+        t = cfg->Read("/Assistant/Linefind", HUGIN_ASS_LINEFIND) == 1;
         MY_BOOL_VAL("prefs_ass_linefind", t);
-        t = cfg->Read(wxT("/Celeste/Auto"), HUGIN_CELESTE_AUTO) == 1;
+        t = cfg->Read("/Celeste/Auto", HUGIN_CELESTE_AUTO) == 1;
         MY_BOOL_VAL("prefs_celeste_auto", t);
-        t = cfg->Read(wxT("/Assistant/AutoCPClean"), HUGIN_ASS_AUTO_CPCLEAN) == 1;
+        t = cfg->Read("/Assistant/AutoCPClean", HUGIN_ASS_AUTO_CPCLEAN) == 1;
         MY_BOOL_VAL("prefs_auto_cpclean", t);
-        t = cfg->Read(wxT("/Assistant/UserDefinedOutputOption"), 0l) == 1;
+        t = cfg->Read("/Assistant/UserDefinedOutputOption", 0l) == 1;
         MY_BOOL_VAL("pref_ass_output", t);
         wxCommandEvent dummy;
         OnUserDefinedOutputOptionsCheckBox(dummy);
@@ -696,44 +686,44 @@ void PreferencesDialog::UpdateDisplayData(int panel)
     if (panel==0 || panel == 4)
     {
         // hdr display settings
-        MY_CHOICE_VAL("prefs_misc_hdr_mapping", cfg->Read(wxT("/ImageCache/Mapping"), HUGIN_IMGCACHE_MAPPING_FLOAT));
-        //MY_CHOICE_VAL("prefs_misc_hdr_range", cfg->Read(wxT("/ImageCache/Range"), HUGIN_IMGCACHE_RANGE));
+        MY_CHOICE_VAL("prefs_misc_hdr_mapping", cfg->Read("/ImageCache/Mapping", HUGIN_IMGCACHE_MAPPING_FLOAT));
+        //MY_CHOICE_VAL("prefs_misc_hdr_range", cfg->Read("/ImageCache/Range", HUGIN_IMGCACHE_RANGE));
 
-        int val = wxConfigBase::Get()->Read(wxT("/CPEditorPanel/MagnifierWidth"), 61l);
+        int val = wxConfigBase::Get()->Read("/CPEditorPanel/MagnifierWidth", 61l);
         val = hugin_utils::floori((val - 61) / 20);
         val = std::min(val, 3);
         XRCCTRL(*this, "prefs_misc_magnifier_width", wxChoice)->SetSelection(val);
 
 
         MY_SPIN_VAL("prefs_ft_TemplateSize",
-                    cfg->Read(wxT("/Finetune/TemplateSize"),HUGIN_FT_TEMPLATE_SIZE));
-        MY_SPIN_VAL("prefs_ft_SearchAreaPercent",cfg->Read(wxT("/Finetune/SearchAreaPercent"),
+                    cfg->Read("/Finetune/TemplateSize",HUGIN_FT_TEMPLATE_SIZE));
+        MY_SPIN_VAL("prefs_ft_SearchAreaPercent",cfg->Read("/Finetune/SearchAreaPercent",
                     HUGIN_FT_SEARCH_AREA_PERCENT));
-        MY_SPIN_VAL("prefs_ft_LocalSearchWidth", cfg->Read(wxT("/Finetune/LocalSearchWidth"),
+        MY_SPIN_VAL("prefs_ft_LocalSearchWidth", cfg->Read("/Finetune/LocalSearchWidth",
                     HUGIN_FT_LOCAL_SEARCH_WIDTH));
 
         d=HUGIN_FT_CORR_THRESHOLD;
-        cfg->Read(wxT("/Finetune/CorrThreshold"), &d, HUGIN_FT_CORR_THRESHOLD);
+        cfg->Read("/Finetune/CorrThreshold", &d, HUGIN_FT_CORR_THRESHOLD);
         tstr = hugin_utils::doubleTowxString(d);
         MY_STR_VAL("prefs_ft_CorrThreshold", tstr);
 
-        cfg->Read(wxT("/Finetune/CurvThreshold"), &d, HUGIN_FT_CURV_THRESHOLD);
+        cfg->Read("/Finetune/CurvThreshold", &d, HUGIN_FT_CURV_THRESHOLD);
         tstr = hugin_utils::doubleTowxString(d);
         MY_STR_VAL("prefs_ft_CurvThreshold", tstr);
 
-        t = cfg->Read(wxT("/Finetune/RotationSearch"), HUGIN_FT_ROTATION_SEARCH) == 1;
+        t = cfg->Read("/Finetune/RotationSearch", HUGIN_FT_ROTATION_SEARCH) == 1;
         MY_BOOL_VAL("prefs_ft_RotationSearch", t);
         EnableRotationCtrls(t);
 
         d = HUGIN_FT_ROTATION_START_ANGLE;
-        cfg->Read(wxT("/Finetune/RotationStartAngle"),&d,HUGIN_FT_ROTATION_START_ANGLE);
+        cfg->Read("/Finetune/RotationStartAngle",&d,HUGIN_FT_ROTATION_START_ANGLE);
         MY_SPIN_VAL("prefs_ft_RotationStartAngle", hugin_utils::roundi(d))
 
         d = HUGIN_FT_ROTATION_STOP_ANGLE;
-        cfg->Read(wxT("/Finetune/RotationStopAngle"), &d, HUGIN_FT_ROTATION_STOP_ANGLE);
+        cfg->Read("/Finetune/RotationStopAngle", &d, HUGIN_FT_ROTATION_STOP_ANGLE);
         MY_SPIN_VAL("prefs_ft_RotationStopAngle", hugin_utils::roundi(d));
 
-        MY_SPIN_VAL("prefs_ft_RotationSteps", cfg->Read(wxT("/Finetune/RotationSteps"),
+        MY_SPIN_VAL("prefs_ft_RotationSteps", cfg->Read("/Finetune/RotationSteps",
                     HUGIN_FT_ROTATION_STEPS));
     }
 
@@ -752,18 +742,18 @@ void PreferencesDialog::UpdateDisplayData(int panel)
     {
         /////
         /// DEFAULT OUTPUT FORMAT
-        MY_CHOICE_VAL("pref_ldr_output_file_format", cfg->Read(wxT("/output/ldr_format"), HUGIN_LDR_OUTPUT_FORMAT));
+        MY_CHOICE_VAL("pref_ldr_output_file_format", cfg->Read("/output/ldr_format", HUGIN_LDR_OUTPUT_FORMAT));
         /** HDR currently deactivated since HDR TIFF broken and only choice is EXR */
-        // MY_CHOICE_VAL("pref_hdr_output_file_format", cfg->Read(wxT("/output/hdr_format"), HUGIN_HDR_OUTPUT_FORMAT));
-        MY_CHOICE_VAL("pref_tiff_compression", cfg->Read(wxT("/output/tiff_compression"), HUGIN_TIFF_COMPRESSION));
-        MY_SPIN_VAL("pref_jpeg_quality", cfg->Read(wxT("/output/jpeg_quality"), HUGIN_JPEG_QUALITY));
+        // MY_CHOICE_VAL("pref_hdr_output_file_format", cfg->Read("/output/hdr_format", HUGIN_HDR_OUTPUT_FORMAT));
+        MY_CHOICE_VAL("pref_tiff_compression", cfg->Read("/output/tiff_compression", HUGIN_TIFF_COMPRESSION));
+        MY_SPIN_VAL("pref_jpeg_quality", cfg->Read("/output/jpeg_quality", HUGIN_JPEG_QUALITY));
         UpdateFileFormatControls();
 
         // default blender
-        SelectListValue(XRCCTRL(*this, "pref_default_blender", wxChoice), cfg->Read(wxT("/default_blender"), HUGIN_DEFAULT_BLENDER));
+        SelectListValue(XRCCTRL(*this, "pref_default_blender", wxChoice), cfg->Read("/default_blender", HUGIN_DEFAULT_BLENDER));
         // default verdandi parameters
-        const wxString defaultVerdandiArgs = cfg->Read(wxT("/VerdandiDefaultArgs"), wxEmptyString);
-        if (defaultVerdandiArgs.Find(wxT("--seam=blend")) != wxNOT_FOUND)
+        const wxString defaultVerdandiArgs = cfg->Read("/VerdandiDefaultArgs", wxEmptyString);
+        if (defaultVerdandiArgs.Find("--seam=blend") != wxNOT_FOUND)
         {
             XRCCTRL(*this, "pref_internal_blender_seam", wxChoice)->SetSelection(1);
         }
@@ -775,12 +765,12 @@ void PreferencesDialog::UpdateDisplayData(int panel)
 
         /////
         /// PROCESSOR
-        MY_CHOICE_VAL("pref_processor_gui", cfg->Read(wxT("/Processor/gui"), HUGIN_PROCESSOR_GUI));
-        t = cfg->Read(wxT("/Processor/start"), HUGIN_PROCESSOR_START) == 1;
+        MY_CHOICE_VAL("pref_processor_gui", cfg->Read("/Processor/gui", HUGIN_PROCESSOR_GUI));
+        t = cfg->Read("/Processor/start", HUGIN_PROCESSOR_START) == 1;
         MY_BOOL_VAL("pref_processor_start", t);
-        t = cfg->Read(wxT("/Processor/overwrite"), HUGIN_PROCESSOR_OVERWRITE) == 1;
+        t = cfg->Read("/Processor/overwrite", HUGIN_PROCESSOR_OVERWRITE) == 1;
         MY_BOOL_VAL("pref_processor_overwrite", t);
-        t = cfg->Read(wxT("/Processor/verbose"), HUGIN_PROCESSOR_VERBOSE) == 1;
+        t = cfg->Read("/Processor/verbose", HUGIN_PROCESSOR_VERBOSE) == 1;
         MY_BOOL_VAL("pref_processor_verbose", t);
         UpdateProcessorControls();
     }
@@ -788,16 +778,16 @@ void PreferencesDialog::UpdateDisplayData(int panel)
     if (panel == 0 || panel == 7)
     {
         // stitching (2) panel
-        t = cfg->Read(wxT("/output/useExiftool"), HUGIN_USE_EXIFTOOL) == 1;
+        t = cfg->Read("/output/useExiftool", HUGIN_USE_EXIFTOOL) == 1;
         MY_BOOL_VAL("pref_exiftool_metadata", t);
-        MY_STR_VAL("pref_exiftool_argfile", cfg->Read(wxT("/output/CopyArgfile"), wxT("")));
-        MY_STR_VAL("pref_exiftool_argfile2", cfg->Read(wxT("/output/FinalArgfile"), wxT("")));
-        t = cfg->Read(wxT("/output/writeGPano"), HUGIN_EXIFTOOL_CREATE_GPANO) == 1;
+        MY_STR_VAL("pref_exiftool_argfile", cfg->Read("/output/CopyArgfile", wxEmptyString));
+        MY_STR_VAL("pref_exiftool_argfile2", cfg->Read("/output/FinalArgfile", wxEmptyString));
+        t = cfg->Read("/output/writeGPano", HUGIN_EXIFTOOL_CREATE_GPANO) == 1;
         MY_BOOL_VAL("pref_exiftool_gpano", t);
         wxCommandEvent dummy;
         OnExifTool(dummy);
         // number of threads
-        int nThreads = cfg->Read(wxT("/output/NumberOfThreads"), 0l);
+        int nThreads = cfg->Read("/output/NumberOfThreads", 0l);
         MY_SPIN_VAL("prefs_output_NumberOfThreads", nThreads);
     }
 
@@ -806,54 +796,54 @@ void PreferencesDialog::UpdateDisplayData(int panel)
 
         /////
         /// NONA
-        MY_CHOICE_VAL("prefs_nona_interpolator", cfg->Read(wxT("/Nona/Interpolator"), HUGIN_NONA_INTERPOLATOR));
-        t = cfg->Read(wxT("/Nona/CroppedImages"), HUGIN_NONA_CROPPEDIMAGES) == 1;
+        MY_CHOICE_VAL("prefs_nona_interpolator", cfg->Read("/Nona/Interpolator", HUGIN_NONA_INTERPOLATOR));
+        t = cfg->Read("/Nona/CroppedImages", HUGIN_NONA_CROPPEDIMAGES) == 1;
         MY_BOOL_VAL("prefs_nona_createCroppedImages", t);
-        t = cfg->Read(wxT("/Nona/UseGPU"), HUGIN_NONA_USEGPU) == 1;
+        t = cfg->Read("/Nona/UseGPU", HUGIN_NONA_USEGPU) == 1;
         MY_BOOL_VAL("prefs_nona_useGpu", t);
 
         /////
         /// ENBLEND
-        MY_STR_VAL("prefs_enblend_EnblendExe", cfg->Read(wxT("/Enblend/Exe"),
-                   wxT(HUGIN_ENBLEND_EXE)));
+        MY_STR_VAL("prefs_enblend_EnblendExe", cfg->Read("/Enblend/Exe",
+                   HUGIN_ENBLEND_EXE));
         bool customEnblendExe = HUGIN_ENBLEND_EXE_CUSTOM;
-        cfg->Read(wxT("/Enblend/Custom"), &customEnblendExe);
+        cfg->Read("/Enblend/Custom", &customEnblendExe);
         MY_BOOL_VAL("prefs_enblend_Custom", customEnblendExe);
         XRCCTRL(*this, "prefs_enblend_EnblendExe", wxTextCtrl)->Enable(customEnblendExe);
         XRCCTRL(*this, "prefs_enblend_select", wxButton)->Enable(customEnblendExe);
-        MY_STR_VAL("prefs_enblend_EnblendArgs", cfg->Read(wxT("/Enblend/Args"),
-                   wxT(HUGIN_ENBLEND_ARGS)));
+        MY_STR_VAL("prefs_enblend_EnblendArgs", cfg->Read("/Enblend/Args",
+                   HUGIN_ENBLEND_ARGS));
         /////
         /// ENFUSE
-        MY_STR_VAL("prefs_enblend_EnfuseExe", cfg->Read(wxT("/Enfuse/Exe"),
-                   wxT(HUGIN_ENFUSE_EXE)));
+        MY_STR_VAL("prefs_enblend_EnfuseExe", cfg->Read("/Enfuse/Exe",
+                   HUGIN_ENFUSE_EXE));
         bool customEnfuseExe = HUGIN_ENFUSE_EXE_CUSTOM;
-        cfg->Read(wxT("/Enfuse/Custom"), &customEnfuseExe);
+        cfg->Read("/Enfuse/Custom", &customEnfuseExe);
         MY_BOOL_VAL("prefs_enblend_enfuseCustom", customEnfuseExe);
         XRCCTRL(*this, "prefs_enblend_EnfuseExe", wxTextCtrl)->Enable(customEnfuseExe);
         XRCCTRL(*this, "prefs_enblend_enfuse_select", wxButton)->Enable(customEnfuseExe);
-        MY_STR_VAL("prefs_enblend_EnfuseArgs", cfg->Read(wxT("/Enfuse/Args"),
-                   wxT(HUGIN_ENFUSE_ARGS)));
+        MY_STR_VAL("prefs_enblend_EnfuseArgs", cfg->Read("/Enfuse/Args",
+                   HUGIN_ENFUSE_ARGS));
     }
 
     if (panel==0 || panel == 9)
     {
         // Celeste settings
         d=HUGIN_CELESTE_THRESHOLD;
-        cfg->Read(wxT("/Celeste/Threshold"), &d, HUGIN_CELESTE_THRESHOLD);
+        cfg->Read("/Celeste/Threshold", &d, HUGIN_CELESTE_THRESHOLD);
         tstr = hugin_utils::doubleTowxString(d);
         MY_STR_VAL("prefs_celeste_threshold", tstr);
-        MY_CHOICE_VAL("prefs_celeste_filter", cfg->Read(wxT("/Celeste/Filter"), HUGIN_CELESTE_FILTER));
+        MY_CHOICE_VAL("prefs_celeste_filter", cfg->Read("/Celeste/Filter", HUGIN_CELESTE_FILTER));
         // photometric optimizer settings
-        MY_SPIN_VAL("prefs_photo_optimizer_nr_points", cfg->Read(wxT("/OptimizePhotometric/nRandomPointsPerImage"), HUGIN_PHOTOMETRIC_OPTIMIZER_NRPOINTS));
+        MY_SPIN_VAL("prefs_photo_optimizer_nr_points", cfg->Read("/OptimizePhotometric/nRandomPointsPerImage", HUGIN_PHOTOMETRIC_OPTIMIZER_NRPOINTS));
         // warnings
-        t = cfg->Read(wxT("/ShowSaveMessage"), 1l) == 1;
+        t = cfg->Read("/ShowSaveMessage", 1l) == 1;
         MY_BOOL_VAL("prefs_warning_save", t);
-        t = cfg->Read(wxT("/ShowExposureWarning"), 1l) == 1;
+        t = cfg->Read("/ShowExposureWarning", 1l) == 1;
         MY_BOOL_VAL("prefs_warning_exposure", t);
-        t = cfg->Read(wxT("/ShowFisheyeCropHint"), 1l) == 1;
+        t = cfg->Read("/ShowFisheyeCropHint", 1l) == 1;
         MY_BOOL_VAL("prefs_warning_fisheye_crop", t);
-        MY_CHOICE_VAL("pref_editcp_action", cfg->Read(wxT("/EditCPAfterAction"), 0l));
+        MY_CHOICE_VAL("pref_editcp_action", cfg->Read("/EditCPAfterAction", 0l));
     }
 }
 
@@ -863,9 +853,7 @@ void PreferencesDialog::OnRestoreDefaults(wxCommandEvent& e)
     wxConfigBase* cfg = wxConfigBase::Get();
     // check which tab is enabled
     wxNotebook* noteb = XRCCTRL(*this, "prefs_tab", wxNotebook);
-    int really = wxMessageBox(_("Really reset displayed preferences to default values?"), _("Load Defaults"),
-                              wxYES_NO, this);
-    if ( really == wxYES)
+    if (hugin_utils::HuginMessageBox(_("Really reset displayed preferences to default values?"), _("Hugin"), wxYES_NO | wxICON_QUESTION, this) == wxYES)
     {
         if (noteb->GetSelection() == 0)
         {
@@ -876,17 +864,17 @@ void PreferencesDialog::OnRestoreDefaults(wxCommandEvent& e)
              * HUGIN_IMGCACHE_UPPERBOUND must fit into 32bit to be compatible with 32bit systems.
              * However, just as a reminder:
             #ifdef __WXMSW__
-                cfg->Write(wxT("/ImageCache/UpperBoundHigh"), HUGIN_IMGCACHE_UPPERBOUND >> 32);
+                cfg->Write("/ImageCache/UpperBoundHigh", HUGIN_IMGCACHE_UPPERBOUND >> 32);
             #endif
             */
-            cfg->Write(wxT("/ImageCache/UpperBound"), HUGIN_IMGCACHE_UPPERBOUND);
+            cfg->Write("/ImageCache/UpperBound", HUGIN_IMGCACHE_UPPERBOUND);
             // locale
-            cfg->Write(wxT("language"), int(HUGIN_LANGUAGE));
+            cfg->Write("language", int(HUGIN_LANGUAGE));
             // smart undo
-            cfg->Write(wxT("smartUndo"), HUGIN_SMART_UNDO);
-            cfg->Write(wxT("CopyLogToClipboard"), 0l);
+            cfg->Write("smartUndo", HUGIN_SMART_UNDO);
+            cfg->Write("CopyLogToClipboard", 0l);
             // projection hints
-            cfg->Write(wxT("/GLPreviewFrame/ShowProjectionHints"), HUGIN_SHOW_PROJECTION_HINTS);
+            cfg->Write("/GLPreviewFrame/ShowProjectionHints", HUGIN_SHOW_PROJECTION_HINTS);
             cfg->Write("/CPEditorPanel/AutoRot", 1l);
             // raw converter
             cfg->Write("/RawImportDialog/dcrawExe", "");
@@ -895,101 +883,101 @@ void PreferencesDialog::OnRestoreDefaults(wxCommandEvent& e)
         }
         if(noteb->GetSelection() == 1)
         {
-            cfg->Write(wxT("tempDir"), wxT(""));
-            cfg->Write(wxT("ProjectFilename"), wxT(HUGIN_DEFAULT_PROJECT_NAME));
-            cfg->Write(wxT("OutputFilename"), wxT(HUGIN_DEFAULT_OUTPUT_NAME));
+            cfg->Write("tempDir", wxEmptyString);
+            cfg->Write("ProjectFilename", HUGIN_DEFAULT_PROJECT_NAME);
+            cfg->Write("OutputFilename", HUGIN_DEFAULT_OUTPUT_NAME);
         };
         if (noteb->GetSelection() == 2)
         {
-            cfg->Write(wxT("/Assistant/autoAlign"), HUGIN_ASS_AUTO_ALIGN);
-            cfg->Write(wxT("/General/IgnoreFovRectilinearOnAdd"), 1l);
-            cfg->Write(wxT("/Assistant/nControlPoints"), HUGIN_ASS_NCONTROLPOINTS);
-            cfg->Write(wxT("/Assistant/panoDownsizeFactor"),HUGIN_ASS_PANO_DOWNSIZE_FACTOR);
-            cfg->Write(wxT("/Assistant/Linefind"), HUGIN_ASS_LINEFIND);
-            cfg->Write(wxT("/Celeste/Auto"), HUGIN_CELESTE_AUTO);
-            cfg->Write(wxT("/Assistant/AutoCPClean"), HUGIN_ASS_AUTO_CPCLEAN);
-            cfg->Write(wxT("/Assistant/UserDefinedOutputOption"), 0l);
+            cfg->Write("/Assistant/autoAlign", HUGIN_ASS_AUTO_ALIGN);
+            cfg->Write("/General/IgnoreFovRectilinearOnAdd", 1l);
+            cfg->Write("/Assistant/nControlPoints", HUGIN_ASS_NCONTROLPOINTS);
+            cfg->Write("/Assistant/panoDownsizeFactor",HUGIN_ASS_PANO_DOWNSIZE_FACTOR);
+            cfg->Write("/Assistant/Linefind", HUGIN_ASS_LINEFIND);
+            cfg->Write("/Celeste/Auto", HUGIN_CELESTE_AUTO);
+            cfg->Write("/Assistant/AutoCPClean", HUGIN_ASS_AUTO_CPCLEAN);
+            cfg->Write("/Assistant/UserDefinedOutputOption", 0l);
         }
         if (noteb->GetSelection() == 3)
         {
             // hdr
-            cfg->Write(wxT("/ImageCache/Mapping"), HUGIN_IMGCACHE_MAPPING_FLOAT);
-            //cfg->Write(wxT("/ImageCache/Range"), HUGIN_IMGCACHE_RANGE);
-            cfg->Write(wxT("/CPEditorPanel/MagnifierWidth"), 61l);
+            cfg->Write("/ImageCache/Mapping", HUGIN_IMGCACHE_MAPPING_FLOAT);
+            //cfg->Write("/ImageCache/Range", HUGIN_IMGCACHE_RANGE);
+            cfg->Write("/CPEditorPanel/MagnifierWidth", 61l);
             // Fine tune settings
-            cfg->Write(wxT("/Finetune/SearchAreaPercent"), HUGIN_FT_SEARCH_AREA_PERCENT);
-            cfg->Write(wxT("/Finetune/TemplateSize"), HUGIN_FT_TEMPLATE_SIZE);
-            cfg->Write(wxT("/Finetune/LocalSearchWidth"), HUGIN_FT_LOCAL_SEARCH_WIDTH);
+            cfg->Write("/Finetune/SearchAreaPercent", HUGIN_FT_SEARCH_AREA_PERCENT);
+            cfg->Write("/Finetune/TemplateSize", HUGIN_FT_TEMPLATE_SIZE);
+            cfg->Write("/Finetune/LocalSearchWidth", HUGIN_FT_LOCAL_SEARCH_WIDTH);
 
-            cfg->Write(wxT("/Finetune/CorrThreshold"), HUGIN_FT_CORR_THRESHOLD);
-            cfg->Write(wxT("/Finetune/CurvThreshold"), HUGIN_FT_CURV_THRESHOLD);
+            cfg->Write("/Finetune/CorrThreshold", HUGIN_FT_CORR_THRESHOLD);
+            cfg->Write("/Finetune/CurvThreshold", HUGIN_FT_CURV_THRESHOLD);
 
-            cfg->Write(wxT("/Finetune/RotationSearch"), HUGIN_FT_ROTATION_SEARCH);
-            cfg->Write(wxT("/Finetune/RotationStartAngle"), HUGIN_FT_ROTATION_START_ANGLE);
-            cfg->Write(wxT("/Finetune/RotationStopAngle"), HUGIN_FT_ROTATION_STOP_ANGLE);
-            cfg->Write(wxT("/Finetune/RotationSteps"), HUGIN_FT_ROTATION_STEPS);
+            cfg->Write("/Finetune/RotationSearch", HUGIN_FT_ROTATION_SEARCH);
+            cfg->Write("/Finetune/RotationStartAngle", HUGIN_FT_ROTATION_START_ANGLE);
+            cfg->Write("/Finetune/RotationStopAngle", HUGIN_FT_ROTATION_STOP_ANGLE);
+            cfg->Write("/Finetune/RotationSteps", HUGIN_FT_ROTATION_STEPS);
         }
         if (noteb->GetSelection() == 4)
         {
             /////
             /// AUTOPANO
-            cpdetector_config_edit.ReadFromFile(huginApp::Get()->GetDataPath()+wxT("default.setting"));
+            cpdetector_config_edit.ReadFromFile(huginApp::Get()->GetDataPath()+"default.setting");
             cpdetector_config_edit.Write(cfg);
         }
         if (noteb->GetSelection() == 5)
         {
             /// OUTPUT
-            cfg->Write(wxT("/output/ldr_format"), HUGIN_LDR_OUTPUT_FORMAT);
+            cfg->Write("/output/ldr_format", HUGIN_LDR_OUTPUT_FORMAT);
             /** HDR currently deactivated since HDR TIFF broken and only choice is EXR */
-            // cfg->Write(wxT("/output/hdr_format"), HUGIN_HDR_OUTPUT_FORMAT);
-            cfg->Write(wxT("/output/tiff_compression"), HUGIN_TIFF_COMPRESSION);
-            cfg->Write(wxT("/output/jpeg_quality"), HUGIN_JPEG_QUALITY);
+            // cfg->Write("/output/hdr_format", HUGIN_HDR_OUTPUT_FORMAT);
+            cfg->Write("/output/tiff_compression", HUGIN_TIFF_COMPRESSION);
+            cfg->Write("/output/jpeg_quality", HUGIN_JPEG_QUALITY);
             // default blender
-            cfg->Write(wxT("/default_blender"), static_cast<long>(HUGIN_DEFAULT_BLENDER));
-            cfg->Write(wxT("/VerdandiDefaultArgs"), wxEmptyString);
+            cfg->Write("/default_blender", static_cast<long>(HUGIN_DEFAULT_BLENDER));
+            cfg->Write("/VerdandiDefaultArgs", wxEmptyString);
             // stitching engine
-            cfg->Write(wxT("/Processor/gui"), HUGIN_PROCESSOR_GUI);
-            cfg->Write(wxT("/Processor/start"), HUGIN_PROCESSOR_START);
-            cfg->Write(wxT("/Processor/overwrite"), HUGIN_PROCESSOR_OVERWRITE);
-            cfg->Write(wxT("/Processor/verbose"), HUGIN_PROCESSOR_VERBOSE);
+            cfg->Write("/Processor/gui", HUGIN_PROCESSOR_GUI);
+            cfg->Write("/Processor/start", HUGIN_PROCESSOR_START);
+            cfg->Write("/Processor/overwrite", HUGIN_PROCESSOR_OVERWRITE);
+            cfg->Write("/Processor/verbose", HUGIN_PROCESSOR_VERBOSE);
         }
         if (noteb->GetSelection() == 6)
         {
-            cfg->Write(wxT("/output/useExiftool"), HUGIN_USE_EXIFTOOL);
-            cfg->Write(wxT("/output/CopyArgfile"), wxT(""));
-            cfg->Write(wxT("/output/FinalArgfile"), wxT(""));
-            cfg->Write(wxT("/output/writeGPano"), HUGIN_EXIFTOOL_CREATE_GPANO);
-            cfg->Write(wxT("/output/NumberOfThreads"), 0l);
+            cfg->Write("/output/useExiftool", HUGIN_USE_EXIFTOOL);
+            cfg->Write("/output/CopyArgfile", wxEmptyString);
+            cfg->Write("/output/FinalArgfile", wxEmptyString);
+            cfg->Write("/output/writeGPano", HUGIN_EXIFTOOL_CREATE_GPANO);
+            cfg->Write("/output/NumberOfThreads", 0l);
         }
         if (noteb->GetSelection() == 7)
         {
             /// ENBLEND
-            cfg->Write(wxT("/Enblend/Exe"), wxT(HUGIN_ENBLEND_EXE));
-            cfg->Write(wxT("/Enblend/Custom"), HUGIN_ENBLEND_EXE_CUSTOM);
-            cfg->Write(wxT("/Enblend/Args"), wxT(HUGIN_ENBLEND_ARGS));
+            cfg->Write("/Enblend/Exe", HUGIN_ENBLEND_EXE);
+            cfg->Write("/Enblend/Custom", HUGIN_ENBLEND_EXE_CUSTOM);
+            cfg->Write("/Enblend/Args", HUGIN_ENBLEND_ARGS);
 
-            cfg->Write(wxT("/Enfuse/Exe"), wxT(HUGIN_ENFUSE_EXE));
-            cfg->Write(wxT("/Enfuse/Custom"), HUGIN_ENFUSE_EXE_CUSTOM);
-            cfg->Write(wxT("/Enfuse/Args"), wxT(HUGIN_ENFUSE_ARGS));
+            cfg->Write("/Enfuse/Exe", HUGIN_ENFUSE_EXE);
+            cfg->Write("/Enfuse/Custom", HUGIN_ENFUSE_EXE_CUSTOM);
+            cfg->Write("/Enfuse/Args", HUGIN_ENFUSE_ARGS);
         }
 
         if (noteb->GetSelection() == 8)
         {
             /// Celeste
-            cfg->Write(wxT("/Celeste/Threshold"), HUGIN_CELESTE_THRESHOLD);
-            cfg->Write(wxT("/Celeste/Filter"), HUGIN_CELESTE_FILTER);
-            cfg->Write(wxT("/OptimizePhotometric/nRandomPointsPerImage"), HUGIN_PHOTOMETRIC_OPTIMIZER_NRPOINTS);
-            cfg->Write(wxT("/ShowSaveMessage"), 1l);
-            cfg->Write(wxT("/ShowExposureWarning"), 1l);
-            cfg->Write(wxT("/ShowFisheyeCropHint"), 1l);
-            cfg->Write(wxT("/EditCPAfterAction"), 0l);
+            cfg->Write("/Celeste/Threshold", HUGIN_CELESTE_THRESHOLD);
+            cfg->Write("/Celeste/Filter", HUGIN_CELESTE_FILTER);
+            cfg->Write("/OptimizePhotometric/nRandomPointsPerImage", HUGIN_PHOTOMETRIC_OPTIMIZER_NRPOINTS);
+            cfg->Write("/ShowSaveMessage", 1l);
+            cfg->Write("/ShowExposureWarning", 1l);
+            cfg->Write("/ShowFisheyeCropHint", 1l);
+            cfg->Write("/EditCPAfterAction", 0l);
         }
 
         /*
                 if (noteb->GetSelection() == 5) {
-                    cfg->Write(wxT("/PTmender/Exe"), wxT(HUGIN_PT_MENDER_EXE) );
-                    cfg->Write(wxT("/PTmender/Custom"),HUGIN_PT_MENDER_EXE_CUSTOM);
-                    cfg->Write(wxT("/PanoTools/ScriptFile"), wxT("PT_script.txt"));
+                    cfg->Write("/PTmender/Exe", HUGIN_PT_MENDER_EXE );
+                    cfg->Write("/PTmender/Custom",HUGIN_PT_MENDER_EXE_CUSTOM);
+                    cfg->Write("/PanoTools/ScriptFile", "PT_script.txt");
                 }
         */
         UpdateDisplayData(noteb->GetSelection() + 1);
@@ -1001,47 +989,47 @@ void PreferencesDialog::UpdateConfigData()
     DEBUG_TRACE("");
     wxConfigBase* cfg = wxConfigBase::Get();
     // Assistant
-    cfg->Write(wxT("/Assistant/autoAlign"),MY_G_BOOL_VAL("prefs_ass_autoAlign"));
-    cfg->Write(wxT("/General/IgnoreFovRectilinearOnAdd"), !MY_G_BOOL_VAL("prefs_ass_loadFovRectilinear"));
-    cfg->Write(wxT("/Assistant/nControlPoints"), MY_G_SPIN_VAL("prefs_ass_nControlPoints"));
-    cfg->Write(wxT("/Assistant/panoDownsizeFactor"), MY_G_SPIN_VAL("prefs_ass_panoDownsizeFactor") / 100.0);
-    cfg->Write(wxT("/Assistant/Linefind"), MY_G_BOOL_VAL("prefs_ass_linefind"));
-    cfg->Write(wxT("/Celeste/Auto"), MY_G_BOOL_VAL("prefs_celeste_auto"));
-    cfg->Write(wxT("/Assistant/AutoCPClean"), MY_G_BOOL_VAL("prefs_auto_cpclean"));
-    cfg->Write(wxT("/Assistant/UserDefinedOutputOption"), MY_G_BOOL_VAL("pref_ass_output"));
+    cfg->Write("/Assistant/autoAlign",MY_G_BOOL_VAL("prefs_ass_autoAlign"));
+    cfg->Write("/General/IgnoreFovRectilinearOnAdd", !MY_G_BOOL_VAL("prefs_ass_loadFovRectilinear"));
+    cfg->Write("/Assistant/nControlPoints", MY_G_SPIN_VAL("prefs_ass_nControlPoints"));
+    cfg->Write("/Assistant/panoDownsizeFactor", MY_G_SPIN_VAL("prefs_ass_panoDownsizeFactor") / 100.0);
+    cfg->Write("/Assistant/Linefind", MY_G_BOOL_VAL("prefs_ass_linefind"));
+    cfg->Write("/Celeste/Auto", MY_G_BOOL_VAL("prefs_celeste_auto"));
+    cfg->Write("/Assistant/AutoCPClean", MY_G_BOOL_VAL("prefs_auto_cpclean"));
+    cfg->Write("/Assistant/UserDefinedOutputOption", MY_G_BOOL_VAL("pref_ass_output"));
 
     // hdr display
-    cfg->Write(wxT("/ImageCache/Mapping"),MY_G_CHOICE_VAL("prefs_misc_hdr_mapping"));
-    //cfg->Write(wxT("/ImageCache/Range"),MY_G_CHOICE_VAL("prefs_misc_hdr_range"));
-    cfg->Write(wxT("/CPEditorPanel/MagnifierWidth"), MY_G_CHOICE_VAL("prefs_misc_magnifier_width") * 20 + 61l);
+    cfg->Write("/ImageCache/Mapping",MY_G_CHOICE_VAL("prefs_misc_hdr_mapping"));
+    //cfg->Write("/ImageCache/Range",MY_G_CHOICE_VAL("prefs_misc_hdr_range"));
+    cfg->Write("/CPEditorPanel/MagnifierWidth", MY_G_CHOICE_VAL("prefs_misc_magnifier_width") * 20 + 61l);
 
     // Fine tune settings
-    cfg->Write(wxT("/Finetune/SearchAreaPercent"), MY_G_SPIN_VAL("prefs_ft_SearchAreaPercent"));
-    cfg->Write(wxT("/Finetune/TemplateSize"), MY_G_SPIN_VAL("prefs_ft_TemplateSize"));
-    cfg->Write(wxT("/Finetune/LocalSearchWidth"), MY_G_SPIN_VAL("prefs_ft_LocalSearchWidth"));
+    cfg->Write("/Finetune/SearchAreaPercent", MY_G_SPIN_VAL("prefs_ft_SearchAreaPercent"));
+    cfg->Write("/Finetune/TemplateSize", MY_G_SPIN_VAL("prefs_ft_TemplateSize"));
+    cfg->Write("/Finetune/LocalSearchWidth", MY_G_SPIN_VAL("prefs_ft_LocalSearchWidth"));
     wxString t = MY_G_STR_VAL("prefs_ft_CorrThreshold");
     double td= HUGIN_FT_CORR_THRESHOLD;
     hugin_utils::stringToDouble(std::string(t.mb_str(wxConvLocal)), td);
-    cfg->Write(wxT("/Finetune/CorrThreshold"), td);
+    cfg->Write("/Finetune/CorrThreshold", td);
 
     t = MY_G_STR_VAL("prefs_ft_CurvThreshold");
     td = HUGIN_FT_CURV_THRESHOLD;
     hugin_utils::stringToDouble(std::string(t.mb_str(wxConvLocal)), td);
-    cfg->Write(wxT("/Finetune/CurvThreshold"), td);
+    cfg->Write("/Finetune/CurvThreshold", td);
 
-    cfg->Write(wxT("/Finetune/RotationSearch"), MY_G_BOOL_VAL("prefs_ft_RotationSearch"));
-    cfg->Write(wxT("/Finetune/RotationStartAngle"), (double) MY_G_SPIN_VAL("prefs_ft_RotationStartAngle"));
-    cfg->Write(wxT("/Finetune/RotationStopAngle"), (double) MY_G_SPIN_VAL("prefs_ft_RotationStopAngle"));
-    cfg->Write(wxT("/Finetune/RotationSteps"), MY_G_SPIN_VAL("prefs_ft_RotationSteps"));
+    cfg->Write("/Finetune/RotationSearch", MY_G_BOOL_VAL("prefs_ft_RotationSearch"));
+    cfg->Write("/Finetune/RotationStartAngle", (double) MY_G_SPIN_VAL("prefs_ft_RotationStartAngle"));
+    cfg->Write("/Finetune/RotationStopAngle", (double) MY_G_SPIN_VAL("prefs_ft_RotationStopAngle"));
+    cfg->Write("/Finetune/RotationSteps", MY_G_SPIN_VAL("prefs_ft_RotationSteps"));
 
     /////
     /// MISC
     // cache
 #ifdef __WXMSW__
     // shifting only 12 bits rights: 32-20=12 and the prefs_cache_UpperBound is in GB
-    cfg->Write(wxT("/ImageCache/UpperBoundHigh"), (long) MY_G_SPIN_VAL("prefs_cache_UpperBound") >> 12);
+    cfg->Write("/ImageCache/UpperBoundHigh", (long) MY_G_SPIN_VAL("prefs_cache_UpperBound") >> 12);
 #endif
-    cfg->Write(wxT("/ImageCache/UpperBound"), (long) MY_G_SPIN_VAL("prefs_cache_UpperBound") << 20);
+    cfg->Write("/ImageCache/UpperBound", (long) MY_G_SPIN_VAL("prefs_cache_UpperBound") << 20);
     // locale
     // language
     wxChoice* lang = XRCCTRL(*this, "prefs_gui_language", wxChoice);
@@ -1051,13 +1039,13 @@ void PreferencesDialog::UpdateConfigData()
 
     void* tmplp = lang->GetClientData(lang->GetSelection());
     long templ =  * static_cast<long*>(tmplp);
-    cfg->Write(wxT("language"), templ);
+    cfg->Write("language", templ);
     DEBUG_INFO("Language Selection ID: " << templ);
     // smart undo
-    cfg->Write(wxT("smartUndo"), MY_G_BOOL_VAL("prefs_smart_undo"));
-    cfg->Write(wxT("CopyLogToClipboard"), MY_G_BOOL_VAL("prefs_copy_log"));
+    cfg->Write("smartUndo", MY_G_BOOL_VAL("prefs_smart_undo"));
+    cfg->Write("CopyLogToClipboard", MY_G_BOOL_VAL("prefs_copy_log"));
     // show projections hints
-    cfg->Write(wxT("/GLPreviewFrame/ShowProjectionHints"), MY_G_BOOL_VAL("pref_show_projection_hints"));
+    cfg->Write("/GLPreviewFrame/ShowProjectionHints", MY_G_BOOL_VAL("pref_show_projection_hints"));
     //auto-rotate
     cfg->Write("/CPEditorPanel/AutoRot", MY_G_BOOL_VAL("pref_autorotate"));
     // raw converter
@@ -1065,80 +1053,80 @@ void PreferencesDialog::UpdateConfigData()
     cfg->Write("/RawImportDialog/RTExe", MY_G_STR_VAL("pref_raw_rt_exe"));
     cfg->Write("/RawImportDialog/DarktableExe", MY_G_STR_VAL("pref_raw_darktable_exe"));;
     // tempdir
-    cfg->Write(wxT("tempDir"),MY_G_STR_VAL("prefs_misc_tempdir"));
+    cfg->Write("tempDir",MY_G_STR_VAL("prefs_misc_tempdir"));
     // filename templates
     wxString filename=XRCCTRL(*this, "prefs_project_filename", wxTextCtrl)->GetValue();
 #ifdef __WXMSW__
-    filename.Replace(wxT("\\"), wxT("/"), true);
+    filename.Replace("\\", "/", true);
 #endif
-    cfg->Write(wxT("ProjectFilename"), filename);
+    cfg->Write("ProjectFilename", filename);
     filename=XRCCTRL(*this, "prefs_output_filename", wxTextCtrl)->GetValue();
 #ifdef __WXMSW__
-    filename.Replace(wxT("\\"), wxT("/"), true);
+    filename.Replace("\\", "/", true);
 #endif
-    cfg->Write(wxT("OutputFilename"), filename);
+    cfg->Write("OutputFilename", filename);
     /////
     /// AUTOPANO
     cpdetector_config_edit.Write(cfg);
 
     /////
     /// OUTPUT
-    cfg->Write(wxT("/output/ldr_format"), MY_G_CHOICE_VAL("pref_ldr_output_file_format"));
+    cfg->Write("/output/ldr_format", MY_G_CHOICE_VAL("pref_ldr_output_file_format"));
     /** HDR currently deactivated since HDR TIFF broken and only choice is EXR */
-    // cfg->Write(wxT("/output/hdr_format"), MY_G_CHOICE_VAL("pref_hdr_output_file_format"));
-    cfg->Write(wxT("/output/tiff_compression"), MY_G_CHOICE_VAL("pref_tiff_compression"));
-    cfg->Write(wxT("/output/jpeg_quality"), MY_G_SPIN_VAL("pref_jpeg_quality"));
+    // cfg->Write("/output/hdr_format", MY_G_CHOICE_VAL("pref_hdr_output_file_format"));
+    cfg->Write("/output/tiff_compression", MY_G_CHOICE_VAL("pref_tiff_compression"));
+    cfg->Write("/output/jpeg_quality", MY_G_SPIN_VAL("pref_jpeg_quality"));
 
-    cfg->Write(wxT("/default_blender"), static_cast<long>(GetSelectedValue(XRCCTRL(*this, "pref_default_blender", wxChoice))));
+    cfg->Write("/default_blender", static_cast<long>(GetSelectedValue(XRCCTRL(*this, "pref_default_blender", wxChoice))));
     if (XRCCTRL(*this, "pref_internal_blender_seam", wxChoice)->GetSelection() == 1)
     {
-        cfg->Write(wxT("/VerdandiDefaultArgs"), wxT("--seam=blend"));
+        cfg->Write("/VerdandiDefaultArgs", "--seam=blend");
     }
     else
     {
-        cfg->Write(wxT("/VerdandiDefaultArgs"), wxEmptyString);
+        cfg->Write("/VerdandiDefaultArgs", wxEmptyString);
     };
 
     /////
     /// PROCESSOR
-    cfg->Write(wxT("/Processor/gui"), MY_G_CHOICE_VAL("pref_processor_gui"));
-    cfg->Write(wxT("/Processor/start"), MY_G_BOOL_VAL("pref_processor_start"));
-    cfg->Write(wxT("/Processor/overwrite"), MY_G_BOOL_VAL("pref_processor_overwrite"));
-    cfg->Write(wxT("/Processor/verbose"), MY_G_BOOL_VAL("pref_processor_verbose"));
+    cfg->Write("/Processor/gui", MY_G_CHOICE_VAL("pref_processor_gui"));
+    cfg->Write("/Processor/start", MY_G_BOOL_VAL("pref_processor_start"));
+    cfg->Write("/Processor/overwrite", MY_G_BOOL_VAL("pref_processor_overwrite"));
+    cfg->Write("/Processor/verbose", MY_G_BOOL_VAL("pref_processor_verbose"));
 
-    cfg->Write(wxT("/output/useExiftool"), MY_G_BOOL_VAL("pref_exiftool_metadata"));
-    cfg->Write(wxT("/output/CopyArgfile"), MY_G_STR_VAL("pref_exiftool_argfile"));
-    cfg->Write(wxT("/output/FinalArgfile"), MY_G_STR_VAL("pref_exiftool_argfile2"));
-    cfg->Write(wxT("/output/writeGPano"), MY_G_BOOL_VAL("pref_exiftool_gpano"));
-    cfg->Write(wxT("/output/NumberOfThreads"), MY_G_SPIN_VAL("prefs_output_NumberOfThreads"));
+    cfg->Write("/output/useExiftool", MY_G_BOOL_VAL("pref_exiftool_metadata"));
+    cfg->Write("/output/CopyArgfile", MY_G_STR_VAL("pref_exiftool_argfile"));
+    cfg->Write("/output/FinalArgfile", MY_G_STR_VAL("pref_exiftool_argfile2"));
+    cfg->Write("/output/writeGPano", MY_G_BOOL_VAL("pref_exiftool_gpano"));
+    cfg->Write("/output/NumberOfThreads", MY_G_SPIN_VAL("prefs_output_NumberOfThreads"));
     /////
     /// STITCHING
-    cfg->Write(wxT("/Nona/Interpolator"), MY_G_CHOICE_VAL("prefs_nona_interpolator"));
-    cfg->Write(wxT("/Nona/CroppedImages"), MY_G_BOOL_VAL("prefs_nona_createCroppedImages"));
-    cfg->Write(wxT("/Nona/UseGPU"), MY_G_BOOL_VAL("prefs_nona_useGpu"));
+    cfg->Write("/Nona/Interpolator", MY_G_CHOICE_VAL("prefs_nona_interpolator"));
+    cfg->Write("/Nona/CroppedImages", MY_G_BOOL_VAL("prefs_nona_createCroppedImages"));
+    cfg->Write("/Nona/UseGPU", MY_G_BOOL_VAL("prefs_nona_useGpu"));
 
     /////
     /// ENBLEND
-    cfg->Write(wxT("/Enblend/Custom"), MY_G_BOOL_VAL("prefs_enblend_Custom"));
-    cfg->Write(wxT("/Enblend/Exe"), MY_G_STR_VAL("prefs_enblend_EnblendExe"));
-    cfg->Write(wxT("/Enblend/Args"), MY_G_STR_VAL("prefs_enblend_EnblendArgs"));
+    cfg->Write("/Enblend/Custom", MY_G_BOOL_VAL("prefs_enblend_Custom"));
+    cfg->Write("/Enblend/Exe", MY_G_STR_VAL("prefs_enblend_EnblendExe"));
+    cfg->Write("/Enblend/Args", MY_G_STR_VAL("prefs_enblend_EnblendArgs"));
 
-    cfg->Write(wxT("/Enfuse/Custom"), MY_G_BOOL_VAL("prefs_enblend_enfuseCustom"));
-    cfg->Write(wxT("/Enfuse/Exe"), MY_G_STR_VAL("prefs_enblend_EnfuseExe"));
-    cfg->Write(wxT("/Enfuse/Args"), MY_G_STR_VAL("prefs_enblend_EnfuseArgs"));
+    cfg->Write("/Enfuse/Custom", MY_G_BOOL_VAL("prefs_enblend_enfuseCustom"));
+    cfg->Write("/Enfuse/Exe", MY_G_STR_VAL("prefs_enblend_EnfuseExe"));
+    cfg->Write("/Enfuse/Args", MY_G_STR_VAL("prefs_enblend_EnfuseArgs"));
 
     // Celeste
     t = MY_G_STR_VAL("prefs_celeste_threshold");
     td = HUGIN_CELESTE_THRESHOLD;
     hugin_utils::stringToDouble(std::string(t.mb_str(wxConvLocal)), td);
-    cfg->Write(wxT("/Celeste/Threshold"), td);
-    cfg->Write(wxT("/Celeste/Filter"), MY_G_CHOICE_VAL("prefs_celeste_filter"));
+    cfg->Write("/Celeste/Threshold", td);
+    cfg->Write("/Celeste/Filter", MY_G_CHOICE_VAL("prefs_celeste_filter"));
     //photometric optimizer
-    cfg->Write(wxT("/OptimizePhotometric/nRandomPointsPerImage"), MY_G_SPIN_VAL("prefs_photo_optimizer_nr_points"));
-    cfg->Write(wxT("/ShowSaveMessage"), MY_G_BOOL_VAL("prefs_warning_save"));
-    cfg->Write(wxT("/ShowExposureWarning"), MY_G_BOOL_VAL("prefs_warning_exposure"));
-    cfg->Write(wxT("/ShowFisheyeCropHint"), MY_G_BOOL_VAL("prefs_warning_fisheye_crop"));
-    cfg->Write(wxT("/EditCPAfterAction"), MY_G_CHOICE_VAL("pref_editcp_action"));
+    cfg->Write("/OptimizePhotometric/nRandomPointsPerImage", MY_G_SPIN_VAL("prefs_photo_optimizer_nr_points"));
+    cfg->Write("/ShowSaveMessage", MY_G_BOOL_VAL("prefs_warning_save"));
+    cfg->Write("/ShowExposureWarning", MY_G_BOOL_VAL("prefs_warning_exposure"));
+    cfg->Write("/ShowFisheyeCropHint", MY_G_BOOL_VAL("prefs_warning_fisheye_crop"));
+    cfg->Write("/EditCPAfterAction", MY_G_CHOICE_VAL("pref_editcp_action"));
 
     cfg->Flush();
     UpdateDisplayData(0);
@@ -1162,8 +1150,7 @@ void PreferencesDialog::OnCPDetectorEdit(wxCommandEvent& e)
     int selection=m_CPDetectorList->GetSelection();
     if (selection == wxNOT_FOUND)
     {
-        wxMessageBox(_("Please select an entry first"),_("Select Entry"),wxOK |
-                     wxICON_EXCLAMATION,this);
+        hugin_utils::HuginMessageBox(_("Please select an entry first"), _("Hugin"), wxOK | wxICON_EXCLAMATION, this);
     }
     else
     {
@@ -1182,12 +1169,12 @@ void PreferencesDialog::OnCPDetectorDelete(wxCommandEvent& e)
     unsigned int selection=m_CPDetectorList->GetSelection();
     if(m_CPDetectorList->GetCount()==1)
     {
-        wxMessageBox(_("You can't delete the last setting.\nAt least one setting is required."),_("Warning"),wxOK | wxICON_EXCLAMATION,this);
+        hugin_utils::HuginMessageBox(_("You can't delete the last setting.\nAt least one setting is required."), _("Hugin"), wxOK | wxICON_EXCLAMATION, this);
     }
     else
     {
-        if(wxMessageBox(wxString::Format(_("Do you really want to remove control point detector setting \"%s\"?"),cpdetector_config_edit.settings[selection].GetCPDetectorDesc().c_str())
-                        ,_("Delete control point detector setting"),wxYES_NO | wxICON_QUESTION,this)==wxYES)
+        if (hugin_utils::HuginMessageBox(wxString::Format(_("Do you really want to remove control point detector setting \"%s\"?"), cpdetector_config_edit.settings[selection].GetCPDetectorDesc()),
+            _("Hugin"), wxYES_NO | wxICON_QUESTION, this) == wxYES)
         {
             if(cpdetector_config_edit.GetDefaultGenerator()==selection)
             {
@@ -1237,19 +1224,14 @@ void PreferencesDialog::OnCPDetectorDefault(wxCommandEvent& e)
     };
 };
 
-void PreferencesDialog::OnCPDetectorListDblClick(wxCommandEvent& e)
-{
-    OnCPDetectorEdit(e);
-};
-
 void PreferencesDialog::OnCPDetectorLoad(wxCommandEvent& e)
 {
     wxFileDialog dlg(this,_("Load control point detector settings"),
-                     wxConfigBase::Get()->Read(wxT("/actualPath"),wxT("")), wxEmptyString,
+                     wxConfigBase::Get()->Read("/actualPath",wxEmptyString), wxEmptyString,
                      _("Control point detector settings (*.setting)|*.setting"),wxFD_OPEN | wxFD_FILE_MUST_EXIST);
     if (dlg.ShowModal() == wxID_OK)
     {
-        wxConfig::Get()->Write(wxT("/actualPath"), dlg.GetDirectory());  // remember for later
+        wxConfig::Get()->Write("/actualPath", dlg.GetDirectory());  // remember for later
         wxString fn = dlg.GetPath();
         cpdetector_config_edit.ReadFromFile(fn);
         cpdetector_config_edit.Write();
@@ -1260,18 +1242,18 @@ void PreferencesDialog::OnCPDetectorLoad(wxCommandEvent& e)
 void PreferencesDialog::OnCPDetectorSave(wxCommandEvent& e)
 {
     wxFileDialog dlg(this,_("Save control point detector settings"),
-                     wxConfigBase::Get()->Read(wxT("/actualPath"),wxT("")), wxEmptyString,
+                     wxConfigBase::Get()->Read("/actualPath",wxEmptyString), wxEmptyString,
                      _("Control point detector settings (*.setting)|*.setting"),wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
     if (dlg.ShowModal() == wxID_OK)
     {
-        wxConfig::Get()->Write(wxT("/actualPath"), dlg.GetDirectory());  // remember for later
+        wxConfig::Get()->Write("/actualPath", dlg.GetDirectory());  // remember for later
         wxString fn = dlg.GetPath();
 #ifndef __WXMSW__
         //append extension if not given
         //not necessary on Windows, the wxFileDialog appends it automatic
-        if(fn.Right(8)!=wxT(".setting"))
+        if(fn.Right(8)!=".setting")
         {
-            fn.Append(wxT(".setting"));
+            fn.Append(".setting");
         };
 #endif
         cpdetector_config_edit.WriteToFile(fn);
@@ -1309,8 +1291,8 @@ void PreferencesDialog::UpdateProcessorControls()
             //PTBatcherGUI
             {
                 wxConfigBase* config=wxConfigBase::Get();
-                XRCCTRL(*this,"pref_processor_start",wxCheckBox)->SetValue(config->Read(wxT("/Processor/start"), HUGIN_PROCESSOR_START) == 1);
-                XRCCTRL(*this,"pref_processor_verbose",wxCheckBox)->SetValue(config->Read(wxT("/Processor/verbose"), HUGIN_PROCESSOR_VERBOSE) == 1);
+                XRCCTRL(*this,"pref_processor_start",wxCheckBox)->SetValue(config->Read("/Processor/start", HUGIN_PROCESSOR_START) == 1);
+                XRCCTRL(*this,"pref_processor_verbose",wxCheckBox)->SetValue(config->Read("/Processor/verbose", HUGIN_PROCESSOR_VERBOSE) == 1);
             }
             break;
         case 1:

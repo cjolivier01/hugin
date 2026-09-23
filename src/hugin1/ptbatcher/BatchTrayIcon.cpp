@@ -41,16 +41,17 @@ enum
     ID_EXIT=wxID_HIGHEST+120
 };
 
-BEGIN_EVENT_TABLE(BatchTaskBarIcon, wxTaskBarIcon)
-    EVT_TASKBAR_LEFT_DCLICK  (BatchTaskBarIcon::OnLeftButtonDClick)
-    EVT_MENU(ID_SHOWGUI, BatchTaskBarIcon::OnShowGUI)
-    EVT_MENU(ID_START, BatchTaskBarIcon::OnStartBatch)
-    EVT_MENU(ID_PAUSE, BatchTaskBarIcon::OnPauseBatch)
-    EVT_MENU(ID_STOP, BatchTaskBarIcon::OnStopBatch)
-    EVT_MENU(ID_ADDPROJECT, BatchTaskBarIcon::OnAddProject)
-    EVT_MENU(ID_ADDPROJECTASSISTANT, BatchTaskBarIcon::OnAddProjectToAssistant)
-    EVT_MENU(ID_EXIT, BatchTaskBarIcon::OnExit)
-END_EVENT_TABLE()
+BatchTaskBarIcon::BatchTaskBarIcon(wxTaskBarIconType iconType) : wxTaskBarIcon(iconType)
+{
+    Bind(wxEVT_TASKBAR_LEFT_DCLICK, &BatchTaskBarIcon::OnLeftButtonDClick, this);
+    Bind(wxEVT_MENU, &BatchTaskBarIcon::OnShowGUI, this, ID_SHOWGUI);
+    Bind(wxEVT_MENU, &BatchTaskBarIcon::OnStartBatch, this, ID_START);
+    Bind(wxEVT_MENU, &BatchTaskBarIcon::OnPauseBatch, this, ID_PAUSE);
+    Bind(wxEVT_MENU, &BatchTaskBarIcon::OnStopBatch, this, ID_STOP);
+    Bind(wxEVT_MENU, &BatchTaskBarIcon::OnAddProject, this, ID_ADDPROJECT);
+    Bind(wxEVT_MENU, &BatchTaskBarIcon::OnAddProjectToAssistant, this, ID_ADDPROJECTASSISTANT);
+    Bind(wxEVT_MENU, &BatchTaskBarIcon::OnExit, this, ID_EXIT);
+}
 
 // Overridables
 wxMenu* BatchTaskBarIcon::CreatePopupMenu()
@@ -141,14 +142,9 @@ enum
     TIMER_BALLOON=wxID_HIGHEST+207,
 };
 //declaration of the balloon tool tip
-BEGIN_EVENT_TABLE(TaskBarBalloon, wxFrame)
-    EVT_LEFT_DOWN(TaskBarBalloon::OnClick)
-    EVT_KEY_DOWN(TaskBarBalloon::OnKeyDown)
-    EVT_TIMER(TIMER_BALLOON,TaskBarBalloon::OnTimerTick)
-END_EVENT_TABLE()
 
 TaskBarBalloon::TaskBarBalloon(wxString sTitle, wxString sMessage)
-    : wxFrame(NULL,-1,wxT("no title"),wxDefaultPosition,wxDefaultSize,wxNO_BORDER | wxSTAY_ON_TOP | wxFRAME_SHAPED | wxFRAME_NO_TASKBAR)
+    : wxFrame(NULL,-1,"no title",wxDefaultPosition,wxDefaultSize,wxNO_BORDER | wxSTAY_ON_TOP | wxFRAME_SHAPED | wxFRAME_NO_TASKBAR)
 {
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_INFOBK));
     wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
@@ -173,6 +169,9 @@ TaskBarBalloon::TaskBarBalloon(wxString sTitle, wxString sMessage)
     iX = (iX * 2) - 2;
     iY = (iY * 2) - 2;
     Move( iX, iY );
+    Bind(wxEVT_LEFT_DOWN, &TaskBarBalloon::OnClick, this);
+    Bind(wxEVT_KEY_DOWN, &TaskBarBalloon::OnKeyDown, this);
+    Bind(wxEVT_TIMER, &TaskBarBalloon::OnTimerTick, this);
 }
 
 TaskBarBalloon::~TaskBarBalloon()

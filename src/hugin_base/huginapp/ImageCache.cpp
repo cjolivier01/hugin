@@ -38,44 +38,10 @@
 #include <vigra_ext/Pyramid.h>
 #include <vigra_ext/FunctorAccessor.h>
 
-
-
 namespace HuginBase {
-    
-template <class T1>
-class GetRange
-{
-    public:
-        static T1 min();
-        static T1 max();
-};
-
-// ImageCache::GetRange implementation
-#define VIGRA_EXT_GETRANGE(T1, MI,MA) \
-template<> \
-T1 GetRange<T1>::min() \
-{ \
-        return MI; \
-} \
-template<> \
-T1 GetRange<T1>::max() \
-{ \
-        return MA; \
-} \
-
-VIGRA_EXT_GETRANGE(vigra::UInt8,  0, 255);
-VIGRA_EXT_GETRANGE(vigra::Int16,  0, 32767);
-VIGRA_EXT_GETRANGE(vigra::UInt16, 0, 65535);
-VIGRA_EXT_GETRANGE(vigra::Int32,  0, 2147483647);
-VIGRA_EXT_GETRANGE(vigra::UInt32, 0, 4294967295u);
-VIGRA_EXT_GETRANGE(float,  0, 1.0f);
-VIGRA_EXT_GETRANGE(double, 0, 1.0);
-
-#undef VIGRA_EXT_GETRANGE
-
 
 template <class SrcIMG>
-void convertTo8Bit(SrcIMG & src, const std::string & origType, vigra::BRGBImage & dest)
+void convertTo8Bit(SrcIMG& src, const std::string& origType, vigra::BRGBImage& dest, int desiredMapping = -1)
 {
     // code to apply the mapping to 8 bit
     // always scaled from 0..1 for integer images.
@@ -88,22 +54,21 @@ void convertTo8Bit(SrcIMG & src, const std::string & origType, vigra::BRGBImage 
     int mapping = HUGIN_IMGCACHE_MAPPING_INTEGER;
     
     // float needs to be from min ... max.
-    if (origType == "FLOAT" || origType == "DOUBLE")
+    if (origType == "FLOAT" || origType == "DOUBLE" || origType == "INT16" || origType == "UINT32" || origType == "INT32")
     {
         vigra::RGBToGrayAccessor<vigra::RGBValue<float> > ga;
-        vigra::FindMinMax<float> minmax;   // init functor
-        vigra::inspectImage(srcImageRange(src, ga),
-                            minmax);
-        min = minmax.min;
-        max = minmax.max;
-        mapping = HUGIN_IMGCACHE_MAPPING_FLOAT;
+        vigra::FindAverageAndVariance<float> mean;   // init functor
+        vigra::inspectImage(srcImageRange(src, ga), mean);
+        min = std::max(mean.average() - 3 * sqrt(mean.variance()), 1e-6f);
+        max = mean.average() + 3 * sqrt(mean.variance());
+        mapping = desiredMapping != -1 ? desiredMapping : HUGIN_IMGCACHE_MAPPING_FLOAT;
     }
     vigra_ext::applyMapping(srcImageRange(src), destImage(dest), min, max, mapping);
 }
 
 
 
-ImageCache::ImageCacheRGB8Ptr ImageCache::Entry::get8BitImage()
+ImageCache::ImageCacheRGB8Ptr ImageCache::Entry::get8BitImage(int desiredMapping)
 {
     if (image8->width() > 0) {
         return image8;
@@ -114,7 +79,8 @@ ImageCache::ImageCacheRGB8Ptr ImageCache::Entry::get8BitImage()
     } else if (imageFloat->width() > 0) {
         convertTo8Bit(*imageFloat,
                       origType,
-                      *image8);
+                      *image8, 
+                      desiredMapping);
     }
     return image8;
 }
@@ -289,8 +255,6 @@ void ImageCache::softFlush()
     }
 }
 
-
-
 ImageCache& ImageCache::getInstance()
 {
     if (instance == NULL)
@@ -299,82 +263,6 @@ ImageCache& ImageCache::getInstance()
     }
     return *instance;
 }
-
-
-
-/*
-struct ApplyGammaFunctor
-{
-    float minv;
-    float maxv;
-    float gamma;
-    float scale;
-
-    ApplyGammaFunctor(float min_, float max_, float gamma_)
-    {
-        minv = min_;
-        maxv = max_;
-        gamma = gamma_;
-        scale = maxv - minv;
-    }
-
-    template <class T>
-    unsigned char operator()(T v) const
-    {
-        typedef vigra::NumericTraits<vigra::UInt8>  DestTraits;
-        return DestTraits::fromRealPromote(pow((float(v)-minv)/scale, gamma)*255);
-    }
-
-    template <class T, unsigned int R, unsigned int G, unsigned int B>
-    RGBValue<vigra::UInt8,0,1,2> operator()(const RGBValue<T,R,G,B> & v) const
-    {
-        typedef vigra::NumericTraits< RGBValue<vigra::UInt8,0,1,2> >  DestTraits;
-        typedef vigra::NumericTraits< RGBValue<T,R,G,B> >  SrcTraits;
-        return DestTraits::fromRealPromote(pow((SrcTraits::toRealPromote(v)+(-minv))/scale, gamma)*255);
-//        return DestTraits::fromRealPromote((log10(SrcTraits::toRealPromote(v)) + (-minv))/scale);
-    }
-};
-*/
-
-
-//#if 0
-///// add a scalar to all components, might break other stuff, therefore define just here
-//template <class V1, class V2>
-//inline
-//vigra::RGBValue<V1>
-//operator+(const vigra::RGBValue<V1> l, V2 const & r)
-//{
-//    return vigra::RGBValue<V1>(l.red() + r, l.green() + r, l.blue() + r);
-//}
-//
-///// subtract a scalar to all components, might break other stuff, therefore define just here
-//template <class V1, class V2>
-//inline
-//vigra::RGBValue<V1>
-//operator-(const vigra::RGBValue<V1> l, V2 const & r)
-//{
-//    return vigra::RGBValue<V1>(l.red() - r, l.green() - r, l.blue() - r);
-//}
-//#endif
-
-
-
-
-//struct MyMultFunc
-//{
-//    MyMultFunc(double f)
-//    {
-//        m = f;
-//    }
-//    double m;
-//
-//    template<class T>
-//    T
-//    operator()(T v) const
-//    {
-//        return vigra::NumericTraits<T>::fromRealPromote(v*m);
-//    }
-//};
 
 template <class SrcPixelType,
           class DestIterator, class DestAccessor>

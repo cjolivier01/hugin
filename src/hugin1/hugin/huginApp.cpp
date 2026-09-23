@@ -42,7 +42,6 @@
 #include "hugin/CPEditorPanel.h"
 #include "hugin/OptimizePhotometricPanel.h"
 #include "hugin/PanoPanel.h"
-#include "hugin/ImagesList.h"
 #include "hugin/CPListFrame.h"
 #include "hugin/PreviewPanel.h"
 #include "hugin/GLPreviewFrame.h"
@@ -51,6 +50,7 @@
 #include "base_wx/CommandHistory.h"
 #include "base_wx/wxcms.h"
 #include "base_wx/wxPanoCommand.h"
+#include "base_wx/wxutils.h"
 #include "hugin/HtmlWindow.h"
 #include "hugin/treelistctrl.h"
 #include "hugin/ImagesTree.h"
@@ -62,11 +62,9 @@
 #include <wx/stdpaths.h>
 #ifdef __WXMSW__
 #include <wx/dir.h>
-#if wxCHECK_VERSION(3,1,0)
 #include <wx/taskbarbutton.h>
 #endif
-#endif
-#if defined __WXGTK__ && wxCHECK_VERSION(3,1,1)
+#if defined __WXGTK__
 #include "base_wx/wxPlatform.h"
 #endif
 
@@ -87,7 +85,7 @@ wxString Components2Str(const HuginGraph::ImageGraph::Components & comp)
 {
     wxString ret;
     for (unsigned i=0; i < comp.size(); i++) {
-        ret.Append(wxT("["));
+        ret.Append("[");
         HuginGraph::ImageGraph::Components::value_type::const_iterator it = comp[i].begin();
         while (it != comp[i].end())
         {
@@ -96,7 +94,7 @@ wxString Components2Str(const HuginGraph::ImageGraph::Components & comp)
             it++;
             if (it != comp[i].end() && *it == imgNr + 1)
             {
-                ret.Append(wxT("-"));
+                ret.Append("-");
                 while (it != comp[i].end() && *it == imgNr + 1)
                 {
                     ++it;
@@ -105,36 +103,26 @@ wxString Components2Str(const HuginGraph::ImageGraph::Components & comp)
                 ret << imgNr;
                 if (it != comp[i].end())
                 {
-                    ret.Append(wxT(", "));
+                    ret.Append(", ");
                 };
             }
             else
             {
                 if (it != comp[i].end())
                 {
-                    ret.Append(wxT(", "));
+                    ret.Append(", ");
                 };
             };
         };
 
-        ret.Append(wxT("]"));
+        ret.Append("]");
         if (i + 1 != comp.size())
         {
-            ret.Append(wxT(", "));
+            ret.Append(", ");
         };
     }
     return ret;
 }
-
-#if defined _WIN32 && defined Hugin_shared
-DEFINE_LOCAL_EVENT_TYPE( EVT_IMAGE_READY )
-#else
-DEFINE_EVENT_TYPE( EVT_IMAGE_READY )
-#endif
-
-BEGIN_EVENT_TABLE(huginApp, wxApp)
-    EVT_IMAGE_READY2(-1, huginApp::relayImageLoaded)
-END_EVENT_TABLE()
 
 // make wxwindows use this class as the main application
 #if defined USE_GDKBACKEND_X11
@@ -156,6 +144,17 @@ int main(int argc, char **argv)
 wxIMPLEMENT_APP(huginApp);
 #endif
 
+wxDEFINE_EVENT(EVT_IMAGE_READY, ImageReadyEvent);
+
+ImageReadyEvent::ImageReadyEvent(HuginBase::ImageCache::RequestPtr request, HuginBase::ImageCache::EntryPtr entry) : wxEvent(0, EVT_IMAGE_READY), request(request), entry(entry)
+{
+}
+
+wxEvent* ImageReadyEvent::Clone() const
+{
+    return new ImageReadyEvent(request, entry);
+}
+
 huginApp::huginApp()
 {
     DEBUG_TRACE("ctor");
@@ -164,6 +163,7 @@ huginApp::huginApp()
 #if wxUSE_ON_FATAL_EXCEPTION
     wxHandleFatalExceptions();
 #endif
+    Bind(EVT_IMAGE_READY, &huginApp::relayImageLoaded, this);
 }
 
 huginApp::~huginApp()
@@ -189,8 +189,12 @@ huginApp::~huginApp()
 bool huginApp::OnInit()
 {
     DEBUG_TRACE("=========================== huginApp::OnInit() begin ===================");
-    SetAppName(wxT("hugin"));
-#if defined __WXGTK__ && wxCHECK_VERSION(3,1,1)
+    SetAppName("hugin");
+#if defined __WXMSW__ && wxCHECK_VERSION(3,3,0)
+    // automatically switch between light and dark mode
+    SetAppearance(Appearance::System);
+#endif
+#if defined __WXGTK__
     CheckConfigFilename();
 #endif
 
@@ -199,7 +203,7 @@ bool huginApp::OnInit()
 
 #ifdef __WXMAC__
     // do not use the native list control on OSX (it is very slow with the control point list window)
-    wxSystemOptions::SetOption(wxT("mac.listctrl.always_use_generic"), 1);
+    wxSystemOptions::SetOption("mac.listctrl.always_use_generic", 1);
     // On OS X the file open does by default not show the file type list
     // Apple means this is not necessary
     // but the the add images dialog needs this selection, so force to 
@@ -222,34 +226,34 @@ bool huginApp::OnInit()
     m_utilsBinDir = exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR);
     exePath.RemoveLastDir();
     const wxString huginRoot=exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR);
-    m_xrcPrefix = huginRoot + wxT("share\\hugin\\xrc\\");
-    m_DataDir = huginRoot + wxT("share\\hugin\\data\\");
+    m_xrcPrefix = huginRoot + "share\\hugin\\xrc\\";
+    m_DataDir = huginRoot + "share\\hugin\\data\\";
 
     // locale setup
-    locale.AddCatalogLookupPathPrefix(huginRoot + wxT("share\\locale"));
+    locale.AddCatalogLookupPathPrefix(huginRoot + "share\\locale");
 
 #elif defined __WXMAC__ && defined MAC_SELF_CONTAINED_BUNDLE
     // initialize paths
     {
         wxString thePath = MacGetPathToBundledResourceFile(CFSTR("xrc"));
-        if (thePath == wxT("")) {
-            wxMessageBox(_("xrc directory not found in bundle"), _("Fatal Error"));
+        if (thePath == wxEmptyString) {
+            hugin_utils::HuginMessageBox(_("xrc directory not found in bundle"), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
             return false;
         }
-        m_xrcPrefix = thePath + wxT("/");
-        m_DataDir = thePath + wxT("/");
+        m_xrcPrefix = thePath + "/";
+        m_DataDir = thePath + "/";
     }
 
 #ifdef HUGIN_HSI
     // Set PYTHONHOME for the hsi module
     {
-        wxString pythonHome = MacGetPathToBundledFrameworksDirectory() + wxT("/Python27.framework/Versions/Current");
+        wxString pythonHome = MacGetPathToBundledFrameworksDirectory() + "/Python27.framework/Versions/Current";
         if(! wxDir::Exists(pythonHome)){
-            wxMessageBox(wxString::Format(_("Directory '%s' does not exists"), pythonHome.c_str()));
+            hugin_utils::HuginMessageBox(wxString::Format(_("Directory '%s' does not exists"), pythonHome), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
         } else {
-            wxUnsetEnv(wxT("PYTHONPATH"));
-            if(! wxSetEnv(wxT("PYTHONHOME"), pythonHome)){
-                wxMessageBox(_("Could not set environment variable PYTHONHOME"));
+            wxUnsetEnv("PYTHONPATH");
+            if(! wxSetEnv("PYTHONHOME", pythonHome)){
+                hugin_utils::HuginMessageBox(_("Could not set environment variable PYTHONHOME"), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
             } else {
                 DEBUG_TRACE("PYTHONHOME set to " << pythonHome);
             }
@@ -264,22 +268,22 @@ bool huginApp::OnInit()
       m_utilsBinDir = exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR);
       exePath.RemoveLastDir();
       const wxString huginRoot=exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR);
-      m_xrcPrefix = huginRoot + wxT("share/hugin/xrc/");
-      m_DataDir = huginRoot + wxT("share/hugin/data/");
+      m_xrcPrefix = huginRoot + "share/hugin/xrc/";
+      m_DataDir = huginRoot + "share/hugin/data/";
 
       // locale setup
-      locale.AddCatalogLookupPathPrefix(huginRoot + wxT("share/locale"));
+      locale.AddCatalogLookupPathPrefix(huginRoot + "share/locale");
     }
 
 #else
     // add the locale directory specified during configure
-    m_xrcPrefix = wxT(INSTALL_XRC_DIR);
-    m_DataDir = wxT(INSTALL_DATA_DIR);
-    locale.AddCatalogLookupPathPrefix(wxT(INSTALL_LOCALE_DIR));
+    m_xrcPrefix = INSTALL_XRC_DIR;
+    m_DataDir = INSTALL_DATA_DIR;
+    locale.AddCatalogLookupPathPrefix(INSTALL_LOCALE_DIR);
 #endif
 
-    if ( ! wxFile::Exists(m_xrcPrefix + wxT("/main_frame.xrc")) ) {
-        wxMessageBox(_("xrc directory not found, hugin needs to be properly installed\nTried Path:" + m_xrcPrefix ), _("Fatal Error"));
+    if ( ! wxFile::Exists(m_xrcPrefix + "/main_frame.xrc") ) {
+        hugin_utils::HuginMessageBox(wxString::Format(_("xrc directory not found, hugin needs to be properly installed\nTried Path: %s"), m_xrcPrefix), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
         return false;
     }
 
@@ -293,7 +297,7 @@ bool huginApp::OnInit()
     // need to explicitly initialize locale for C++ library/runtime
     setlocale(LC_ALL, "");
     // initialize i18n
-    int localeID = config->Read(wxT("language"), (long) HUGIN_LANGUAGE);
+    int localeID = config->Read("language", (long) HUGIN_LANGUAGE);
     DEBUG_TRACE("localeID: " << localeID);
     {
         bool bLInit;
@@ -308,7 +312,7 @@ bool huginApp::OnInit()
 	}
 	
     // set the name of locale recource to look for
-    locale.AddCatalog(wxT("hugin"));
+    locale.AddCatalog("hugin");
 
     // initialize image handlers
     wxInitAllImageHandlers();
@@ -327,7 +331,6 @@ bool huginApp::OnInit()
     wxXmlResource::Get()->AddHandler(new CPImageCtrlXmlHandler());
     wxXmlResource::Get()->AddHandler(new CPImagesComboBoxXmlHandler());
     wxXmlResource::Get()->AddHandler(new MaskEditorPanelXmlHandler());
-    wxXmlResource::Get()->AddHandler(new ImagesListMaskXmlHandler());
     wxXmlResource::Get()->AddHandler(new MaskImageCtrlXmlHandler());
     wxXmlResource::Get()->AddHandler(new OptimizePanelXmlHandler());
     wxXmlResource::Get()->AddHandler(new OptimizePhotometricPanelXmlHandler());
@@ -340,26 +343,26 @@ bool huginApp::OnInit()
     wxXmlResource::Get()->AddHandler(new SplitButtonXmlHandler());
 
     // load XRC files
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("cp_list_frame.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("preview_frame.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("edit_script_dialog.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("main_menu.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("main_tool.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("about.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("pref_dialog.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("cpdetector_dialog.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("reset_dialog.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("optimize_photo_panel.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("cp_editor_panel.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("images_panel.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("main_frame.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("optimize_panel.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("pano_panel.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("mask_editor_panel.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("lensdb_dialogs.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("image_variable_dlg.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("dlg_warning.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("import_raw_dialog.xrc"));
+    wxXmlResource::Get()->Load(m_xrcPrefix + "cp_list_frame.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "preview_frame.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "edit_script_dialog.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "main_menu.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "main_tool.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "about.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "pref_dialog.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "cpdetector_dialog.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "reset_dialog.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "optimize_photo_panel.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "cp_editor_panel.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "images_panel.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "main_frame.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "optimize_panel.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "pano_panel.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "mask_editor_panel.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "lensdb_dialogs.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "image_variable_dlg.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "dlg_warning.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "import_raw_dialog.xrc");
 #endif
 
 #ifdef __WXMAC__
@@ -375,10 +378,9 @@ bool huginApp::OnInit()
     SetTopWindow(frame);
 
     // setup main frame size, after it has been created.
-    RestoreFramePosition(frame, wxT("MainFrame"));
+    hugin_utils::RestoreFramePosition(frame, "MainFrame");
 #ifdef __WXMSW__
     frame->SendSizeEvent();
-#if wxCHECK_VERSION(3,1,0)
 // wxUSE_TASKBARBUTTON 1 is default, nevertheless check that the feature has not been deactivated by the user, otherwise issue a warning
 #if wxUSE_TASKBARBUTTON
     wxTaskBarJumpList jumpList;
@@ -390,11 +392,17 @@ bool huginApp::OnInit()
         exeFile.GetFullPath(), 0);
     jumpList.GetTasks().Append(item1);
     exeFile.SetName("calibrate_lens_gui");
-    wxTaskBarJumpListItem *item2 = new wxTaskBarJumpListItem(
+    item1 = new wxTaskBarJumpListItem(
         NULL, wxTASKBAR_JUMP_LIST_TASK, _("Open Lens calibrate tool"), exeFile.GetFullPath(), wxEmptyString,
         _("Opens Calibrate_lens_gui, a simple GUI for lens calibration"),
         exeFile.GetFullPath(), 0);
-    jumpList.GetTasks().Append(item2);
+    jumpList.GetTasks().Append(item1);
+    exeFile.SetName("Hugin_toolbox");
+    item1 = new wxTaskBarJumpListItem(
+        NULL, wxTASKBAR_JUMP_LIST_TASK, _("Open Hugin toolbox"), exeFile.GetFullPath(), wxEmptyString,
+        _("Opens Hugin_toolbox, a GUI for several small helper programs"),
+        exeFile.GetFullPath(), 0);
+    jumpList.GetTasks().Append(item1);
 #else
   #if defined _MSC_VER
     #pragma message("Warning: huginApp.cpp - wxWidgets is compiled without support for taskbar buttons. Some features have therefore disabled.")
@@ -403,11 +411,10 @@ bool huginApp::OnInit()
   #endif
 #endif
 #endif
-#endif
     // init help system
     provider->SetHelpController(&frame->GetHelpController());
 #ifdef __WXMSW__
-    frame->GetHelpController().Initialize(m_xrcPrefix + wxT("data/hugin_help_en_EN.chm"));
+    frame->GetHelpController().Initialize(m_xrcPrefix + "data/hugin_help_en_EN.chm");
 #else
 #if wxUSE_WXHTML_HELP
     // using wxHtmlHelpController
@@ -417,19 +424,19 @@ bool huginApp::OnInit()
     wxString strFile = MacGetPathToBundledResourceFile(CFSTR("help"));
     if (!strFile.IsEmpty())
     {
-        frame->GetHelpController().AddBook(wxFileName(strFile + wxT("/hugin_help_en_EN.hhp")));
+        frame->GetHelpController().AddBook(wxFileName(strFile + "/hugin_help_en_EN.hhp"));
     }
     else
     {
-        wxLogError(wxString::Format(wxT("Could not find help directory in the bundle"), strFile.c_str()));
+        wxLogError(wxString::Format("Could not find help directory in the bundle", strFile.c_str()));
         return false;
     }
 #else
-    frame->GetHelpController().AddBook(wxFileName(m_xrcPrefix + wxT("data/help_en_EN/hugin_help_en_EN.hhp")));
+    frame->GetHelpController().AddBook(wxFileName(m_xrcPrefix + "data/help_en_EN/hugin_help_en_EN.hhp"));
 #endif
 #else
     // using wxExtHelpController
-    frame->GetHelpController().Initialize(Initialize(m_xrcPrefix + wxT("data/help_en_EN")));
+    frame->GetHelpController().Initialize(Initialize(m_xrcPrefix + "data/help_en_EN"));
 #endif
 #endif
 
@@ -447,10 +454,10 @@ bool huginApp::OnInit()
 
     wxString cwd = wxFileName::GetCwd();
 
-    m_workDir = config->Read(wxT("tempDir"),wxT(""));
+    m_workDir = config->Read("tempDir",wxEmptyString);
     // FIXME, make secure against some symlink attacks
     // get a temp dir
-    if (m_workDir == wxT("")) {
+    if (m_workDir == wxEmptyString) {
 #if (defined __WXMSW__)
         DEBUG_DEBUG("figuring out windows temp dir");
         /* added by Yili Zhao */
@@ -460,14 +467,14 @@ bool huginApp::OnInit()
 #elif (defined __WXMAC__) && (defined MAC_SELF_CONTAINED_BUNDLE)
         DEBUG_DEBUG("temp dir on Mac");
         m_workDir = MacGetPathToUserDomainTempDir();
-        if(m_workDir == wxT(""))
-            m_workDir = wxT("/tmp");
+        if(m_workDir == wxEmptyString)
+            m_workDir = "/tmp";
 #else //UNIX
         DEBUG_DEBUG("temp dir on unix");
         // try to read environment variable
-        if (!wxGetEnv(wxT("TMPDIR"), &m_workDir)) {
+        if (!wxGetEnv("TMPDIR", &m_workDir)) {
             // still no tempdir, use /tmp
-            m_workDir = wxT("/tmp");
+            m_workDir = "/tmp";
         }
 #endif
         
@@ -504,9 +511,9 @@ bool huginApp::OnInit()
 #endif
         wxFileName file(argv[1]);
         // if the first file is a project file, open it
-        if (file.GetExt().CmpNoCase(wxT("pto")) == 0 ||
-            file.GetExt().CmpNoCase(wxT("pts")) == 0 ||
-            file.GetExt().CmpNoCase(wxT("ptp")) == 0 )
+        if (file.GetExt().CmpNoCase("pto") == 0 ||
+            file.GetExt().CmpNoCase("pts") == 0 ||
+            file.GetExt().CmpNoCase("ptp") == 0 )
         {
             if(file.IsRelative())
                 file.MakeAbsolute(cwd);
@@ -551,7 +558,7 @@ bool huginApp::OnInit()
                         // Use the first filename to set actualPath.
                         if (!actualPathSet)
                         {
-                            config->Write(wxT("/actualPath"), file.GetPath());
+                            config->Write("/actualPath", file.GetPath());
                             actualPathSet = true;
                         };
                     };
@@ -566,7 +573,7 @@ bool huginApp::OnInit()
                             // Use the first filename to set actualPath.
                             if (!actualPathSet)
                             {
-                                config->Write(wxT("/actualPath"), file.GetPath());
+                                config->Write("/actualPath", file.GetPath());
                                 actualPathSet = true;
                             };
                         };
@@ -588,15 +595,10 @@ bool huginApp::OnInit()
             {
                 if (rawFilesv.size() == 1)
                 {
-                    wxMessageDialog message(GetTopWindow(), _("You selected only one raw file. This is not recommended.\nAll raw files should be converted at once."),
-#ifdef _WIN32
-                        _("Hugin"),
-#else
-                        wxT(""),
-#endif
-                        wxICON_EXCLAMATION | wxOK | wxCANCEL);
-                    message.SetOKLabel(_("Convert anyway."));
-                    if (message.ShowModal() != wxID_OK)
+                    hugin_utils::MessageDialog message=hugin_utils::GetMessageDialog(_("You selected only one raw file. This is not recommended.\nAll raw files should be converted at once."), 
+                        _("Hugin"), wxICON_EXCLAMATION | wxOK | wxCANCEL, wxGetActiveWindow());
+                    message->SetOKLabel(_("Convert anyway."));
+                    if (message->ShowModal() != wxID_OK)
                     {
                         return true;
                     };
@@ -625,7 +627,7 @@ bool huginApp::OnInit()
 	if(secondParam.Cmp(_T("-notips"))!=0)
 	{
 		//load tip startup preferences (tips will be started after splash terminates)
-		int nValue = config->Read(wxT("/MainFrame/ShowStartTip"), 1l);
+		int nValue = config->Read("/MainFrame/ShowStartTip", 1l);
 
 		//show tips if needed now
 		if(nValue > 0)
@@ -715,93 +717,3 @@ void huginApp::OnFatalException()
 #endif
 
 huginApp * huginApp::m_this = 0;
-
-
-// utility functions
-
-void RestoreFramePosition(wxTopLevelWindow * frame, const wxString & basename)
-{
-    DEBUG_TRACE(basename.mb_str(wxConvLocal));
-
-    wxConfigBase * config = wxConfigBase::Get();
-
-    // get display size
-    int dx,dy;
-    wxDisplaySize(&dx,&dy);
-
-#if ( __WXGTK__ )
-// restoring the splitter positions properly when maximising doesn't work.
-// Disabling maximise on wxWidgets >= 2.6.0 and gtk
-        //size
-        int w = config->Read(wxT("/") + basename + wxT("/width"),-1l);
-        int h = config->Read(wxT("/") + basename + wxT("/height"),-1l);
-        if (w > 0 && w <= dx) {
-            frame->SetClientSize(w,h);
-        } else {
-            frame->Fit();
-        }
-        //position
-        int x = config->Read(wxT("/") + basename + wxT("/positionX"),-1l);
-        int y = config->Read(wxT("/") + basename + wxT("/positionY"),-1l);
-        if ( y >= 0 && x >= 0 && x < dx && y < dy) {
-            frame->Move(x, y);
-        } else {
-            frame->Move(0, 44);
-        }
-#else
-    bool maximized = config->Read(wxT("/") + basename + wxT("/maximized"), 0l) != 0;
-    if (maximized) {
-        frame->Maximize();
-	} else {
-        //size
-        int w = config->Read(wxT("/") + basename + wxT("/width"),-1l);
-        int h = config->Read(wxT("/") + basename + wxT("/height"),-1l);
-        if (w > 0 && w <= dx) {
-            frame->SetClientSize(w,h);
-        } else {
-            frame->Fit();
-        }
-        //position
-        int x = config->Read(wxT("/") + basename + wxT("/positionX"),-1l);
-        int y = config->Read(wxT("/") + basename + wxT("/positionY"),-1l);
-        if ( y >= 0 && x >= 0 && x < dx && y < dy) {
-            frame->Move(x, y);
-        } else {
-            frame->Move(0, 44);
-        }
-    }
-#endif
-}
-
-
-void StoreFramePosition(wxTopLevelWindow * frame, const wxString & basename)
-{
-    DEBUG_TRACE(basename);
-
-    wxConfigBase * config = wxConfigBase::Get();
-
-#if ( __WXGTK__ )
-// restoring the splitter positions properly when maximising doesn't work.
-// Disabling maximise on wxWidgets >= 2.6.0 and gtk
-    
-        wxSize sz = frame->GetClientSize();
-        config->Write(wxT("/") + basename + wxT("/width"), sz.GetWidth());
-        config->Write(wxT("/") + basename + wxT("/height"), sz.GetHeight());
-        wxPoint ps = frame->GetPosition();
-        config->Write(wxT("/") + basename + wxT("/positionX"), ps.x);
-        config->Write(wxT("/") + basename + wxT("/positionY"), ps.y);
-        config->Write(wxT("/") + basename + wxT("/maximized"), 0);
-#else
-    if ( (! frame->IsMaximized()) && (! frame->IsIconized()) ) {
-        wxSize sz = frame->GetClientSize();
-        config->Write(wxT("/") + basename + wxT("/width"), sz.GetWidth());
-        config->Write(wxT("/") + basename + wxT("/height"), sz.GetHeight());
-        wxPoint ps = frame->GetPosition();
-        config->Write(wxT("/") + basename + wxT("/positionX"), ps.x);
-        config->Write(wxT("/") + basename + wxT("/positionY"), ps.y);
-        config->Write(wxT("/") + basename + wxT("/maximized"), 0);
-    } else if (frame->IsMaximized()){
-        config->Write(wxT("/") + basename + wxT("/maximized"), 1l);
-    }
-#endif
-}

@@ -75,8 +75,6 @@ private:
     int m_pid;
     //Called in GUI application when process terminates
     void OnProcessTerminate(wxProcessEvent& event);
-
-    DECLARE_EVENT_TABLE()
 };
 
 // event ID's for RunStitchPanel

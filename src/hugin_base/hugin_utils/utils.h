@@ -241,6 +241,9 @@ namespace hugin_utils
     /** returns description of given icc profile */
     IMPEX std::string GetICCDesc(const vigra::ImageImportInfo::ICCProfile& iccProfile);
     IMPEX std::string GetICCDesc(const cmsHPROFILE& profile);
+    /** return true if icc profile is linear one, otherwise return false */
+    IMPEX bool IsLinearICCProfile(const vigra::ImageImportInfo::ICCProfile& iccProfile);
+
 
     /** return vector of known extensions of raw files, all in lower case */
     IMPEX std::vector<std::string> GetRawExtensions();

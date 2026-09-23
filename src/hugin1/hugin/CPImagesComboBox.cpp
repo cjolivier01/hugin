@@ -33,10 +33,17 @@
 #endif
 #include "hugin/CPImagesComboBox.h"
 
-BEGIN_EVENT_TABLE(CPImagesComboBox,wxOwnerDrawnComboBox)
-    EVT_MOUSEWHEEL(CPImagesComboBox::OnMouseWheel)
-    EVT_KEY_DOWN(CPImagesComboBox::OnKeyDown)
-END_EVENT_TABLE()
+bool CPImagesComboBox::Create(wxWindow* parent, wxWindowID id, const wxString& value, const wxPoint& pos, const wxSize& size,
+    long style, const wxValidator& validator, const wxString& name)
+{
+    if (!wxOwnerDrawnComboBox::Create(parent, id, value, pos, size, wxArrayString(), style, validator, name))
+    {
+        return false;
+    }
+    Bind(wxEVT_MOUSEWHEEL, &CPImagesComboBox::OnMouseWheel, this);
+    Bind(wxEVT_KEY_DOWN, &CPImagesComboBox::OnKeyDown, this);
+    return true;
+}
 
 void CPImagesComboBox::OnMouseWheel(wxMouseEvent & e)
 {
@@ -157,10 +164,10 @@ void CPImagesComboBox::OnDrawItem(wxDC& dc,
 
     // if image connected by control points, add number of CPs to width equation as well
     wxCoord qty_w = 0;
-    wxString qty_cp = wxT("");
+    wxString qty_cp = wxEmptyString;
     if(CPConnection[item]>-1.0)
     {
-        qty_cp = wxString::Format(wxT(" %d"), CPCount[item]);
+        qty_cp = wxString::Format(" %d", CPCount[item]);
         GetTextExtent(qty_cp, &qty_w, &h);
     }
 
@@ -174,7 +181,7 @@ void CPImagesComboBox::OnDrawItem(wxDC& dc,
     else // otherwise, truncate and add an ellipsis
     {
         // determine the base width
-        wxString ellipsis(wxT("..."));
+        wxString ellipsis("...");
         wxCoord base_w;
         GetTextExtent(ellipsis, &base_w, &h);
 
@@ -302,7 +309,7 @@ wxObject *CPImagesComboBoxXmlHandler::DoCreateResource()
     cp->Create(m_parentAsWindow,
                    GetID(), wxEmptyString,
                    GetPosition(), GetSize(),
-                   GetStyle(wxT("style")), wxDefaultValidator,
+                   GetStyle("style"), wxDefaultValidator,
                    GetName());
 
     SetupWindow(cp);
@@ -312,5 +319,5 @@ wxObject *CPImagesComboBoxXmlHandler::DoCreateResource()
 
 bool CPImagesComboBoxXmlHandler::CanHandle(wxXmlNode *node)
 {
-    return IsOfClass(node, wxT("CPImagesComboBox"));
+    return IsOfClass(node, "CPImagesComboBox");
 }

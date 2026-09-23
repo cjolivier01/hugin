@@ -33,6 +33,7 @@
 #include "base_wx/CommandHistory.h"
 #include "base_wx/PanoCommand.h"
 #include "base_wx/platform.h"
+#include "base_wx/wxutils.h"
 #include "base_wx/MyExternalCmdExecDialog.h"
 #include "base_wx/wxPanoCommand.h"
 #include "icpfind/AutoCtrlPointCreator.h"
@@ -86,16 +87,16 @@ bool ParseHeader(wxXmlNode* root, PapywizardSettings& images)
     while (child)
     {
         // section <camera>
-        if (child->GetName().CmpNoCase(wxT("camera")) == 0)
+        if (child->GetName().CmpNoCase("camera") == 0)
         {
             wxXmlNode* camChild = child->GetChildren();
             while (camChild)
             {
                 // crop factor is saved as attribute in <sensor>
-                if (camChild->GetName().CmpNoCase(wxT("sensor")) == 0)
+                if (camChild->GetName().CmpNoCase("sensor") == 0)
                 {
                     wxString number;
-                    if (camChild->GetAttribute(wxT("coef"), &number))
+                    if (camChild->GetAttribute("coef", &number))
                     {
                         if (!hugin_utils::stringToDouble(std::string(number.mb_str(wxConvLocal)), images.cropfactor))
                         {
@@ -107,19 +108,19 @@ bool ParseHeader(wxXmlNode* root, PapywizardSettings& images)
             }
         }
         // section <lens>
-        if (child->GetName().CmpNoCase(wxT("lens")) == 0)
+        if (child->GetName().CmpNoCase("lens") == 0)
         {
             // projection as type attribute
-            wxString projection = child->GetAttribute(wxT("type"), wxEmptyString).Trim().Trim(false);
+            wxString projection = child->GetAttribute("type", wxEmptyString).Trim().Trim(false);
             if (!projection.empty())
             {
-                if (projection.CmpNoCase(wxT("rectilinear")) == 0)
+                if (projection.CmpNoCase("rectilinear") == 0)
                 {
                     images.projection = HuginBase::SrcPanoImage::RECTILINEAR;
                 }
                 else
                 {
-                    if (projection.CmpNoCase(wxT("fisheye")) == 0)
+                    if (projection.CmpNoCase("fisheye") == 0)
                     {
                         images.projection = HuginBase::SrcPanoImage::CIRCULAR_FISHEYE;
                     }
@@ -133,7 +134,7 @@ bool ParseHeader(wxXmlNode* root, PapywizardSettings& images)
             wxXmlNode* lensChild = child->GetChildren();
             while (lensChild)
             {
-                if (lensChild->GetName().CmpNoCase(wxT("focal")) == 0)
+                if (lensChild->GetName().CmpNoCase("focal") == 0)
                 {
                     wxString focallength = lensChild->GetNodeContent().Trim().Trim(false);
                     if(!hugin_utils::stringToDouble(std::string(focallength.mb_str(wxConvLocal)), images.focallength))
@@ -156,7 +157,7 @@ bool ParseShoot(wxXmlNode* root, PapywizardSettings& images)
     size_t id = 1;
     while (child)
     {
-        if (child->GetName().CmpNoCase(wxT("pict")) == 0)
+        if (child->GetName().CmpNoCase("pict") == 0)
         {
             PapywizardSettings::PapywizardImage image;
             long longVal;
@@ -168,7 +169,7 @@ bool ParseShoot(wxXmlNode* root, PapywizardSettings& images)
             // see https://bugs.launchpad.net/hugin/+bug/1840110
             // so the check id code is disabled for now
             // so activate the check again define PAPYWIZARD_USE_ID_CHECK 
-            if (!child->GetAttribute(wxT("id"), &s))
+            if (!child->GetAttribute("id", &s))
             {
                 return false;
             };
@@ -187,7 +188,7 @@ bool ParseShoot(wxXmlNode* root, PapywizardSettings& images)
 #endif
             ++id;
             // read bracket attribute
-            if(!child->GetAttribute(wxT("bracket"), &s))
+            if(!child->GetAttribute("bracket", &s))
             {
                 return false;
             };
@@ -200,9 +201,9 @@ bool ParseShoot(wxXmlNode* root, PapywizardSettings& images)
             wxXmlNode* posChild = child->GetChildren();
             while (posChild)
             {
-                if (posChild->GetName().CmpNoCase(wxT("position")) == 0)
+                if (posChild->GetName().CmpNoCase("position") == 0)
                 {
-                    if (!posChild->GetAttribute(wxT("yaw"), &s))
+                    if (!posChild->GetAttribute("yaw", &s))
                     {
                         return false;
                     };
@@ -210,7 +211,7 @@ bool ParseShoot(wxXmlNode* root, PapywizardSettings& images)
                     {
                         return false;
                     };
-                    if (!posChild->GetAttribute(wxT("pitch"), &s))
+                    if (!posChild->GetAttribute("pitch", &s))
                     {
                         return false;
                     }
@@ -218,7 +219,7 @@ bool ParseShoot(wxXmlNode* root, PapywizardSettings& images)
                     {
                         return false;
                     };
-                    if (!posChild->GetAttribute(wxT("roll"), &s))
+                    if (!posChild->GetAttribute("roll", &s))
                     {
                         return false;
                     };
@@ -245,7 +246,7 @@ bool ParsePapywizardFile(const wxString& filename, PapywizardSettings& images)
     {
         return false;
     }
-    if (xmlFile.GetRoot()->GetName().CmpNoCase(wxT("papywizard")) != 0)
+    if (xmlFile.GetRoot()->GetName().CmpNoCase("papywizard") != 0)
     {
         // not a papywizard file
         return false;
@@ -254,14 +255,14 @@ bool ParsePapywizardFile(const wxString& filename, PapywizardSettings& images)
     wxXmlNode* child = xmlFile.GetRoot()->GetChildren();
     while (child)
     {
-        if (child->GetName().CmpNoCase(wxT("header")) == 0)
+        if (child->GetName().CmpNoCase("header") == 0)
         {
             if (!ParseHeader(child, images))
             {
                 return false;
             };
         };
-        if (child->GetName().CmpNoCase(wxT("shoot")) == 0)
+        if (child->GetName().CmpNoCase("shoot") == 0)
         {
             if (!ParseShoot(child, images))
             {
@@ -279,30 +280,24 @@ public:
     /** Constructor, read from xrc ressource */
     PapywizardImportDialog(wxWindow *parent)
     {
-        wxXmlResource::Get()->LoadDialog(this, parent, wxT("papywizard_import_dialog"));
-#ifdef __WXMSW__
-        wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + wxT("data/hugin.ico"), wxBITMAP_TYPE_ICO);
-        SetIcons(myIcons);
-#else
-        wxIcon myIcon(huginApp::Get()->GetXRCPath() + wxT("data/hugin.png"), wxBITMAP_TYPE_PNG);
-        SetIcon(myIcon);
-#endif
+        wxXmlResource::Get()->LoadDialog(this, parent, "papywizard_import_dialog");
 
         m_linkPos = XRCCTRL(*this, "papywizard_link_positions", wxCheckBox);
         m_cpfind = XRCCTRL(*this, "papywizard_cpfind", wxCheckBox);
+        m_cpfind->Bind(wxEVT_CHECKBOX, &PapywizardImportDialog::OnCpfindCheck, this);
         m_cpfindParams = XRCCTRL(*this, "papywizard_cpfind_parameters", wxTextCtrl);
         m_geocpset = XRCCTRL(*this, "papywizard_geocpset", wxCheckBox);
-        const wxString cpfindParams = wxConfig::Get()->Read(wxT("/PapywizardImportCpfind"), wxEmptyString);
+        const wxString cpfindParams = wxConfig::Get()->Read("/PapywizardImportCpfind", wxEmptyString);
         m_cpfindParams->SetValue(cpfindParams);
-        RestoreFramePosition(this, wxT("PapywizardImportDialog"));
+        hugin_utils::RestoreFramePosition(this, "PapywizardImportDialog");
     };
     /** destructor, save settings */
     ~PapywizardImportDialog()
     {
-        StoreFramePosition(this, wxT("PapywizardImportDialog"));
+        hugin_utils::StoreFramePosition(this, "PapywizardImportDialog");
         if (m_cpfind->IsChecked())
         {
-            wxConfig::Get()->Write(wxT("/PapywizardImportCpfind"), m_cpfindParams->GetValue());
+            wxConfig::Get()->Write("/PapywizardImportCpfind", m_cpfindParams->GetValue());
         };
     };
     void EnableStack(const bool hasStacks)
@@ -338,37 +333,22 @@ private:
     wxCheckBox* m_cpfind;
     wxTextCtrl* m_cpfindParams;
     wxCheckBox* m_geocpset;
-    DECLARE_EVENT_TABLE()
 };
-
-BEGIN_EVENT_TABLE(PapywizardImportDialog, wxDialog)
-    EVT_CHECKBOX(XRCID("papywizard_cpfind"), PapywizardImportDialog::OnCpfindCheck)
-END_EVENT_TABLE()
 
 bool ImportPapywizardFile(const wxString& filename, HuginBase::Panorama& pano)
 {
     PapywizardSettings papyImages;
     if (!ParsePapywizardFile(filename, papyImages))
     {
-        wxMessageBox(wxString::Format(_("Could not parse file %s as Papywizard XML file."), filename.c_str()),
-#ifdef __WXMSW__
-            _("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxOK);
+        hugin_utils::HuginMessageBox(wxString::Format(_("Could not parse file %s as Papywizard XML file."), filename),
+            _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
         return false;
     };
     // check if number of images matches
     if(papyImages.images.size()!=pano.getNrOfImages())
     {
-        wxMessageBox(wxString::Format(_("The current project does not match with the Papywizard xml file.\nThe Papywizard file \"%s\" contains %lu images, but the Hugin project contains %lu images."), filename.c_str(), static_cast<unsigned long>(papyImages.images.size()), static_cast<unsigned long>(pano.getNrOfImages())),
-#ifdef __WXMSW__
-            _("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxOK);
+        hugin_utils::HuginMessageBox(wxString::Format(_("The current project does not match with the Papywizard xml file.\nThe Papywizard file \"%s\" contains %lu images, but the Hugin project contains %lu images."), filename.c_str(), static_cast<unsigned long>(papyImages.images.size()), static_cast<unsigned long>(pano.getNrOfImages())),
+            _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
         return false;
     };
     PapywizardImportDialog dialog(wxGetActiveWindow());
@@ -451,7 +431,7 @@ bool ImportPapywizardFile(const wxString& filename, HuginBase::Panorama& pano)
     if (dialog.RunCpfind())
     {
         //save project into temp directory
-        wxString tempDir = wxConfig::Get()->Read(wxT("tempDir"), wxT(""));
+        wxString tempDir = wxConfig::Get()->Read("tempDir", wxEmptyString);
         if (!tempDir.IsEmpty())
         {
             if (tempDir.Last() != wxFileName::GetPathSeparator())
@@ -459,19 +439,19 @@ bool ImportPapywizardFile(const wxString& filename, HuginBase::Panorama& pano)
                 tempDir.Append(wxFileName::GetPathSeparator());
             }
         };
-        wxFileName scriptFileName(wxFileName::CreateTempFileName(tempDir + wxT("hp")));
+        wxFileName scriptFileName(wxFileName::CreateTempFileName(tempDir + "hp"));
         const std::string scriptString(scriptFileName.GetFullPath().mb_str(HUGIN_CONV_FILENAME));
         pano.WritePTOFile(scriptString, hugin_utils::getPathPrefix(scriptString));
         // build command queue
         const wxFileName exePath(wxStandardPaths::Get().GetExecutablePath());
         HuginQueue::CommandQueue* commands=new HuginQueue::CommandQueue();
         const wxString quotedProject(HuginQueue::wxEscapeFilename(scriptFileName.GetFullPath()));
-        commands->push_back(new HuginQueue::NormalCommand(HuginQueue::GetInternalProgram(exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR), wxT("cpfind")),
-            dialog.GetCPFindParam() + wxT(" --prealigned -o ") + quotedProject + wxT(" ") + quotedProject, _("Searching for control points...")));
+        commands->push_back(new HuginQueue::NormalCommand(HuginQueue::GetInternalProgram(exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR), "cpfind"),
+            dialog.GetCPFindParam() + " --prealigned -o " + quotedProject + " " + quotedProject, _("Searching for control points...")));
         if (dialog.RunGeocpset())
         {
-            commands->push_back(new HuginQueue::NormalCommand(HuginQueue::GetInternalProgram(exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR), wxT("geocpset")),
-                wxT("-o ") + quotedProject + wxT(" ") + quotedProject, _("Connecting overlapping images")));
+            commands->push_back(new HuginQueue::NormalCommand(HuginQueue::GetInternalProgram(exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR), "geocpset"),
+                "-o " + quotedProject + " " + quotedProject, _("Connecting overlapping images")));
         };
         //execute queue
         MyExecuteCommandQueue(commands, wxGetActiveWindow(), _("Searching control points"));

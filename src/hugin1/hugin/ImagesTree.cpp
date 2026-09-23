@@ -32,6 +32,7 @@
 #include "hugin/ImagesTree.h"
 #include "base_wx/wxImageCache.h"
 #include "base_wx/platform.h"
+#include "base_wx/wxutils.h"
 #include "hugin_base/algorithms/basic/LayerStacks.h"
 #include <panodata/ImageVariableGroup.h>
 #include <panodata/StandardImageVariableGroups.h>
@@ -57,31 +58,6 @@ enum
     ID_DEACTIVATE_IMAGE,
     ID_OPERATION_START=wxID_HIGHEST+300
 };
-
-BEGIN_EVENT_TABLE(ImagesTreeCtrl, wxTreeListCtrl)
-    EVT_LIST_COL_END_DRAG(-1, ImagesTreeCtrl::OnColumnWidthChange)
-    EVT_TREE_ITEM_MENU(-1, ImagesTreeCtrl::OnContextMenu)
-    EVT_LIST_COL_RIGHT_CLICK(-1, ImagesTreeCtrl::OnHeaderContextMenu)
-    EVT_MENU(ID_LINK, ImagesTreeCtrl::OnLinkImageVariables)
-    EVT_MENU(ID_UNLINK, ImagesTreeCtrl::OnUnlinkImageVariables)
-    EVT_MENU(ID_EDIT, ImagesTreeCtrl::OnEditImageVariables)
-    EVT_MENU(ID_SELECT_ALL, ImagesTreeCtrl::OnSelectAll)
-    EVT_MENU(ID_UNSELECT_ALL, ImagesTreeCtrl::OnUnselectAll)
-    EVT_MENU(ID_SELECT_LENS_STACK, ImagesTreeCtrl::OnSelectLensStack)
-    EVT_MENU(ID_UNSELECT_LENS_STACK, ImagesTreeCtrl::OnUnselectLensStack)
-    EVT_MENU(ID_ACTIVATE_IMAGE, ImagesTreeCtrl::OnActivateImage)
-    EVT_MENU(ID_DEACTIVATE_IMAGE, ImagesTreeCtrl::OnDeactivateImage)
-    EVT_MENU_RANGE(ID_OPERATION_START, ID_OPERATION_START+50, ImagesTreeCtrl::OnExecuteOperation)
-    EVT_TREE_BEGIN_DRAG(-1, ImagesTreeCtrl::OnBeginDrag)
-    EVT_LEFT_UP(ImagesTreeCtrl::OnLeftUp)
-    EVT_LEFT_DCLICK(ImagesTreeCtrl::OnLeftDblClick)
-    EVT_TREE_KEY_DOWN(-1, ImagesTreeCtrl::OnChar)
-    EVT_TREE_BEGIN_LABEL_EDIT(-1, ImagesTreeCtrl::OnBeginEdit)
-    EVT_TREE_END_LABEL_EDIT(-1, ImagesTreeCtrl::OnEndEdit)
-#if wxCHECK_VERSION(3,1,3)
-    EVT_DPI_CHANGED(ImagesTreeCtrl::OnDpiChanged)
-#endif
-END_EVENT_TABLE()
 
 class ImagesTreeData : public wxTreeItemData
 {
@@ -122,14 +98,28 @@ bool ImagesTreeCtrl::Create(wxWindow* parent, wxWindowID id,
     }
 
     DEBUG_TRACE("Tree, adding columns");
-    m_configClassName = wxT("/ImagesTree");
+    m_configClassName = "/ImagesTree";
     CreateColumns();
     DEBUG_TRACE("");
-    m_degDigits = wxConfigBase::Get()->Read(wxT("/General/DegreeFractionalDigits"),1);
-    m_pixelDigits = wxConfigBase::Get()->Read(wxT("/General/PixelFractionalDigits"),1);
-    m_distDigits = wxConfigBase::Get()->Read(wxT("/General/DistortionFractionalDigits"),3);
+    m_degDigits = wxConfigBase::Get()->Read("/General/DegreeFractionalDigits",1);
+    m_pixelDigits = wxConfigBase::Get()->Read("/General/PixelFractionalDigits",1);
+    m_distDigits = wxConfigBase::Get()->Read("/General/DistortionFractionalDigits",3);
     //create root
-    m_root=AddRoot(wxT("root"));
+    m_root=AddRoot("root");
+    // bind event handler
+    Bind(wxEVT_LIST_COL_END_DRAG, &ImagesTreeCtrl::OnColumnWidthChange, this);
+    Bind(wxEVT_TREE_ITEM_MENU, &ImagesTreeCtrl::OnContextMenu, this);
+    Bind(wxEVT_LIST_COL_RIGHT_CLICK, &ImagesTreeCtrl::OnHeaderContextMenu, this);
+    Bind(wxEVT_TREE_BEGIN_DRAG, &ImagesTreeCtrl::OnBeginDrag, this);
+    Bind(wxEVT_LEFT_UP, &ImagesTreeCtrl::OnLeftUp, this);
+    Bind(wxEVT_LEFT_DCLICK, &ImagesTreeCtrl::OnLeftDblClick, this);
+    // for working double click we need also the menu handler on ID_EDIT
+    Bind(wxEVT_MENU, &ImagesTreeCtrl::OnEditImageVariables, this, ID_EDIT);
+    Bind(wxEVT_TREE_KEY_DOWN, &ImagesTreeCtrl::OnChar, this);
+    Bind(wxEVT_TREE_BEGIN_LABEL_EDIT, &ImagesTreeCtrl::OnBeginEdit, this);
+    Bind(wxEVT_TREE_END_LABEL_EDIT, &ImagesTreeCtrl::OnEndEdit, this);
+    Bind(wxEVT_DPI_CHANGED, &ImagesTreeCtrl::OnDpiChanged, this);
+
     return true;
 }
 
@@ -146,7 +136,7 @@ void ImagesTreeCtrl::CreateColumns()
     };\
     m_variableVector.push_back(IVE);\
     counter++;
-    ADDCOLUMN(wxT("#"), "imgNr", 35, wxALIGN_LEFT, false, HuginBase::ImageVariableGroup::IVE_Filename, _("Image number"))
+    ADDCOLUMN("#", "imgNr", 35, wxALIGN_LEFT, false, HuginBase::ImageVariableGroup::IVE_Filename, _("Image number"))
     ADDCOLUMN(_("Filename"), "filename", 200, wxALIGN_LEFT, false, HuginBase::ImageVariableGroup::IVE_Filename, _("Filename"))
     ADDCOLUMN(_("Width"), "width", 60, wxALIGN_RIGHT, false, HuginBase::ImageVariableGroup::IVE_Filename, _("Image width"))
     ADDCOLUMN(_("Height"), "height", 60, wxALIGN_RIGHT, false, HuginBase::ImageVariableGroup::IVE_Filename, _("Image height"))
@@ -167,37 +157,37 @@ void ImagesTreeCtrl::CreateColumns()
     ADDCOLUMN(_("Yaw (y)"), "y", 60, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Yaw, _("Yaw"))
     ADDCOLUMN(_("Pitch (p)"), "p", 60, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Yaw, _("Pitch"))
     ADDCOLUMN(_("Roll (r)"), "r", 60, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Yaw, _("Roll"))
-    ADDCOLUMN(wxT("X (TrX)"), "TrX", 60, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Yaw, _("Camera translation X"))
-    ADDCOLUMN(wxT("Y (TrY)"), "TrY", 60, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Yaw, _("Camera translation Y"))
-    ADDCOLUMN(wxT("Z (TrZ)"), "TrZ", 60, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Yaw, _("Camera translation Z"))
+    ADDCOLUMN("X (TrX)", "TrX", 60, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Yaw, _("Camera translation X"))
+    ADDCOLUMN("Y (TrY)", "TrY", 60, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Yaw, _("Camera translation Y"))
+    ADDCOLUMN("Z (TrZ)", "TrZ", 60, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Yaw, _("Camera translation Z"))
     ADDCOLUMN(_("Plane yaw"), "Tpy", 60, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Yaw, _("Translation remap plane yaw"))
     ADDCOLUMN(_("Plane pitch"), "Tpp", 60, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Yaw, _("Translation remap plane pitch"))
     ADDCOLUMN(_("Camera translation"), "cam_trans", 60, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Yaw, _("Camera translation"))
 
     ADDCOLUMN(_("Lens type (f)"), "projection", 100, wxALIGN_LEFT, false, HuginBase::ImageVariableGroup::IVE_Filename, _("Lens type (rectilinear, fisheye, equirectangular, ...)"))
     ADDCOLUMN(_("Hfov (v)"), "v", 80, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_HFOV, _("Horizontal field of view (v)"))
-    ADDCOLUMN(wxT("a"), "a", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialDistortion, _("Radial distortion (a)"))
-    ADDCOLUMN(wxT("b"), "b", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialDistortion, _("Radial distortion (b, barrel)"))
-    ADDCOLUMN(wxT("c"), "c", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialDistortion, _("Radial distortion (c)"))
-    ADDCOLUMN(wxT("d"), "d", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialDistortionCenterShift, _("Horizontal image center shift (d)"))
-    ADDCOLUMN(wxT("e"), "e", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialDistortionCenterShift, _("Vertical image center shift (e)"))
-    ADDCOLUMN(wxT("g"), "g", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Shear, _("Horizontal image shearing (g)"))
-    ADDCOLUMN(wxT("t"), "t", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Shear, _("Vertical image shearing (t)"))
+    ADDCOLUMN("a", "a", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialDistortion, _("Radial distortion (a)"))
+    ADDCOLUMN("b", "b", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialDistortion, _("Radial distortion (b, barrel)"))
+    ADDCOLUMN("c", "c", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialDistortion, _("Radial distortion (c)"))
+    ADDCOLUMN("d", "d", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialDistortionCenterShift, _("Horizontal image center shift (d)"))
+    ADDCOLUMN("e", "e", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialDistortionCenterShift, _("Vertical image center shift (e)"))
+    ADDCOLUMN("g", "g", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Shear, _("Horizontal image shearing (g)"))
+    ADDCOLUMN("t", "t", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_Shear, _("Vertical image shearing (t)"))
 
-    ADDCOLUMN(wxT("EV"), "Eev", 50, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_ExposureValue, _("Exposure value (Eev)"))
-    ADDCOLUMN(wxT("Er"), "Er", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_WhiteBalanceRed, _("Red multiplier (Er)"))
-    ADDCOLUMN(wxT("Eb"), "Eb", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_WhiteBalanceBlue, _("Blue multiplier (Eb)"))
-    ADDCOLUMN(wxT("Vb"), "Vb", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialVigCorrCoeff, _("Vignetting (Vb, Vc, Vd)"))
-    ADDCOLUMN(wxT("Vc"), "Vc", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialVigCorrCoeff, _("Vignetting (Vb, Vc, Vd)"))
-    ADDCOLUMN(wxT("Vd"), "Vd", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialVigCorrCoeff, _("Vignetting (Vb, Vc, Vd)"))
-    ADDCOLUMN(wxT("Vx"), "Vx", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialVigCorrCenterShift, _("Horizontal vignetting center shift (Vx)"))
-    ADDCOLUMN(wxT("Vy"), "Vy", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialVigCorrCenterShift, _("Vertical vignetting center shift (Vy)"))
+    ADDCOLUMN("EV", "Eev", 50, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_ExposureValue, _("Exposure value (Eev)"))
+    ADDCOLUMN("Er", "Er", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_WhiteBalanceRed, _("Red multiplier (Er)"))
+    ADDCOLUMN("Eb", "Eb", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_WhiteBalanceBlue, _("Blue multiplier (Eb)"))
+    ADDCOLUMN("Vb", "Vb", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialVigCorrCoeff, _("Vignetting (Vb, Vc, Vd)"))
+    ADDCOLUMN("Vc", "Vc", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialVigCorrCoeff, _("Vignetting (Vb, Vc, Vd)"))
+    ADDCOLUMN("Vd", "Vd", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialVigCorrCoeff, _("Vignetting (Vb, Vc, Vd)"))
+    ADDCOLUMN("Vx", "Vx", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialVigCorrCenterShift, _("Horizontal vignetting center shift (Vx)"))
+    ADDCOLUMN("Vy", "Vy", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_RadialVigCorrCenterShift, _("Vertical vignetting center shift (Vy)"))
     ADDCOLUMN(_("Response type"), "response", 80, wxALIGN_LEFT, false, HuginBase::ImageVariableGroup::IVE_Filename, _("Camera response type"))
-    ADDCOLUMN(wxT("Ra"), "Ra", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_EMoRParams, _("Camera response parameter"))
-    ADDCOLUMN(wxT("Rb"), "Rb", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_EMoRParams, _("Camera response parameter"))
-    ADDCOLUMN(wxT("Rc"), "Rc", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_EMoRParams, _("Camera response parameter"))
-    ADDCOLUMN(wxT("Rd"), "Rd", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_EMoRParams, _("Camera response parameter"))
-    ADDCOLUMN(wxT("Re"), "Re", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_EMoRParams, _("Camera response parameter"))
+    ADDCOLUMN("Ra", "Ra", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_EMoRParams, _("Camera response parameter"))
+    ADDCOLUMN("Rb", "Rb", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_EMoRParams, _("Camera response parameter"))
+    ADDCOLUMN("Rc", "Rc", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_EMoRParams, _("Camera response parameter"))
+    ADDCOLUMN("Rd", "Rd", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_EMoRParams, _("Camera response parameter"))
+    ADDCOLUMN("Re", "Re", 40, wxALIGN_LEFT, true, HuginBase::ImageVariableGroup::IVE_EMoRParams, _("Camera response parameter"))
 
     //empty column to have enough space on the right side
     AddColumn(wxEmptyString,10);
@@ -206,7 +196,7 @@ void ImagesTreeCtrl::CreateColumns()
     for ( int j=0; j < GetColumnCount() ; j++ )
     {
         // -1 is auto
-        int width = wxConfigBase::Get()->Read(wxString::Format(m_configClassName+wxT("/ColumnWidth%d"), j ), -1);
+        int width = wxConfigBase::Get()->Read(wxString::Format(m_configClassName+"/ColumnWidth%d", j ), -1);
         if(width != -1)
             SetColumnWidth(j, width);
     }
@@ -386,27 +376,35 @@ void ImagesTreeCtrl::UpdateImageText(wxTreeItemId item)
     SetItemText(item, m_columnMap["imgNr"], s);
     s.Clear();
     SetItemText(item, m_columnMap["filename"], fn.GetFullName() );
-    SetItemText(item, m_columnMap["width"], wxString::Format(wxT("%d"), img.getSize().width()));
-    SetItemText(item, m_columnMap["height"], wxString::Format(wxT("%d"), img.getSize().height()));
+    SetItemText(item, m_columnMap["width"], wxString::Format("%d", img.getSize().width()));
+    SetItemText(item, m_columnMap["height"], wxString::Format("%d", img.getSize().height()));
 
-    wxChar flags[] = wxT("--");
+    wxString flags;
     if (m_pano->getOptions().optimizeReferenceImage == imgNr)
     {
-        flags[0]='A';
+        flags.Append("A");
+    }
+    else
+    {
+        flags.Append("-");
     }
     if (m_pano->getOptions().colorReferenceImage == imgNr)
     {
-        flags[1]='C';
+        flags.Append("C");
     }
-    SetItemText(item, m_columnMap["anchor"], wxString(flags, wxConvLocal));
+    else
+    {
+        flags.Append("-");
+    };
+    SetItemText(item, m_columnMap["anchor"], flags);
     std::vector<unsigned int> cps = m_pano->getCtrlPointsForImage(imgNr);
     s << cps.size();
     SetItemText(item, m_columnMap["cps"], s);
     s.Clear();
     const unsigned int stackNumber = m_variable_groups->getStacks().getPartNumber(imgNr);
-    SetItemText(item, m_columnMap["stackNr"], wxString::Format(wxT("%u"), stackNumber));
+    SetItemText(item, m_columnMap["stackNr"], wxString::Format("%u", stackNumber));
     const unsigned int lensNr=m_variable_groups->getLenses().getPartNumber(imgNr);
-    SetItemText(item, m_columnMap["lensNr"], wxString::Format(wxT("%u"), lensNr));
+    SetItemText(item, m_columnMap["lensNr"], wxString::Format("%u", lensNr));
 
     SetItemText(item, m_columnMap["maker"], wxString(img.getExifMake().c_str(), wxConvLocal));
     SetItemText(item, m_columnMap["model"], wxString(img.getExifModel().c_str(), wxConvLocal));
@@ -444,7 +442,7 @@ void ImagesTreeCtrl::UpdateImageText(wxTreeItemId item)
         {
             text=_("active");
         };
-        text.Prepend(wxT(" "));
+        text.Prepend(" ");
         SetItemText(item, m_columnMap["cam_trans"], text);
     };
 
@@ -639,7 +637,7 @@ void ImagesTreeCtrl::UpdateGroupText(wxTreeItemId item)
             {
                 text=_("active");
             };
-            text.Prepend(wxT(" "));
+            text.Prepend(" ");
             SetItemText(item, m_columnMap["cam_trans"], text);
         }
         else
@@ -944,10 +942,10 @@ void ImagesTreeCtrl::MarkActiveImages(const bool markActive)
 
 void ImagesTreeCtrl::OnColumnWidthChange( wxListEvent & e )
 {
-    if(m_configClassName != wxT(""))
+    if(m_configClassName != wxEmptyString)
     {
         int colNum = e.GetColumn();
-        wxConfigBase::Get()->Write( m_configClassName+wxString::Format(wxT("/ColumnWidth%d"),colNum), GetColumnWidth(colNum) );
+        wxConfigBase::Get()->Write( m_configClassName+wxString::Format("/ColumnWidth%d",colNum), GetColumnWidth(colNum) );
     }
 }
 
@@ -1011,7 +1009,6 @@ void ImagesTreeCtrl::SetOptimizerMode()
     };
 }
 
-#if wxCHECK_VERSION(3,1,3)
 void ImagesTreeCtrl::OnDpiChanged(wxDPIChangedEvent& e)
 {
     // dpi has changed, we need to update the images of the checkboxes
@@ -1021,7 +1018,6 @@ void ImagesTreeCtrl::OnDpiChanged(wxDPIChangedEvent& e)
         Refresh();
     };
 }
-#endif
 
 void ImagesTreeCtrl::SetGroupMode(GroupMode newGroup)
 {
@@ -1139,10 +1135,12 @@ void ImagesTreeCtrl::OnContextMenu(wxTreeEvent & e)
                     if(emptyText)
                     {
                         menu.Append(ID_LINK,_("Link"));
+                        Bind(wxEVT_MENU, &ImagesTreeCtrl::OnLinkImageVariables, this, ID_LINK);
                     }
                     else
                     {
                         menu.Append(ID_UNLINK, _("Unlink"));
+                        Bind(wxEVT_MENU, &ImagesTreeCtrl::OnUnlinkImageVariables, this, ID_UNLINK);
                     };
                 }
                 else
@@ -1150,10 +1148,12 @@ void ImagesTreeCtrl::OnContextMenu(wxTreeEvent & e)
                     if(emptyText)
                     {
                         menu.Append(ID_UNLINK,_("Unlink"));
+                        Bind(wxEVT_MENU, &ImagesTreeCtrl::OnUnlinkImageVariables, this, ID_UNLINK);
                     }
                     else
                     {
                         menu.Append(ID_LINK, _("Link"));
+                        Bind(wxEVT_MENU, &ImagesTreeCtrl::OnLinkImageVariables, this, ID_LINK);
                     };
                 };
                 menu.AppendSeparator();
@@ -1165,23 +1165,31 @@ void ImagesTreeCtrl::OnContextMenu(wxTreeEvent & e)
                     if(m_groupMode==GROUP_LENS && m_variableVector[m_selectedColumn]!=HuginBase::ImageVariableGroup::IVE_Yaw)
                     {
                         menu.Append(ID_SELECT_LENS_STACK, _("Select all for current lens"));
+                        Bind(wxEVT_MENU, &ImagesTreeCtrl::OnSelectLensStack, this, ID_SELECT_LENS_STACK);
                         menu.Append(ID_UNSELECT_LENS_STACK, _("Unselect all for current lens"));
+                        Bind(wxEVT_MENU, &ImagesTreeCtrl::OnUnselectLensStack, this, ID_UNSELECT_LENS_STACK);
                     };
                     if(m_groupMode==GROUP_STACK && m_variableVector[m_selectedColumn]==HuginBase::ImageVariableGroup::IVE_Yaw)
                     {
                         menu.Append(ID_SELECT_LENS_STACK, _("Select all for current stack"));
+                        Bind(wxEVT_MENU, &ImagesTreeCtrl::OnSelectLensStack, this, ID_SELECT_LENS_STACK);
                         menu.Append(ID_UNSELECT_LENS_STACK, _("Unselect all for current stack"));
+                        Bind(wxEVT_MENU, &ImagesTreeCtrl::OnUnselectLensStack, this, ID_UNSELECT_LENS_STACK);
                     };
                 };
                 if(m_columnVector[m_selectedColumn]!="cam_trans")
                 {
                     menu.Append(ID_SELECT_ALL, _("Select all"));
+                    Bind(wxEVT_MENU, &ImagesTreeCtrl::OnSelectAll, this, ID_SELECT_ALL);
                 };
                 menu.Append(ID_UNSELECT_ALL, _("Unselect all"));
+                Bind(wxEVT_MENU, &ImagesTreeCtrl::OnUnselectAll, this, ID_UNSELECT_ALL);
                 menu.AppendSeparator();
             }
         };
         menu.Append(ID_EDIT, _("Edit image variables..."));
+        // handler for ID_EDIT is already Bind() in ImagesTreeCtrl::Create to make it work with double click, 
+        // so no need to call Bind again
         if (m_markDisabledImages)
         {
             const HuginBase::UIntSet selectedImages = GetSelectedImages();
@@ -1190,16 +1198,20 @@ void ImagesTreeCtrl::OnContextMenu(wxTreeEvent & e)
                 if (m_pano->getImage(*selectedImages.begin()).getActive())
                 {
                     menu.Append(ID_DEACTIVATE_IMAGE, _("Deactivate image"));
+                    Bind(wxEVT_MENU, &ImagesTreeCtrl::OnDeactivateImage, this, ID_DEACTIVATE_IMAGE);
                 }
                 else
                 {
                     menu.Append(ID_ACTIVATE_IMAGE, _("Activate image"));
+                    Bind(wxEVT_MENU, &ImagesTreeCtrl::OnActivateImage, this, ID_ACTIVATE_IMAGE);
                 };
             }
             else
             {
                 menu.Append(ID_ACTIVATE_IMAGE, _("Activate images"));
+                Bind(wxEVT_MENU, &ImagesTreeCtrl::OnActivateImage, this, ID_ACTIVATE_IMAGE);
                 menu.Append(ID_DEACTIVATE_IMAGE, _("Deactivate images"));
+                Bind(wxEVT_MENU, &ImagesTreeCtrl::OnDeactivateImage, this, ID_DEACTIVATE_IMAGE);
             };
         };
     }
@@ -1210,8 +1222,10 @@ void ImagesTreeCtrl::OnContextMenu(wxTreeEvent & e)
             if(m_columnVector[m_selectedColumn]!="cam_trans")
             {
                 menu.Append(ID_SELECT_ALL, _("Select all"));
+                Bind(wxEVT_MENU, &ImagesTreeCtrl::OnSelectAll, this, ID_SELECT_ALL);
             };
             menu.Append(ID_UNSELECT_ALL, _("Unselect all"));
+            Bind(wxEVT_MENU, &ImagesTreeCtrl::OnUnselectAll, this, ID_UNSELECT_ALL);
             allowMenuExtension=false;
         }
     };
@@ -1284,6 +1298,7 @@ void ImagesTreeCtrl::GenerateSubMenu(wxMenu* menu, PanoOperation::PanoOperationV
         {
             menu->Append(id, (*operations)[i]->GetLabel());
             m_menuOperation[id]=(*operations)[i];
+            Bind(wxEVT_MENU, &ImagesTreeCtrl::OnExecuteOperation, this, id);
             id++;
         }
     };
@@ -1379,7 +1394,9 @@ void ImagesTreeCtrl::OnHeaderContextMenu(wxListEvent & e)
     if(m_optimizerMode && set_contains(m_editableColumns, m_selectedColumn))
     {
         menu.Append(ID_SELECT_ALL, _("Select all"));
+        Bind(wxEVT_MENU, &ImagesTreeCtrl::OnSelectAll, this, ID_SELECT_ALL);
         menu.Append(ID_UNSELECT_ALL, _("Unselect all"));
+        Bind(wxEVT_MENU, &ImagesTreeCtrl::OnUnselectAll, this, ID_UNSELECT_ALL);
         PopupMenu(&menu);
     };
     e.Skip();
@@ -2065,14 +2082,9 @@ void ImagesTreeCtrl::OnEndEdit(wxTreeEvent &e)
                 {
                     if(m_pano->getImage(data->GetImgNr()).getProjection()==HuginBase::SrcPanoImage::FISHEYE_ORTHOGRAPHIC && val>190)
                     {
-                        if(wxMessageBox(
+                        if (hugin_utils::HuginMessageBox(
                             wxString::Format(_("You have given a field of view of %.2f degrees.\n But the orthographic projection is limited to a field of view of 180 degress.\nDo you want still use that high value?"), val),
-#ifdef __WXMSW__
-                            _("Hugin"),
-#else
-                            wxT(""),
-#endif
-                            wxICON_EXCLAMATION | wxYES_NO)==wxNO)
+                            _("Hugin"), wxICON_EXCLAMATION | wxYES_NO, this) == wxNO)
                         {
                             //restore old string
                             SetItemText(e.GetItem(), e.GetInt(), m_editOldString);
@@ -2140,7 +2152,7 @@ wxObject *ImagesTreeCtrlXmlHandler::DoCreateResource()
     cp->Create(m_parentAsWindow,
                GetID(),
                GetPosition(), GetSize(),
-               GetStyle(wxT("style")),
+               GetStyle("style"),
                GetName());
 
     SetupWindow( cp);
@@ -2150,7 +2162,7 @@ wxObject *ImagesTreeCtrlXmlHandler::DoCreateResource()
 
 bool ImagesTreeCtrlXmlHandler::CanHandle(wxXmlNode *node)
 {
-    return IsOfClass(node, wxT("ImagesTreeList"));
+    return IsOfClass(node, "ImagesTreeList");
 }
 
 IMPLEMENT_DYNAMIC_CLASS(ImagesTreeCtrlXmlHandler, wxTreeListCtrlXmlHandler)

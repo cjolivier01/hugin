@@ -3,46 +3,46 @@
   <object class="wxToolBar" name="preview_toolbar">
     <style>wxTB_FLAT|wxTB_TEXT</style>
     <object class="tool" name="preview_center_tool">
-      <bitmap>data/center_pano.png</bitmap>
+      <bitmap default_size="22,22">data/center_pano.svg</bitmap>
       <tooltip>Center the preview horizontally</tooltip>
       <label>Center</label>
     </object>
     <object class="tool" name="preview_fit_pano_tool">
-      <bitmap>data/fit_pano.png</bitmap>
+      <bitmap default_size="22,22">data/fit_pano.svg</bitmap>
       <longhelp>Show the whole panorama</longhelp>
       <tooltip>Estimate field of view</tooltip>
       <label>Fit</label>
     </object>
     <object class="tool" name="preview_straighten_pano_tool">
-      <bitmap>data/straighten_pano.png</bitmap>
+      <bitmap default_size="22,22">data/straighten_pano.svg</bitmap>
       <tooltip>Automatically straighten a wavy horizon</tooltip>
       <label>Straighten</label>
     </object>
     <object class="tool" name="preview_num_transform">
-      <bitmap>data/preview_num_transform.png</bitmap>
+      <bitmap default_size="22,22">data/preview_num_transform.svg</bitmap>
       <tooltip>Numerical Transform</tooltip>
       <label>Num. Transf.</label>
     </object>
     <object class="separator"/>
     <object class="tool" name="preview_auto_update_tool">
-      <bitmap>data/preview_auto_update.png</bitmap>
+      <bitmap default_size="22,22">data/preview_auto_update.svg</bitmap>
       <tooltip>Auto update</tooltip>
       <label>Auto</label>
       <toggle>1</toggle>
     </object>
     <object class="tool" name="preview_update_tool">
-      <bitmap>data/reload.png</bitmap>
+      <bitmap default_size="22,22">data/reload.svg</bitmap>
       <tooltip>Update preview</tooltip>
       <label>Update</label>
     </object>
     <object class="separator"/>
     <object class="tool" name="preview_show_all_tool">
-      <bitmap>data/preview_show_all.png</bitmap>
+      <bitmap default_size="22,22">data/preview_show_all.svg</bitmap>
       <tooltip>Show all images</tooltip>
       <label>All</label>
     </object>
     <object class="tool" name="preview_show_none_tool">
-      <bitmap>data/preview_show_none.png</bitmap>
+      <bitmap default_size="22,22">data/preview_show_none.svg</bitmap>
       <tooltip>Show none of the images</tooltip>
       <label>None</label>
     </object>
@@ -161,17 +161,17 @@
                     <object class="sizeritem">
                       <object class="wxToolBar">
                         <object class="tool" name="action_new_project">
-                          <bitmap>data\filenew.png</bitmap>
+                          <bitmap default_size="22,22">data\filenew.svg</bitmap>
                           <tooltip>New project</tooltip>
                           <longhelp>Start a new project</longhelp>
                         </object>
                         <object class="tool" name="action_load_project">
-                          <bitmap>data\fileopen.png</bitmap>
+                          <bitmap default_size="22,22">data\fileopen.svg</bitmap>
                           <tooltip>Open project...</tooltip>
                           <longhelp>Open a project file</longhelp>
                         </object>
                         <object class="tool" name="action_save_project">
-                          <bitmap>data\filesave.png</bitmap>
+                          <bitmap default_size="22,22">data\filesave.svg</bitmap>
                           <tooltip>Save project</tooltip>
                           <longhelp>Save current project file</longhelp>
                         </object>
@@ -197,7 +197,7 @@
                   <object class="SplitButton" name="ass_load_images_button">
                     <label>1. Load images...</label>
                     <tooltip>Load a series of images</tooltip>
-                    <bitmap>data/number1.png</bitmap>
+                    <bitmap default_size="48,48">data/number1.svg</bitmap>
                   </object>
                   <flag>wxALL|wxALIGN_CENTRE_VERTICAL</flag>
                   <border>12</border>
@@ -213,7 +213,7 @@
                   <object class="SplitButton" name="ass_align_button">
                     <label>2. Align...</label>
                     <tooltip>Align all images. Creates control points and optimizes the image positions</tooltip>
-                    <bitmap>data/number2.png</bitmap>
+                    <bitmap default_size="48,48">data/number2.svg</bitmap>
                   </object>
                   <flag>wxALL|wxALIGN_CENTRE_VERTICAL</flag>
                   <border>12</border>
@@ -228,7 +228,7 @@
                   <object class="SplitButton" name="ass_create_button">
                     <label>3. Create panorama...</label>
                     <tooltip>Create a high resolution panorama</tooltip>
-                    <bitmap>data/number3.png</bitmap>
+                    <bitmap default_size="48,48">data/number3.svg</bitmap>
                   </object>
                   <flag>wxALL|wxALIGN_CENTRE_VERTICAL</flag>
                   <border>12</border>
@@ -251,7 +251,7 @@
             </object>
             <label>Assistant</label>
             <selected>1</selected>
-            <bitmap>data/hugin_small.png</bitmap>
+            <bitmap default_size="16,16">data/hugin.svg</bitmap>
           </object>
           <object class="notebookpage">
             <object class="wxPanel" name="preview_mode_panel">
@@ -261,7 +261,7 @@
                   <object class="wxBoxSizer">
                     <object class="sizeritem">
                       <object class="wxToggleButton" name="preview_identify_toggle_button">
-                        <bitmap>data/identify_tool.png</bitmap>
+                        <bitmap default_size="22,22">data/identify_tool.svg</bitmap>
                         <bitmapposition>wxTOP</bitmapposition>
                         <style>wxBU_EXACTFIT</style>
                         <label>Identify</label>
@@ -390,7 +390,7 @@
                         <object class="sizeritem">
                           <object class="wxToggleButton" name="preview_color_picker_toggle_button">
                             <style>wxBU_EXACTFIT</style>
-                            <bitmap>data/preview_white_balance.png</bitmap>
+                            <bitmap default_size="22,22">data/preview_white_balance.svg</bitmap>
                             <bitmapposition>wxTOP</bitmapposition>
                             <label>Gray picker</label>
                             <tooltip>Correct global white balance by selecting a neutral gray area</tooltip>
@@ -400,7 +400,7 @@
                         <object class="sizeritem">
                           <object class="wxToggleButton" name="preview_edit_cp_toggle_button">
                             <style>wxBU_EXACTFIT</style>
-                            <bitmap>data/preview_control_point_tool.png</bitmap>
+                            <bitmap default_size="22,22">data/preview_control_point_tool.svg</bitmap>
                             <bitmapposition>wxTOP</bitmapposition>
                             <label>Edit CP</label>
                             <tooltip>Create or delete control points in selected rectangle\nCreate line control point with pressed Alt key</tooltip>
@@ -447,7 +447,7 @@
               </object>
             </object>
             <label>Preview</label>
-            <bitmap>data/gl_preview_small.png</bitmap>
+            <bitmap default_size="16,16">data/gl_preview.svg</bitmap>
           </object>
           <object class="notebookpage">
             <object class="wxPanel" name="layout_mode_panel">
@@ -492,7 +492,7 @@
               </object>
             </object>
             <label>Layout</label>
-            <bitmap>data/preview_layout_small.png</bitmap>
+            <bitmap default_size="16,16">data/preview_layout.svg</bitmap>
           </object>
           <object class="notebookpage">
             <label>Projection</label>
@@ -502,7 +502,7 @@
                 <object class="sizeritem">
                   <object class="wxButton" name="preview_fit_pano_tool2">
                     <label>Fit</label>
-                    <bitmap>data/fit_pano.png</bitmap>
+                    <bitmap default_size="22,22">data/fit_pano.svg</bitmap>
                     <bitmapposition>wxTOP</bitmapposition>
                     <direction>wxTOP</direction>
                     <style>wxBU_EXACTFIT</style>
@@ -607,7 +607,7 @@
                 <object class="sizeritem">
                   <object class="wxButton" name="preview_center_tool">
                     <label>Center</label>
-                    <bitmap>data/center_pano.png</bitmap>
+                    <bitmap default_size="22,22">data/center_pano.svg</bitmap>
                     <bitmapposition>wxTOP</bitmapposition>
                     <direction>wxTOP</direction>
                     <style>wxBU_EXACTFIT</style>
@@ -619,7 +619,7 @@
                 <object class="sizeritem">
                   <object class="wxButton" name="preview_fit_pano_tool">
                     <label>Fit</label>
-                    <bitmap>data/fit_pano.png</bitmap>
+                    <bitmap default_size="22,22">data/fit_pano.svg</bitmap>
                     <bitmapposition>wxTOP</bitmapposition>
                     <direction>wxTOP</direction>
                     <style>wxBU_EXACTFIT</style>
@@ -631,7 +631,7 @@
                 <object class="sizeritem">
                   <object class="wxButton" name="preview_straighten_pano_tool">
                     <label>Straighten</label>
-                    <bitmap>data/straighten_pano.png</bitmap>
+                    <bitmap default_size="22,22">data/straighten_pano.svg</bitmap>
                     <bitmapposition>wxTOP</bitmapposition>
                     <direction>wxTOP</direction>
                     <style>wxBU_EXACTFIT</style>
@@ -802,7 +802,7 @@
               </object>
             </object>
             <label>Move/Drag</label>
-            <bitmap>data/drag_tool_small.png</bitmap>
+            <bitmap default_size="16,16">data/drag_tool.svg</bitmap>
           </object>
           <object class="notebookpage">
             <object class="wxPanel" name="crop_mode_panel">
@@ -811,7 +811,7 @@
                 <object class="sizeritem">
                   <object class="wxButton" name="preview_autocrop_tool">
                     <label>Autocrop</label>
-                    <bitmap>data/autocrop_tool.png</bitmap>
+                    <bitmap default_size="22,22">data/autocrop_tool.svg</bitmap>
                     <bitmapposition>wxTOP</bitmapposition>
                     <direction>wxTOP</direction>
                     <style>wxBU_EXACTFIT</style>
@@ -823,7 +823,7 @@
                 <object class="sizeritem">
                   <object class="wxButton" name="preview_autocrop_outside_tool">
                     <label>Autocrop outside</label>
-                    <bitmap>data/autocrop_tool.png</bitmap>
+                    <bitmap default_size="22,22">data/autocrop_tool.svg</bitmap>
                     <bitmapposition>wxTOP</bitmapposition>
                     <direction>wxTOP</direction>
                     <style>wxBU_EXACTFIT</style>
@@ -835,7 +835,7 @@
                 <object class="sizeritem">
                   <object class="wxButton" name="preview_stack_autocrop_tool">
                     <label>HDR Autocrop</label>
-                    <bitmap>data/autocrop_tool.png</bitmap>
+                    <bitmap default_size="22,22">data/autocrop_tool.svg</bitmap>
                     <bitmapposition>wxTOP</bitmapposition>
                     <direction>wxTOP</direction>
                     <style>wxBU_EXACTFIT</style>
@@ -959,7 +959,7 @@
                         <object class="sizeritem">
                           <object class="wxButton" name="crop_aspect_button">
                             <label>Aspect ratio...</label>
-                            <tooltip>Sets the aspect ratio of the crop to a fix value</tooltip>
+                            <tooltip>Sets the aspect ratio of the crop to a fix value.</tooltip>
                           </object>
                           <flag>wxLEFT|wxRIGHT</flag>
                           <border>5</border>
@@ -979,7 +979,7 @@
               </object>
             </object>
             <label>Crop</label>
-            <bitmap>data/crop_tool_small.png</bitmap>
+            <bitmap default_size="16,16">data/crop_tool.svg</bitmap>
           </object>
         </object>
         <option>1</option>

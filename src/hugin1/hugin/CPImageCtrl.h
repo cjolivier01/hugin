@@ -88,24 +88,7 @@ private:
     int pointNr;
 };
 
-typedef void (wxEvtHandler::*CPEventFunction)(CPEvent&);
-
-BEGIN_DECLARE_EVENT_TYPES()
-#if defined _WIN32 && defined Hugin_shared
-    DECLARE_LOCAL_EVENT_TYPE(EVT_CPEVENT,1)
-#else
-    DECLARE_EVENT_TYPE(EVT_CPEVENT,1)
-#endif
-END_DECLARE_EVENT_TYPES()
-
-#define EVT_CPEVENT(func) \
-    DECLARE_EVENT_TABLE_ENTRY( EVT_CPEVENT, \
-                            -1,                       \
-                            -1,                       \
-                            (wxObjectEventFunction)   \
-                            (CPEventFunction) & func, \
-                            (wxObject *) NULL ),
-
+wxDECLARE_EVENT(EVT_CPEVENT, CPEvent);
 
 /** helper class to display and manipulate cp in cp tab */
 class DisplayedControlPoint
@@ -242,7 +225,7 @@ public:
         : scaleFactor(1),fitToWindow(false)
         { }
 
-    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxT("panel"));
+    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = "panel");
 
     void Init(CPEditorPanel * parent);
 
@@ -323,9 +306,6 @@ public:
 
     /// get the new point
     hugin_utils::FDiff2D getNewPoint();
-
-    /// initiate redraw
-    void update();
 
     /// scroll the window by @p delta pixels
     void ScrollDelta(const wxPoint & delta);
@@ -439,8 +419,6 @@ public:
     /** return the size of the drawn bitmap (possible rotate is applied) */
     const wxSize GetBitmapSize() const;
 
-    virtual void OnDraw(wxDC& dc);
-
     // setting/getting option if line cp should be shown as separate line
     void ShowLines(bool isShown);
     bool IsShowingLines() const;
@@ -454,6 +432,8 @@ protected:
     void OnMouseEnter(wxMouseEvent & e);
     void OnTimer(wxTimerEvent & e);
     void OnScrollWin(wxScrollWinEvent & e);
+    /** paint event */
+    void OnPaint(wxPaintEvent& e);
 
     /// helper func to emit a region
     bool emit(CPEvent & ev);
@@ -541,7 +521,6 @@ private:
     bool m_forceMagnifier;
     wxTimer m_timer;
 
-    DECLARE_EVENT_TABLE();
     DECLARE_DYNAMIC_CLASS(CPImageCtrl)
 };
 

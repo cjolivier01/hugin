@@ -636,7 +636,7 @@ namespace HuginBase
             {
                 if(lensName.length()>0)
                 {
-                    return lensName;
+                    return hugin_utils::StrTrim(lensName);
                 };
             }
             else

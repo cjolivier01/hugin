@@ -28,13 +28,14 @@
 #include "panoinc.h"
 #include <wx/stdpaths.h>
 #include "base_wx/platform.h"
+#include "base_wx/wxutils.h"
 
 #include "LensCalApp.h"
 #include "LensCalImageCtrl.h"
 #include "base_wx/huginConfig.h"
 #include "hugin/config_defaults.h"
 #include "base_wx/PTWXDlg.h"
-#if defined __WXGTK__ && wxCHECK_VERSION(3,1,1)
+#if defined __WXGTK__
 #include "base_wx/wxPlatform.h"
 #endif
 
@@ -43,16 +44,18 @@
 
 // make wxwindows use this class as the main application
 IMPLEMENT_APP(LensCalApp)
-BEGIN_EVENT_TABLE(LensCalApp, wxApp)
-END_EVENT_TABLE()
 
 bool LensCalApp::OnInit()
 {
 #if wxUSE_ON_FATAL_EXCEPTION
     wxHandleFatalExceptions();
 #endif
-    SetAppName(wxT("hugin"));
-#if defined __WXGTK__ && wxCHECK_VERSION(3,1,1)
+    SetAppName("hugin");
+#if defined __WXMSW__ && wxCHECK_VERSION(3,3,0)
+    // automatically switch between light and dark mode
+    SetAppearance(Appearance::System);
+#endif
+#if defined __WXGTK__
     CheckConfigFilename();
 #endif
     // register our custom pano tools dialog handlers
@@ -61,17 +64,17 @@ bool LensCalApp::OnInit()
 #if defined __WXMSW__
     wxFileName exeDir(wxStandardPaths::Get().GetExecutablePath());
     exeDir.RemoveLastDir();
-    m_xrcPrefix = exeDir.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + wxT("share\\hugin\\xrc\\");
+    m_xrcPrefix = exeDir.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + "share\\hugin\\xrc\\";
     // locale setup
-    locale.AddCatalogLookupPathPrefix(exeDir.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + wxT("share\\locale"));
+    locale.AddCatalogLookupPathPrefix(exeDir.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + "share\\locale");
 #elif defined __WXMAC__ && defined MAC_SELF_CONTAINED_BUNDLE
     // initialize paths
     wxString thePath = MacGetPathToBundledResourceFile(CFSTR("xrc"));
-    if (thePath == wxT("")) {
-        wxMessageBox(_("xrc directory not found in bundle"), _("Fatal Error"));
+    if (thePath == wxEmptyString) {
+        hugin_utils::HuginMessageBox(_("xrc directory not found in bundle"), _("Calibrate_lens_GUI"), wxOK | wxICON_ERROR, wxGetActiveWindow());
         return false;
     }
-    m_xrcPrefix = thePath + wxT("/");
+    m_xrcPrefix = thePath + "/";
 #elif defined UNIX_SELF_CONTAINED_BUNDLE
     // initialize paths
     {
@@ -79,18 +82,18 @@ bool LensCalApp::OnInit()
       exePath.RemoveLastDir();
       const wxString huginRoot=exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR);
       // add the locale directory specified during configure
-      m_xrcPrefix = huginRoot + wxT("share/hugin/xrc/");
-      locale.AddCatalogLookupPathPrefix(huginRoot + wxT("share/locale"));
+      m_xrcPrefix = huginRoot + "share/hugin/xrc/";
+      locale.AddCatalogLookupPathPrefix(huginRoot + "share/locale");
     }
 #else
     // add the locale directory specified during configure
-    m_xrcPrefix = wxT(INSTALL_XRC_DIR);
-    locale.AddCatalogLookupPathPrefix(wxT(INSTALL_LOCALE_DIR));
+    m_xrcPrefix = INSTALL_XRC_DIR;
+    locale.AddCatalogLookupPathPrefix(INSTALL_LOCALE_DIR);
 #endif
 
-    if ( ! wxFile::Exists(m_xrcPrefix + wxT("/lenscal_frame.xrc")) )
+    if ( ! wxFile::Exists(m_xrcPrefix + "/lenscal_frame.xrc") )
     {
-        wxMessageBox(_("xrc directory not found, hugin needs to be properly installed\nTried Path:" + m_xrcPrefix ), _("Fatal Error"));
+        hugin_utils::HuginMessageBox(wxString::Format(_("xrc directory not found, hugin needs to be properly installed\nTried Path: %s"), m_xrcPrefix), _("Calibrate_lens_GUI"), wxOK | wxICON_ERROR, wxGetActiveWindow());
         return false;
     }
 
@@ -103,7 +106,7 @@ bool LensCalApp::OnInit()
     // need to explicitly initialize locale for C++ library/runtime
     setlocale(LC_ALL, "");
     // initialize i18n
-    int localeID = config->Read(wxT("language"), (long) HUGIN_LANGUAGE);
+    int localeID = config->Read("language", (long) HUGIN_LANGUAGE);
     DEBUG_TRACE("localeID: " << localeID);
     {
         bool bLInit;
@@ -118,7 +121,7 @@ bool LensCalApp::OnInit()
 	}
 	
     // set the name of locale recource to look for
-    locale.AddCatalog(wxT("hugin"));
+    locale.AddCatalog("hugin");
 
     // initialize image handlers
     wxInitAllImageHandlers();
@@ -127,16 +130,16 @@ bool LensCalApp::OnInit()
     wxXmlResource::Get()->InitAllHandlers();
     wxXmlResource::Get()->AddHandler(new LensCalImageCtrlXmlHandler());
     // load XRC files
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("lenscal_frame.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("lensdb_dialogs.xrc"));
-    wxXmlResource::Get()->Load(m_xrcPrefix + wxT("dlg_warning.xrc"));
+    wxXmlResource::Get()->Load(m_xrcPrefix + "lenscal_frame.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "lensdb_dialogs.xrc");
+    wxXmlResource::Get()->Load(m_xrcPrefix + "dlg_warning.xrc");
 
     // create main frame
     m_frame = new LensCalFrame(NULL);
     SetTopWindow(m_frame);
 
     // setup main frame size, after it has been created.
-    RestoreFramePosition(m_frame, wxT("LensCalFrame"));
+    hugin_utils::RestoreFramePosition(m_frame, "LensCalFrame");
 
     // show the frame.
     m_frame->Show(TRUE);
@@ -153,90 +156,3 @@ void LensCalApp::OnFatalException()
     GenerateReport(wxDebugReport::Context_Exception);
 };
 #endif
-
-// utility functions
-void RestoreFramePosition(wxTopLevelWindow * frame, const wxString & basename)
-{
-    DEBUG_TRACE(basename.mb_str(wxConvLocal));
-    wxConfigBase * config = wxConfigBase::Get();
-
-    // get display size
-    int dx,dy;
-    wxDisplaySize(&dx,&dy);
-
-#if ( __WXGTK__ )
-// restoring the splitter positions properly when maximising doesn't work.
-// Disabling maximise on wxWidgets >= 2.6.0 and gtk
-        //size
-        int w = config->Read(wxT("/") + basename + wxT("/width"),-1l);
-        int h = config->Read(wxT("/") + basename + wxT("/height"),-1l);
-        if (w > 0 && w <= dx) {
-            frame->SetClientSize(w,h);
-        } else {
-            frame->Fit();
-        }
-        //position
-        int x = config->Read(wxT("/") + basename + wxT("/positionX"),-1l);
-        int y = config->Read(wxT("/") + basename + wxT("/positionY"),-1l);
-        if ( y >= 0 && x >= 0 && x < dx && y < dy) {
-            frame->Move(x, y);
-        } else {
-            frame->Move(0, 44);
-        }
-#else
-    bool maximized = config->Read(wxT("/") + basename + wxT("/maximized"), 0l) != 0;
-    if (maximized) {
-        frame->Maximize();
-	} else {
-        //size
-        int w = config->Read(wxT("/") + basename + wxT("/width"),-1l);
-        int h = config->Read(wxT("/") + basename + wxT("/height"),-1l);
-        if (w > 0 && w <= dx) {
-            frame->SetClientSize(w,h);
-        } else {
-            frame->Fit();
-        }
-        //position
-        int x = config->Read(wxT("/") + basename + wxT("/positionX"),-1l);
-        int y = config->Read(wxT("/") + basename + wxT("/positionY"),-1l);
-        if ( y >= 0 && x >= 0 && x < dx && y < dy) {
-            frame->Move(x, y);
-        } else {
-            frame->Move(0, 44);
-        }
-    }
-#endif
-}
-
-
-void StoreFramePosition(wxTopLevelWindow * frame, const wxString & basename)
-{
-    DEBUG_TRACE(basename);
-
-    wxConfigBase * config = wxConfigBase::Get();
-
-#if ( __WXGTK__ )
-// restoring the splitter positions properly when maximising doesn't work.
-// Disabling maximise on wxWidgets >= 2.6.0 and gtk
-    
-        wxSize sz = frame->GetClientSize();
-        config->Write(wxT("/") + basename + wxT("/width"), sz.GetWidth());
-        config->Write(wxT("/") + basename + wxT("/height"), sz.GetHeight());
-        wxPoint ps = frame->GetPosition();
-        config->Write(wxT("/") + basename + wxT("/positionX"), ps.x);
-        config->Write(wxT("/") + basename + wxT("/positionY"), ps.y);
-        config->Write(wxT("/") + basename + wxT("/maximized"), 0);
-#else
-    if ( (! frame->IsMaximized()) && (! frame->IsIconized()) ) {
-        wxSize sz = frame->GetClientSize();
-        config->Write(wxT("/") + basename + wxT("/width"), sz.GetWidth());
-        config->Write(wxT("/") + basename + wxT("/height"), sz.GetHeight());
-        wxPoint ps = frame->GetPosition();
-        config->Write(wxT("/") + basename + wxT("/positionX"), ps.x);
-        config->Write(wxT("/") + basename + wxT("/positionY"), ps.y);
-        config->Write(wxT("/") + basename + wxT("/maximized"), 0);
-    } else if (frame->IsMaximized()){
-        config->Write(wxT("/") + basename + wxT("/maximized"), 1l);
-    }
-#endif
-}

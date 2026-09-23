@@ -63,9 +63,11 @@ include(CheckIncludeFiles)
 project(hugin)
 
 # version
-set(V_MAJOR 2024)
+set(V_MAJOR 2025)
 set(V_MINOR 0)
 set(V_PATCH 1)
+
+include(GNUInstallDirs)
 
 #
 # Check for mercurial and get current revision
@@ -155,7 +157,7 @@ IF (WIN32)
 
   # wxWidgets
   IF(NOT wxWidgets_ROOT_SUFFIX)
-    SET( wxWidgets_ROOT_SUFFIX 3.0.0 CACHE STRING "version of wxWidgets." FORCE )
+    SET( wxWidgets_ROOT_SUFFIX 3.2.0 CACHE STRING "version of wxWidgets." FORCE )
   ENDIF(NOT wxWidgets_ROOT_SUFFIX)
   IF(NOT wxWidgets_ROOT_DIR)
     SET(wxWidgets_ROOT_DIR ${SOURCE_BASE_DIR}/wxWidgets-${wxWidgets_ROOT_SUFFIX})
@@ -174,20 +176,15 @@ ELSE()
   FIND_PACKAGE(wxWidgets REQUIRED base core aui xrc html xml adv gl net qa propgrid)
 ENDIF()
 
-# hugin requires wxwidgets 3.0 or above
+# hugin requires wxwidgets 3.2 or above
 IF (UNIX)
   EXECUTE_PROCESS(
     COMMAND ${wxWidgets_CONFIG_EXECUTABLE} --version
     OUTPUT_VARIABLE wxWidgets_VERSION
   )
   STRING(REGEX REPLACE "^([0-9]+\\.[0-9]+)\\..*" "\\1"  wxWidgets_VERSION ${wxWidgets_VERSION})
-  IF(wxWidgets_VERSION VERSION_LESS "3.0")
-    MESSAGE(FATAL_ERROR "At least wxWidgets 3.0 is required")
-  ENDIF()
-  IF(wxWidgets_VERSION VERSION_GREATER "3.1.0")
-    SET(USE_XDG_DIRS 1)
-  ELSE()
-    UNSET(USE_XDG_DIRS)
+  IF(wxWidgets_VERSION VERSION_LESS "3.2")
+    MESSAGE(FATAL_ERROR "At least wxWidgets 3.2 is required")
   ENDIF()
   # Ubuntu has 2 different devel packages, we need the GUI version
   EXECUTE_PROCESS(
@@ -206,11 +203,12 @@ ENDIF (UNIX)
 
 FIND_PACKAGE(TIFF REQUIRED)
 INCLUDE_DIRECTORIES(${TIFF_INCLUDE_DIR})
-FIND_PACKAGE(JPEG REQUIRED)
-INCLUDE_DIRECTORIES(${JPEG_INCLUDE_DIR})
-FIND_PACKAGE(PNG REQUIRED)
 INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR})
-INCLUDE_DIRECTORIES(${PNG_INCLUDE_DIR})
+IF(NOT HUGIN_SHARED)
+  # JPEG and PNG are needed when compiling static version
+  FIND_PACKAGE(JPEG REQUIRED)
+  FIND_PACKAGE(PNG REQUIRED)
+ENDIF()
 
 IF(WIN32 AND NOT HUGIN_SHARED)
 IF(NOT ${WX_jpeg} MATCHES ${JPEG_LIBRARIES_RELEASE})
@@ -312,83 +310,6 @@ IF(WIN32)
   # for Windows Vista support
   ADD_DEFINITIONS(-DPSAPI_VERSION=1)
 ENDIF(WIN32)
-
-# check if we have C++17 <filesystem> header
-# keep the logic below in sync with src/hugin_base/hugin_utils/filesystem.h
-INCLUDE(CheckCXXSourceCompiles)
-check_cxx_source_compiles(
-  "
-    #include <filesystem>
-    #include <string>
-
-    #if defined _MSC_VER && _MSC_VER <= 1900
-    // MSVC 2015 has implemented it in std::tr2::sys
-    namespace fs = std::tr2::sys;
-    #elif defined _MSC_VER && _MSC_VER <= 1916
-    // MSVC 2017 is using the experimental namespace
-    namespace fs = std::experimental::filesystem;
-    #else
-    namespace fs = std::filesystem;
-    #endif
-
-    int main()
-    {
-      fs::path filepath;
-      filepath=fs::absolute(filepath);
-      std::string s=filepath.filename().string();
-      (void)fs::copy_options::overwrite_existing;
-      return 0;
-    };
-  "
-  HAVE_STD_FILESYSTEM
-)
-
-IF(HAVE_STD_FILESYSTEM)
-# in this combination we don't need Boost anymore
-ELSE()
-##
-## Boost
-##
-# I am sick of having to edit the boost rev number in this file.
-# Now it is a cache variable you can edit in cmakesetup --TKS
-#
-IF( NOT Boost_root_suffix )
-  SET( Boost_root_suffix _1_54_0 CACHE STRING "suffix of boost root dir." FORCE )
-ENDIF( NOT Boost_root_suffix )
-
-IF(WIN32)
-  IF(HUGIN_SHARED)
-    SET(Boost_USE_STATIC_LIBS OFF)
-    SET(Boost_USE_STATIC_RUNTIME OFF)
-    # ADD_DEFINITIONS(-DBOOST_ALL_DYN_LINK)
-    # ADD_DEFINITIONS(-D_DLL)
-    ADD_DEFINITIONS(-DBOOST_ALL_NO_LIB)
-  ELSE()
-    SET(Boost_USE_STATIC_LIBS ON)
-    SET(Boost_USE_STATIC_RUNTIME ON)
-  ENDIF()
-  # If BOOST_ROOT was defined in the environment, use it.
-  IF(NOT BOOST_ROOT AND NOT $ENV{BOOST_ROOT} STREQUAL "")
-    SET(BOOST_ROOT $ENV{BOOST_ROOT})
-  ENDIF()
-  IF(NOT BOOST_ROOT)
-    SET(BOOST_ROOT ${SOURCE_BASE_DIR}/boost${Boost_root_suffix})
-  ENDIF()
-ENDIF(WIN32)
-
-FIND_PACKAGE(Boost COMPONENTS filesystem system)
-
-IF (NOT Boost_FOUND)
-  IF(WIN32)
-    MESSAGE(FATAL_ERROR "Boost not found. Bad BOOST_ROOT? On windows, try editing Boost_root_suffix")
-  ELSE()
-    MESSAGE(FATAL_ERROR "Boost not found. Maybe wrong version. Hugin requires at least version 1.47")
-  ENDIF()
-ENDIF (NOT Boost_FOUND)
-
-INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
-LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
-ENDIF()
 
 # find enblend-enfuse base path
 IF(WIN32)
@@ -540,9 +461,6 @@ IF(NOT CMAKE_BUILD_TYPE)
       FORCE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
-# allow user to specify lib suffix
-set(LIB_SUFFIX "" CACHE STRING "Define suffix of lib directory name (32/64)" )
-
 IF(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
   MESSAGE("Building in Debug mode, resulting programs will be SLOW")
   ADD_DEFINITIONS(-DDEBUG)
@@ -554,24 +472,16 @@ ENDIF(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 #
 # define destination dirs (relative to prefix)
 #
-SET(HUGINDATADIR share/hugin)
-SET(DATADIR share)
-SET(BINDIR  bin)
-
-IF (NOT MANDIR AND NOT $ENV{MANDIR} STREQUAL "")
-    SET (MANDIR "$ENV{MANDIR}")
-ELSEIF(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
-    SET (MANDIR "man")
-ELSE(NOT MANDIR AND NOT $ENV{MANDIR} STREQUAL "")
-    SET (MANDIR "share/man")
-ENDIF(NOT MANDIR AND NOT $ENV{MANDIR} STREQUAL "")
-
-SET(LOCALEDIR share/locale)
-SET(ICONDIR share/icons)
-SET(LINKDIR share/applications)
-SET(LIBDIR  lib${LIB_SUFFIX})
-SET(INSTALL_XRC_DIR ${CMAKE_INSTALL_PREFIX}/share/hugin/xrc)
-SET(INSTALL_DATA_DIR ${CMAKE_INSTALL_PREFIX}/share/hugin/data)
+SET(DATADIR "${CMAKE_INSTALL_DATADIR}")
+SET(BINDIR  "${CMAKE_INSTALL_BINDIR}")
+SET(LIBDIR  "${CMAKE_INSTALL_LIBDIR}")
+set(MANDIR  "${CMAKE_INSTALL_MANDIR}")
+SET(HUGINDATADIR ${DATADIR}/hugin)
+SET(LOCALEDIR ${DATADIR}/locale)
+SET(ICONDIR ${DATADIR}/icons)
+SET(LINKDIR ${DATADIR}/applications)
+SET(INSTALL_XRC_DIR ${CMAKE_INSTALL_PREFIX}/${HUGINDATADIR}/xrc)
+SET(INSTALL_DATA_DIR ${CMAKE_INSTALL_PREFIX}/${HUGINDATADIR}/data)
 SET(INSTALL_LOCALE_DIR ${CMAKE_INSTALL_PREFIX}/${LOCALEDIR})
 
 IF (APPLE)
@@ -647,10 +557,7 @@ ELSE()
     ADD_DEFINITIONS(/D_SCL_SECURE_NO_WARNINGS)
     # Stop MSVC9 from bitching about POSIX names without underscores
     ADD_DEFINITIONS(/D_CRT_NONSTDC_NO_DEPRECATE)
-    # Show information about auto-linking library files during build, .e.g.
-    # "Linking to lib file: libboost_thread-vc90-mt-s-1_37.lib"
-    # This can be used to determine on which boost libraries Hugin depend on
-    #ADD_DEFINITIONS(/DBOOST_LIB_DIAGNOSTIC)
+    ADD_COMPILE_OPTIONS(/Zc:__cplusplus)
     IF(NOT HUGIN_SHARED)
       # compile everything for the static C runtime
       FOREACH(TYPE C CXX)

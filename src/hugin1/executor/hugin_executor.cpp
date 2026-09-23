@@ -68,7 +68,7 @@ class HuginExecutor : public APP
 #if defined __WXMSW__
         // locale setup
         exePath.RemoveLastDir();
-        m_locale.AddCatalogLookupPathPrefix(exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + wxT("share\\locale"));
+        m_locale.AddCatalogLookupPathPrefix(exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + "share\\locale");
 #elif defined __WXMAC__ && defined MAC_SELF_CONTAINED_BUNDLE
         // nothing to do
 #elif defined UNIX_SELF_CONTAINED_BUNDLE
@@ -78,26 +78,26 @@ class HuginExecutor : public APP
           exePath.RemoveLastDir();
           const wxString huginRoot=exePath.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR);
           // add the locale directory specified during configure
-          m_locale.AddCatalogLookupPathPrefix(huginRoot + wxT("share/locale"));
+          m_locale.AddCatalogLookupPathPrefix(huginRoot + "share/locale");
         }
 #else
         // add the locale directory specified during configure
-        m_locale.AddCatalogLookupPathPrefix(wxT(INSTALL_LOCALE_DIR));
+        m_locale.AddCatalogLookupPathPrefix(INSTALL_LOCALE_DIR);
 #endif
         // init our config settings
-#if defined __WXGTK__ && wxCHECK_VERSION(3,1,1)
+#if defined __WXGTK__
         CheckConfigFilename();
 #endif
-        wxConfig* config = new wxConfig(wxT("hugin"));
+        wxConfig* config = new wxConfig("hugin");
         wxConfigBase::Set(config);
 
         // need to explicitly initialize locale for C++ library/runtime
         setlocale(LC_ALL, "");
         // initialize i18n
-        int localeID = config->Read(wxT("language"), (long)HUGIN_LANGUAGE);
+        int localeID = config->Read("language", (long)HUGIN_LANGUAGE);
         m_locale.Init(localeID);
         // set the name of locale recource to look for
-        m_locale.AddCatalog(wxT("hugin"));
+        m_locale.AddCatalog("hugin");
         
         return APP::OnInit();
     };
@@ -166,7 +166,7 @@ class HuginExecutor : public APP
 
         if (m_threads == -1)
         {
-            m_threads = wxConfigBase::Get()->Read(wxT("/output/NumberOfThreads"), 0l);
+            m_threads = wxConfigBase::Get()->Read("/output/NumberOfThreads", 0l);
         };
 
         const bool success = HuginQueue::RunCommandsQueue(commands, m_threads, m_dryRun);
@@ -203,15 +203,15 @@ class HuginExecutor : public APP
     /** set the parameters for the command line parser */
     virtual void OnInitCmdLine(wxCmdLineParser &parser)
     {
-        parser.AddSwitch(wxT("h"), wxT("help"), _("shows this help message"), wxCMD_LINE_OPTION_HELP);
-        parser.AddSwitch(wxT("a"), wxT("assistant"), _("execute assistant"));
-        parser.AddSwitch(wxT("s"), wxT("stitching"), _("execute stitching with given project"));
-        parser.AddOption(wxT("t"), wxT("threads"), _("number of used threads"), wxCMD_LINE_VAL_NUMBER);
-        parser.AddOption(wxT("p"), wxT("prefix"), _("prefix used for stitching"), wxCMD_LINE_VAL_STRING);
-        parser.AddOption(wxT("u"), wxT("user-defined-output"), _("use user defined commands in given file"), wxCMD_LINE_VAL_STRING);
-        parser.AddLongOption(wxT("user-defined-assistant"), _("use user defined assistant commands in given file"), wxCMD_LINE_VAL_STRING);
-        parser.AddSwitch(wxT("d"), wxT("dry-run"), _("only print commands"));
-        parser.AddParam(wxT("input.pto"), wxCMD_LINE_VAL_STRING, wxCMD_LINE_OPTION_MANDATORY);
+        parser.AddSwitch("h", "help", _("shows this help message"), wxCMD_LINE_OPTION_HELP);
+        parser.AddSwitch("a", "assistant", _("execute assistant"));
+        parser.AddSwitch("s", "stitching", _("execute stitching with given project"));
+        parser.AddOption("t", "threads", _("number of used threads"), wxCMD_LINE_VAL_NUMBER);
+        parser.AddOption("p", "prefix", _("prefix used for stitching"), wxCMD_LINE_VAL_STRING);
+        parser.AddOption("u", "user-defined-output", _("use user defined commands in given file"), wxCMD_LINE_VAL_STRING);
+        parser.AddLongOption("user-defined-assistant", _("use user defined assistant commands in given file"), wxCMD_LINE_VAL_STRING);
+        parser.AddSwitch("d", "dry-run", _("only print commands"));
+        parser.AddParam("input.pto", wxCMD_LINE_VAL_STRING, wxCMD_LINE_OPTION_MANDATORY);
         m_runAssistant = false;
         m_runStitching = false;
         m_dryRun = false;
@@ -222,16 +222,16 @@ class HuginExecutor : public APP
     virtual bool OnCmdLineParsed(wxCmdLineParser &parser)
     {
         // we don't call the parents method of OnCmdLineParse, this will pull in other options we don't want
-        m_runAssistant = parser.Found(wxT("a"));
-        m_runStitching = parser.Found(wxT("s"));
-        m_dryRun = parser.Found(wxT("d"));
+        m_runAssistant = parser.Found("a");
+        m_runStitching = parser.Found("s");
+        m_dryRun = parser.Found("d");
         long threads;
-        if (parser.Found(wxT("t"), &threads))
+        if (parser.Found("t", &threads))
         {
             m_threads = threads;
         };
-        parser.Found(wxT("p"), &m_prefix);
-        parser.Found(wxT("u"), &m_userOutput);
+        parser.Found("p", &m_prefix);
+        parser.Found("u", &m_userOutput);
         if (!m_userOutput.IsEmpty() && m_runStitching)
         {
             wxFileName userOutputFile(m_userOutput);
@@ -261,7 +261,7 @@ class HuginExecutor : public APP
                 };
             };
         }
-        parser.Found(wxT("user-defined-assistant"), &m_userAssistant);
+        parser.Found("user-defined-assistant", &m_userAssistant);
         if (!m_userAssistant.IsEmpty() && m_runAssistant)
         {
             wxFileName userAssistantFile(m_userAssistant);

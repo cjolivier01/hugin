@@ -66,6 +66,8 @@ protected:
     void OnShowNone(wxCommandEvent & e);
     void OnNumTransform(wxCommandEvent & e);
     void OnChangeFOV(wxScrollEvent & e);
+    void OnExposureTextChanged(wxCommandEvent& e);
+    void OnRangeCompressionTextChanged(wxCommandEvent& e);
     void OnTextCtrlChanged(wxCommandEvent & e);
 
     void OnDefaultExposure( wxCommandEvent & e );
@@ -121,8 +123,6 @@ private:
     std::vector<wxTextCtrl *>   m_projParamTextCtrl;
     std::vector<wxSlider *>     m_projParamSlider;
     std::vector<wxToggleButton *> m_ToggleButtons;
-
-    DECLARE_EVENT_TABLE()
 };
 
 

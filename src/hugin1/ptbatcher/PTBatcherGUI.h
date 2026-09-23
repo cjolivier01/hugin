@@ -67,7 +67,7 @@ public:
 };
 
 /** topic name for BatchIPCConnection and BatchIPCServer */
-const wxString IPC_START(wxT("BatchStart"));
+const wxString IPC_START("BatchStart");
 
 /** The application class for hugin_stitch_project
  *
@@ -81,15 +81,8 @@ public:
     virtual bool OnInit();
     virtual int OnExit();
 #if wxUSE_ON_FATAL_EXCEPTION
-#if wxCHECK_VERSION(3,1,0)
     virtual void OnFatalException() wxOVERRIDE;
-#else
-    virtual void OnFatalException();
 #endif
-#endif
-
-    //Handles some input keys for the frame
-    void OnItemActivated(wxListEvent& event);
 
     //Main batch list
     ProjectArray projList;
@@ -111,8 +104,6 @@ private:
     wxString m_xrcPrefix;
     wxSingleInstanceChecker* m_checker;
     BatchIPCServer* m_server;
-
-    DECLARE_EVENT_TABLE()
 };
 
 DECLARE_APP(PTBatcherGUI)

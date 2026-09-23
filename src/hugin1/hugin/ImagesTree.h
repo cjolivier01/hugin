@@ -60,7 +60,7 @@ public:
     ImagesTreeCtrl();
 
     /** creates the control */
-    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxT("panel"));
+    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = "panel");
 
     /** initialization, connects all control with Panorama, register observer */
     void Init(HuginBase::Panorama * pano);
@@ -141,10 +141,8 @@ protected:
     void OnActivateImage(wxCommandEvent& e);
     /** event handler for deactivate image */
     void OnDeactivateImage(wxCommandEvent& e);
-#if wxCHECK_VERSION(3,1,3)
     /** event handler for updating dpi */
     void OnDpiChanged(wxDPIChangedEvent& e);
-#endif
 
 private:
     /** creates all columns and stores information in m_columnMap, m_columnVector, m_editableColumns and m_variableVector */
@@ -221,7 +219,6 @@ private:
 
     //for saving column width
     wxString m_configClassName;
-    DECLARE_EVENT_TABLE()
     DECLARE_DYNAMIC_CLASS(ImagesTreeCtrl)
 };
 

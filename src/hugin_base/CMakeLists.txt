@@ -92,7 +92,6 @@ hugin_math/hugin_math.h
 hugin_math/Matrix3.h
 hugin_math/Vector3.h
 hugin_utils/alphanum.h
-hugin_utils/filesystem.h
 hugin_utils/openmp_lock.h
 hugin_utils/platform.h
 hugin_utils/stl_utils.h
@@ -154,7 +153,7 @@ vigra_ext/VignettingCorrection.h
 
 IF (${HUGIN_SHARED_LIBS})
   add_library(huginbase SHARED ${HUGIN_BASE_SRC} ${HUGIN_BASE_HEADER})
-  target_link_libraries(huginbase ${Boost_LIBRARIES} Threads::Threads ${X11_X11_LIB})
+  target_link_libraries(huginbase Threads::Threads ${X11_X11_LIB})
   set_target_properties(huginbase PROPERTIES VERSION ${HUGIN_LIB_VERSION})
   IF(WIN32)
     install(TARGETS huginbase RUNTIME DESTINATION ${BINDIR})
@@ -168,7 +167,7 @@ ELSE (${HUGIN_SHARED_LIBS})
 ENDIF (${HUGIN_SHARED_LIBS})
 
 TARGET_LINK_LIBRARIES(huginbase huginlevmar ${VIGRA_LIBRARIES} 
-        ${Boost_LIBRARIES} ${EXIV2_LIBRARIES} ${PANO_LIBRARIES}
+        ${EXIV2_LIBRARIES} ${PANO_LIBRARIES}
         ${TIFF_LIBRARIES} ${LAPACK_LIBRARIES}
         ${OPENGL_GLEW_LIBRARIES} Threads::Threads
         ${SQLITE3_LIBRARIES} ${LCMS2_LIBRARIES})

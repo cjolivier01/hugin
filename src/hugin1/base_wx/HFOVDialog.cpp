@@ -31,17 +31,9 @@
 
 #include "wxPlatform.h"
 #include "platform.h"
+#include "wxutils.h"
 #include "LensTools.h"
 #include "HFOVDialog.h"
-
-BEGIN_EVENT_TABLE(HFOVDialog, wxDialog)
-    EVT_CHOICE (XRCID("lensdlg_type_choice"),HFOVDialog::OnTypeChanged)
-    EVT_TEXT ( XRCID("lensdlg_cropfactor_text"), HFOVDialog::OnCropFactorChanged )
-    EVT_TEXT ( XRCID("lensdlg_hfov_text"), HFOVDialog::OnHFOVChanged )
-    EVT_TEXT ( XRCID("lensdlg_focallength_text"), HFOVDialog::OnFocalLengthChanged )
-    EVT_BUTTON( XRCID("lensdlg_load_lens_button"), HFOVDialog::OnLoadLensParameters )
-    EVT_BUTTON ( wxID_OK, HFOVDialog::OnOk)
-END_EVENT_TABLE()
 
 HFOVDialog::HFOVDialog(wxWindow * parent, HuginBase::SrcPanoImage & srcImg)
     : m_srcImg(srcImg)
@@ -49,24 +41,30 @@ HFOVDialog::HFOVDialog(wxWindow * parent, HuginBase::SrcPanoImage & srcImg)
     m_HFOV = srcImg.getHFOV();
     m_focalLength = srcImg.getExifFocalLength();
     m_cropFactor = srcImg.getCropFactor();
-    wxXmlResource::Get()->LoadDialog(this, parent, wxT("dlg_focallength"));
+    wxXmlResource::Get()->LoadDialog(this, parent, "dlg_focallength");
 
     m_cropText = XRCCTRL(*this, "lensdlg_cropfactor_text", wxTextCtrl);
     DEBUG_ASSERT(m_cropText);
+    m_cropText->Bind(wxEVT_TEXT, &HFOVDialog::OnCropFactorChanged, this);
 
     m_hfovText = XRCCTRL(*this, "lensdlg_hfov_text", wxTextCtrl);
     DEBUG_ASSERT(m_hfovText);
+    m_hfovText->Bind(wxEVT_TEXT, &HFOVDialog::OnHFOVChanged, this);
 
     m_focalLengthText = XRCCTRL(*this, "lensdlg_focallength_text", wxTextCtrl);
     DEBUG_ASSERT(m_focalLengthText);
+    m_focalLengthText->Bind(wxEVT_TEXT, &HFOVDialog::OnFocalLengthChanged, this);
 
     m_projChoice = XRCCTRL(*this, "lensdlg_type_choice", wxChoice);
     DEBUG_ASSERT(m_projChoice);
     FillLensProjectionList(m_projChoice);
+    m_projChoice->Bind(wxEVT_CHOICE, &HFOVDialog::OnTypeChanged, this);
 
     m_okButton = XRCCTRL(*this, "wxID_OK", wxButton);
     DEBUG_ASSERT(m_okButton);
+    m_okButton->Bind(wxEVT_BUTTON, &HFOVDialog::OnOk, this);
 
+    Bind(wxEVT_BUTTON, &HFOVDialog::OnLoadLensParameters, this, XRCID("lensdlg_load_lens_button"));
     // fill fields
     wxString fn(srcImg.getFilename().c_str(), HUGIN_CONV_FILENAME);
     wxString message;
@@ -152,7 +150,7 @@ void HFOVDialog::OnHFOVChanged(wxCommandEvent & e)
     DEBUG_DEBUG(m_HFOV);
 
     if (m_HFOV <= 0) {
-        wxMessageBox(_("The horizontal field of view must be positive."));
+        hugin_utils::HuginMessageBox(_("The horizontal field of view must be positive."), _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
         m_HFOV = 50;
         m_HFOVStr = hugin_utils::doubleTowxString(m_HFOV,2);
         m_hfovText->SetValue(m_HFOVStr);
@@ -204,7 +202,7 @@ void HFOVDialog::OnFocalLengthChanged(wxCommandEvent & e)
         m_focalLength=1;
         m_focalLengthStr = hugin_utils::doubleTowxString(m_focalLength,2);
         m_focalLengthText->SetValue(m_focalLengthStr);
-        wxMessageBox(_("The focal length must be positive."));
+        hugin_utils::HuginMessageBox(_("The focal length must be positive."), _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
     }
 
     if (m_cropFactor > 0) {
@@ -244,7 +242,7 @@ void HFOVDialog::OnCropFactorChanged(wxCommandEvent & e)
     }
 
     if (m_cropFactor <= 0) {
-        wxMessageBox(_("The crop factor must be positive."));
+        hugin_utils::HuginMessageBox(_("The crop factor must be positive."), _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
         m_cropFactor=1;
         m_cropFactorStr = hugin_utils::doubleTowxString(m_cropFactor,2);
         m_cropText->SetValue(m_cropFactorStr);
@@ -366,14 +364,9 @@ void HFOVDialog::OnOk(wxCommandEvent & e)
 {
     if (m_srcImg.getProjection() == HuginBase::SrcPanoImage::FISHEYE_ORTHOGRAPHIC && m_HFOV>190)
     {
-        if(wxMessageBox(
+        if (hugin_utils::HuginMessageBox(
             wxString::Format(_("You have given a field of view of %.2f degrees.\n But the orthographic projection is limited to a field of view of 180 degress.\nDo you want still use that high value?"), m_HFOV),
-#ifdef __WXMSW__
-            _("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxICON_EXCLAMATION | wxYES_NO)==wxNO)
+            _("Hugin"), wxICON_EXCLAMATION | wxYES_NO, this) == wxNO)
         {
             return;
         };

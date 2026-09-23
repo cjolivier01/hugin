@@ -29,26 +29,16 @@
 #include "panoinc.h"
 #include "Batch.h"
 
-BEGIN_EVENT_TABLE(FailedProjectsDialog,wxDialog)
-    EVT_LISTBOX(XRCID("failed_list"),FailedProjectsDialog::OnSelectProject)
-END_EVENT_TABLE()
-
 FailedProjectsDialog::FailedProjectsDialog(wxWindow* parent,Batch* batch,wxString xrcPrefix)
 {
     // load our children. some children might need special
     // initialization. this will be done later.
-    wxXmlResource::Get()->LoadDialog(this,parent,wxT("failed_project_dialog"));
+    wxXmlResource::Get()->LoadDialog(this,parent,"failed_project_dialog");
 
-#ifdef __WXMSW__
-    wxIconBundle myIcons(xrcPrefix+ wxT("data/ptbatcher.ico"),wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(xrcPrefix + wxT("data/ptbatcher.png"),wxBITMAP_TYPE_PNG);
-    SetIcon(myIcon);
-#endif
     m_batch=batch;
 
     m_list=XRCCTRL(*this,"failed_list",wxListBox);
+    m_list->Bind(wxEVT_LISTBOX, &FailedProjectsDialog::OnSelectProject, this);
     m_log=XRCCTRL(*this,"failed_log",wxTextCtrl);
 
     //fill list
@@ -68,7 +58,7 @@ FailedProjectsDialog::FailedProjectsDialog(wxWindow* parent,Batch* batch,wxStrin
     // restore position and size
     int dx,dy;
     wxDisplaySize(&dx,&dy);
-    bool maximized = config->Read(wxT("/FailedProjectsDialog/maximized"), 0l) != 0;
+    bool maximized = config->Read("/FailedProjectsDialog/maximized", 0l) != 0;
     if (maximized)
     {
         this->Maximize();
@@ -76,8 +66,8 @@ FailedProjectsDialog::FailedProjectsDialog(wxWindow* parent,Batch* batch,wxStrin
     else
     {
         //size
-        int w = config->Read(wxT("/FailedProjectsDialog/width"),-1l);
-        int h = config->Read(wxT("/FailedProjectsDialog/height"),-1l);
+        int w = config->Read("/FailedProjectsDialog/width",-1l);
+        int h = config->Read("/FailedProjectsDialog/height",-1l);
         if (w > 0 && w <= dx)
         {
             this->SetClientSize(w,h);
@@ -87,15 +77,15 @@ FailedProjectsDialog::FailedProjectsDialog(wxWindow* parent,Batch* batch,wxStrin
             this->Fit();
         }
         //splitter position
-        int splitter_pos=config->Read(wxT("/FailedProjectsDialog/splitterPos"),-1l);
+        int splitter_pos=config->Read("/FailedProjectsDialog/splitterPos",-1l);
         wxSplitterWindow* splitWindow=XRCCTRL(*this,"failed_splitter",wxSplitterWindow);
         if(splitter_pos>0 && splitter_pos<splitWindow->GetSize().GetWidth())
         {
             splitWindow->SetSashPosition(splitter_pos);
         };
         //position
-        int x = config->Read(wxT("/FailedProjectsDialog/positionX"),-1l);
-        int y = config->Read(wxT("/FailedProjectsDialog/positionY"),-1l);
+        int x = config->Read("/FailedProjectsDialog/positionX",-1l);
+        int y = config->Read("/FailedProjectsDialog/positionY",-1l);
         if ( y >= 0 && x >= 0 && x < dx && y < dy)
         {
             this->Move(x, y);
@@ -113,18 +103,18 @@ FailedProjectsDialog::~FailedProjectsDialog()
     if(!this->IsMaximized())
     {
         wxSize sz = this->GetClientSize();
-        config->Write(wxT("/FailedProjectsDialog/width"), sz.GetWidth());
-        config->Write(wxT("/FailedProjectsDialog/height"), sz.GetHeight());
+        config->Write("/FailedProjectsDialog/width", sz.GetWidth());
+        config->Write("/FailedProjectsDialog/height", sz.GetHeight());
         wxPoint ps = this->GetPosition();
-        config->Write(wxT("/FailedProjectsDialog/positionX"), ps.x);
-        config->Write(wxT("/FailedProjectsDialog/positionY"), ps.y);
-        config->Write(wxT("/FailedProjectsDialog/maximized"), 0);
+        config->Write("/FailedProjectsDialog/positionX", ps.x);
+        config->Write("/FailedProjectsDialog/positionY", ps.y);
+        config->Write("/FailedProjectsDialog/maximized", 0);
     }
     else
     {
-        config->Write(wxT("/FailedProjectsDialog/maximized"), 1l);
+        config->Write("/FailedProjectsDialog/maximized", 1l);
     };
-    config->Write(wxT("/FailedProjectsDialog/splitterPos"), XRCCTRL(*this,"failed_splitter",wxSplitterWindow)->GetSashPosition());
+    config->Write("/FailedProjectsDialog/splitterPos", XRCCTRL(*this,"failed_splitter",wxSplitterWindow)->GetSashPosition());
 };
 
 void FailedProjectsDialog::OnSelectProject(wxCommandEvent& e)

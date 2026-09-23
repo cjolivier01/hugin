@@ -68,8 +68,6 @@ private:
 
     std::vector<HuginBase::UIntSet> m_stacks;
     std::vector<HuginBase::UIntSet> m_exposureLayers;
-
-    DECLARE_EVENT_TABLE()
 };
 
 #endif //_PANOOUTPUTDIALOG_H

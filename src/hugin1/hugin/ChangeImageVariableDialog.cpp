@@ -28,36 +28,21 @@
 #include "panoinc.h"
 #include "hugin/huginApp.h"
 #include "base_wx/platform.h"
+#include "base_wx/wxutils.h"
 #include "panodata/ParseExp.h"
 #include <iostream>
-
-BEGIN_EVENT_TABLE(ImageVariablesExpressionDialog, wxDialog)
-    EVT_BUTTON(wxID_OK, ImageVariablesExpressionDialog::OnOk)
-    EVT_BUTTON(XRCID("change_variable_load"), ImageVariablesExpressionDialog::OnLoad)
-    EVT_BUTTON(XRCID("change_variable_save"), ImageVariablesExpressionDialog::OnSave)
-    EVT_BUTTON(XRCID("change_variable_delete"), ImageVariablesExpressionDialog::OnDelete)
-    EVT_BUTTON(XRCID("change_variable_test"), ImageVariablesExpressionDialog::OnTest)
-    EVT_TEXT(XRCID("change_variable_text"), ImageVariablesExpressionDialog::OnTextChange)
-END_EVENT_TABLE()
 
 ImageVariablesExpressionDialog::ImageVariablesExpressionDialog(wxWindow *parent, HuginBase::Panorama* pano)
 {
     // load our children. some children might need special
     // initialization. this will be done later.
-    wxXmlResource::Get()->LoadDialog(this, parent, wxT("image_variables_change_dialog"));
+    wxXmlResource::Get()->LoadDialog(this, parent, "image_variables_change_dialog");
 
-#ifdef __WXMSW__
-    wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + wxT("data/hugin.ico"),wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(huginApp::Get()->GetXRCPath() + wxT("data/hugin.png"),wxBITMAP_TYPE_PNG);
-    SetIcon(myIcon);
-#endif
     m_textInput = XRCCTRL(*this, "change_variable_text", wxTextCtrl);
     m_presetsList = XRCCTRL(*this, "change_variable_choice", wxChoice);
     m_textAttrInactive = wxTextAttr(wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT));
     m_textAttrDefault = wxTextAttr(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-    RestoreFramePosition(this, "ChangeImageVariablesDialog");
+    hugin_utils::RestoreFramePosition(this, "ChangeImageVariablesDialog");
     SetExpression(wxConfig::Get()->Read("/ChangeImageVariablesDialog/LastExpression", wxEmptyString));
     m_pano=pano;
     const wxFileName filename(hugin_utils::GetUserAppDataDir(), "expressions.ini");
@@ -81,11 +66,17 @@ ImageVariablesExpressionDialog::ImageVariablesExpressionDialog(wxWindow *parent,
             m_presetsList->AppendString(name);
         };
     };
+    Bind(wxEVT_BUTTON, &ImageVariablesExpressionDialog::OnLoad, this, XRCID("change_variable_load"));
+    Bind(wxEVT_BUTTON, &ImageVariablesExpressionDialog::OnSave, this, XRCID("change_variable_save"));
+    Bind(wxEVT_BUTTON, &ImageVariablesExpressionDialog::OnDelete, this, XRCID("change_variable_delete"));
+    Bind(wxEVT_BUTTON, &ImageVariablesExpressionDialog::OnTest, this, XRCID("change_variable_test"));
+    Bind(wxEVT_TEXT, &ImageVariablesExpressionDialog::OnTextChange, this, XRCID("change_variable_text"));
+    Bind(wxEVT_BUTTON, &ImageVariablesExpressionDialog::OnOk, this, wxID_OK);
 };
 
 ImageVariablesExpressionDialog::~ImageVariablesExpressionDialog()
 {
-    StoreFramePosition(this, "ChangeImageVariablesDialog");
+    hugin_utils::StoreFramePosition(this, "ChangeImageVariablesDialog");
     delete m_presets;
 };
 
@@ -114,7 +105,7 @@ void ImageVariablesExpressionDialog::OnOk(wxCommandEvent & e)
 {
     wxConfigBase* config = wxConfig::Get();
     config->Write("/ChangeImageVariablesDialog/LastExpression", m_textInput->GetValue());
-    StoreFramePosition(this, "ChangeImageVariablesDialog");
+    hugin_utils::StoreFramePosition(this, "ChangeImageVariablesDialog");
     config->Flush();
     EndModal(wxID_OK);
 }
@@ -156,13 +147,8 @@ void ImageVariablesExpressionDialog::OnSave(wxCommandEvent & e)
         bool newPreset = true;
         if (m_presets->HasGroup(s))
         {
-            if (wxMessageBox(wxString::Format(_("Preset with name \"%s\" already exists.\nShould this preset be overwritten?"), s),
-#ifdef __WXMSW__
-                "Hugin",
-#else
-                wxEmptyString,
-#endif
-                wxYES_NO | wxYES_DEFAULT | wxICON_WARNING) == wxNO)
+            if (hugin_utils::HuginMessageBox(wxString::Format(_("Preset with name \"%s\" already exists.\nShould this preset be overwritten?"), s), _("Hugin"),
+                wxYES_NO | wxYES_DEFAULT | wxICON_WARNING, this) == wxNO)
             {
                 return;
             };
@@ -190,6 +176,7 @@ void ImageVariablesExpressionDialog::OnDelete(wxCommandEvent & e)
         m_presets->Flush();
         m_presetsList->Delete(selection);
         Layout();
+        Update();
     }
     else
     {
@@ -205,7 +192,7 @@ void ImageVariablesExpressionDialog::OnTest(wxCommandEvent & e)
     wxDialog dlg;
     if (wxXmlResource::Get()->LoadDialog(&dlg, this, "log_dialog"))
     {
-        RestoreFramePosition(&dlg, "LogDialog");
+        hugin_utils::RestoreFramePosition(&dlg, "LogDialog");
         if (error.str().empty())
         {
         // no error, show status
@@ -219,7 +206,7 @@ void ImageVariablesExpressionDialog::OnTest(wxCommandEvent & e)
             dlg.SetTitle(_("Errors during expression parsing"));
         };
         dlg.ShowModal();
-        StoreFramePosition(&dlg, "LogDialog");
+        hugin_utils::StoreFramePosition(&dlg, "LogDialog");
     };
 }
 

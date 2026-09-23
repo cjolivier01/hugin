@@ -23,7 +23,9 @@
 #ifndef _BASE_WX_WXUTILS_H
 #define _BASE_WX_WXUTILS_H
 
-#include <hugin_utils/utils.h>
+#include "hugin_shared.h"
+#include "panoinc_WX.h"
+#include "hugin_utils/utils.h"
 
 // use trace function under windows, because usually there is
 // no stdout under windows
@@ -72,5 +74,30 @@
         } while(0)
 #endif
 
+namespace hugin_utils
+{
+    WXIMPEX wxString GetFormattedTimeSpan(const wxTimeSpan& timeSpan);
 
+    // functions to store/restore frame/dialog position and size
+    WXIMPEX void RestoreFramePosition(wxTopLevelWindow* frame, const wxString& basename);
+    WXIMPEX void StoreFramePosition(wxTopLevelWindow* frame, const wxString& basename);
+    // wrapper around wxMessageBox, don't show caption on Linux/MacOS
+    // use wxMessageDialog on Windows for dark mode support
+    WXIMPEX int HuginMessageBox(const wxString& message, const wxString& caption, int  style, wxWindow* parent);
+    typedef std::unique_ptr<wxMessageDialogBase> MessageDialog;
+    WXIMPEX MessageDialog GetMessageDialog(const wxString& message, const wxString& caption, int  style, wxWindow* parent);
+    /** ask user if the given file should be overwritten, return true if the user confirmed the overwritting */
+    WXIMPEX bool AskUserOverwrite(const wxString& filename, const wxString& caption, wxWindow* parent);
+    /** helper class, it disables the control/window in the constructor and automatically enables it back in destructor,
+        create this DisableWindow class on the stack, this disables the control, when the variable goes out of scope
+        the connected control is automatically enabled again */
+    class WXIMPEX DisableWindow
+    {
+    public:
+        DisableWindow(wxWindow* window);
+        ~DisableWindow();
+    private:
+        wxWindow* m_window;
+    };
+}
 #endif // _BASE_WX_WXUTILS_H

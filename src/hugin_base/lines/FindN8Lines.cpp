@@ -277,7 +277,7 @@ inline float ccdist( int dx, int dy )
 // Euclidian distance
 inline float eudist( int dx, int dy )
 {
-    register float x = dx, y = dy;
+    float x = dx, y = dy;
     return sqrt( x*x + y*y );
 }
 
@@ -477,8 +477,8 @@ int linePts2lineList(vigra::BImage & img, int minsize, double flpix, Lines& line
                         // fill 1st span's d's, initialize Dsq
                         for( isqr = 0; isqr < span-1; isqr++ )
                         {
-                            register int x = pts.at( isqr + 1).x,
-                                         y = pts.at( isqr + 1 ).y;
+                            int x = pts.at( isqr + 1 ).x;
+                            int y = pts.at( isqr + 1 ).y;
                             float d = ccdist( x - xl, y - yl );
                             ccd[isqr] = d;
                             Arc += d;

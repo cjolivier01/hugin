@@ -59,8 +59,6 @@ private:
 
     HuginBase::MaskPolygonVector m_loadedMask;
     HuginBase::MaskPolygonVector m_processedMask;
-
-    DECLARE_EVENT_TABLE()
 };
 
 #endif //_MASKLOADDIALOG_H

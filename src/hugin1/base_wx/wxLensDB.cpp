@@ -33,6 +33,7 @@
 #include "panodata/ImageVariableGroup.h"
 #include "base_wx/PanoCommand.h"
 #include <set>
+#include "base_wx/wxutils.h"
 
 /** dialog for loading lens parameter from lens database */
 class LoadLensDBDialog : public wxDialog
@@ -61,33 +62,25 @@ private:
     wxChoice *m_lenslist;
     wxCheckBox *m_loadDistortion;
     wxCheckBox *m_loadVignetting;
-    double m_focal;
-    double m_aperture;
-    double m_distance;
+    double m_focal{ 0 };
+    double m_aperture{ 0 };
+    double m_distance{ 0 };
     HuginBase::LensDB::LensList m_lensNames;
-    DECLARE_EVENT_TABLE()
 };
-
-BEGIN_EVENT_TABLE(LoadLensDBDialog,wxDialog)
-    EVT_BUTTON(wxID_OK, LoadLensDBDialog::OnOk)
-    EVT_CHOICE(XRCID("load_lens_lenschoice"), LoadLensDBDialog::OnCheckChanged)
-    EVT_CHECKBOX(XRCID("load_lens_distortion"), LoadLensDBDialog::OnCheckChanged)
-    EVT_CHECKBOX(XRCID("load_lens_vignetting"), LoadLensDBDialog::OnCheckChanged)
-END_EVENT_TABLE()
 
 LoadLensDBDialog::LoadLensDBDialog(wxWindow *parent)
 {
     // load our children. some children might need special
     // initialization. this will be done later.
-    wxXmlResource::Get()->LoadDialog(this, parent, wxT("load_lens_dlg"));
+    wxXmlResource::Get()->LoadDialog(this, parent, "load_lens_dlg");
 
     //set parameters
     wxConfigBase * config = wxConfigBase::Get();
     // get display size
     int dx,dy;
     wxDisplaySize(&dx,&dy);
-    int w = config->Read(wxT("/LoadLensDialog/width"),-1l);
-    int h = config->Read(wxT("/LoadLensDialog/height"),-1l);
+    int w = config->Read("/LoadLensDialog/width",-1l);
+    int h = config->Read("/LoadLensDialog/height",-1l);
     if (w>0 && w<=dx && h>0 && h<=dy)
     {
         SetClientSize(w,h);
@@ -97,8 +90,8 @@ LoadLensDBDialog::LoadLensDBDialog(wxWindow *parent)
         Fit();
     }
     //position
-    int x = config->Read(wxT("/LoadLensDialog/positionX"),-1l);
-    int y = config->Read(wxT("/LoadLensDialog/positionY"),-1l);
+    int x = config->Read("/LoadLensDialog/positionX",-1l);
+    int y = config->Read("/LoadLensDialog/positionY",-1l);
     if ( y >= 0 && x >= 0) 
     {
         this->Move(x, y);
@@ -108,14 +101,18 @@ LoadLensDBDialog::LoadLensDBDialog(wxWindow *parent)
         this->Move(0, 44);
     };
     bool b;
-    config->Read(wxT("/LoadLensDialog/loadDistortion"), &b, true);
+    config->Read("/LoadLensDialog/loadDistortion", &b, true);
     m_loadDistortion = XRCCTRL(*this, "load_lens_distortion", wxCheckBox);
     m_loadDistortion->SetValue(b);
-    config->Read(wxT("/LoadLensDialog/loadVignetting"), &b, true);
+    m_loadDistortion->Bind(wxEVT_CHECKBOX, &LoadLensDBDialog::OnCheckChanged, this);
+    config->Read("/LoadLensDialog/loadVignetting", &b, true);
     m_loadVignetting = XRCCTRL(*this, "load_lens_vignetting", wxCheckBox);
     m_loadVignetting->SetValue(b);
+    m_loadVignetting->Bind(wxEVT_CHECKBOX, &LoadLensDBDialog::OnCheckChanged, this);
     m_lenslist=XRCCTRL(*this,"load_lens_lenschoice", wxChoice);
     FillLensList();
+    m_lenslist->Bind(wxEVT_CHOICE, &LoadLensDBDialog::OnCheckChanged, this);
+    Bind(wxEVT_BUTTON, &LoadLensDBDialog::OnOk, this, wxID_OK);
 };
 
 void LoadLensDBDialog::FillLensList()
@@ -126,10 +123,10 @@ void LoadLensDBDialog::FillLensList()
         for (HuginBase::LensDB::LensList::const_iterator it = m_lensNames.begin(); it != m_lensNames.end(); ++it)
         {
             wxString s((*it).c_str(), wxConvLocal);
-            wxString cam = s.AfterFirst(wxT('|'));
+            wxString cam = s.AfterFirst('|');
             if (!cam.empty())
             {
-                s = wxString::Format(_("Camera %s (%s)"), cam.c_str(), s.BeforeFirst(wxT('|')).c_str());
+                s = wxString::Format(_("Camera %s (%s)"), cam.c_str(), s.BeforeFirst('|').c_str());
             };
             lensnames.Add(s);
         };
@@ -204,7 +201,7 @@ bool str2double(wxWindow* parent, wxString s, double & d)
 {
     if (!hugin_utils::stringToDouble(std::string(s.mb_str(wxConvLocal)), d)) 
     {
-        wxMessageBox(wxString::Format(_("The input \"%s\" is not a valid number."),s.c_str()),_("Warning"), wxOK | wxICON_ERROR, parent);
+        hugin_utils::HuginMessageBox(wxString::Format(_("The input \"%s\" is not a valid number."), s), _("Hugin"), wxOK | wxICON_ERROR, parent);
         return false;
     }
     return true;
@@ -255,20 +252,20 @@ void LoadLensDBDialog::OnOk(wxCommandEvent & e)
     //store selected options
     wxConfigBase * config = wxConfigBase::Get();
     wxSize sz = this->GetClientSize();
-    config->Write(wxT("/LoadLensDialog/width"), sz.GetWidth());
-    config->Write(wxT("/LoadLensDialog/height"), sz.GetHeight());
+    config->Write("/LoadLensDialog/width", sz.GetWidth());
+    config->Write("/LoadLensDialog/height", sz.GetHeight());
     wxPoint ps = this->GetPosition();
-    config->Write(wxT("/LoadLensDialog/positionX"), ps.x);
-    config->Write(wxT("/LoadLensDialog/positionY"), ps.y);
-    config->Write(wxT("/LoadLensDialog/loadDistortion"),m_loadDistortion->GetValue());
-    config->Write(wxT("/LoadLensDialog/loadVignetting"),m_loadVignetting->GetValue());
+    config->Write("/LoadLensDialog/positionX", ps.x);
+    config->Write("/LoadLensDialog/positionY", ps.y);
+    config->Write("/LoadLensDialog/loadDistortion",m_loadDistortion->GetValue());
+    config->Write("/LoadLensDialog/loadVignetting",m_loadVignetting->GetValue());
     config->Flush(); 
     e.Skip();
 };
 
 void LoadLensDBDialog::OnCheckChanged(wxCommandEvent & e)
 {
-    int sel=m_lenslist->GetSelection();
+    const int sel = m_lenslist->GetSelection();
     XRCCTRL(*this,"wxID_OK",wxButton)->Enable(sel!=wxNOT_FOUND && (m_loadDistortion->GetValue() || m_loadVignetting->GetValue()));
 };
 
@@ -378,31 +375,24 @@ protected:
 private:
     wxCheckBox *m_saveDistortion;
     wxCheckBox *m_saveVignetting;
-    double m_focal;
-    double m_aperture;
-    double m_distance;
-    DECLARE_EVENT_TABLE()
+    double m_focal { 0 };
+    double m_aperture{ 0 };
+    double m_distance{ 0 };
 };
-
-BEGIN_EVENT_TABLE(SaveLensDBDialog,wxDialog)
-    EVT_BUTTON(wxID_OK, SaveLensDBDialog::OnOk)
-    EVT_CHECKBOX(XRCID("save_lens_distortion"), SaveLensDBDialog::OnCheckChanged)
-    EVT_CHECKBOX(XRCID("save_lens_vignetting"), SaveLensDBDialog::OnCheckChanged)
-END_EVENT_TABLE()
 
 SaveLensDBDialog::SaveLensDBDialog(wxWindow *parent)
 {
     // load our children. some children might need special
     // initialization. this will be done later.
-    wxXmlResource::Get()->LoadDialog(this, parent, wxT("save_lens_dlg"));
+    wxXmlResource::Get()->LoadDialog(this, parent, "save_lens_dlg");
 
     //set parameters
     wxConfigBase * config = wxConfigBase::Get();
     // get display size
     int dx,dy;
     wxDisplaySize(&dx,&dy);
-    int w = config->Read(wxT("/SaveLensDialog/width"),-1l);
-    int h = config->Read(wxT("/SaveLensDialog/height"),-1l);
+    int w = config->Read("/SaveLensDialog/width",-1l);
+    int h = config->Read("/SaveLensDialog/height",-1l);
     if (w>0 && w<=dx && h>0 && h<=dy)
     {
         SetClientSize(w,h);
@@ -412,8 +402,8 @@ SaveLensDBDialog::SaveLensDBDialog(wxWindow *parent)
         Fit();
     }
     //position
-    int x = config->Read(wxT("/SaveLensDialog/positionX"),-1l);
-    int y = config->Read(wxT("/SaveLensDialog/positionY"),-1l);
+    int x = config->Read("/SaveLensDialog/positionX",-1l);
+    int y = config->Read("/SaveLensDialog/positionY",-1l);
     if ( y >= 0 && x >= 0) 
     {
         this->Move(x, y);
@@ -423,12 +413,15 @@ SaveLensDBDialog::SaveLensDBDialog(wxWindow *parent)
         this->Move(0, 44);
     };
     bool b;
-    config->Read(wxT("/SaveLensDialog/saveDistortion"),&b,true);
+    config->Read("/SaveLensDialog/saveDistortion",&b,true);
     m_saveDistortion=XRCCTRL(*this,"save_lens_distortion",wxCheckBox);
     m_saveDistortion->SetValue(b);
-    config->Read(wxT("/SaveLensDialog/saveVignetting"),&b,true);
+    m_saveDistortion->Bind(wxEVT_CHECKBOX, &SaveLensDBDialog::OnCheckChanged, this);
+    config->Read("/SaveLensDialog/saveVignetting",&b,true);
     m_saveVignetting=XRCCTRL(*this,"save_lens_vignetting",wxCheckBox);
     m_saveVignetting->SetValue(b);
+    m_saveVignetting->Bind(wxEVT_CHECKBOX, &SaveLensDBDialog::OnCheckChanged, this);
+    Bind(wxEVT_BUTTON, &SaveLensDBDialog::OnOk, this, wxID_OK);
 };
 
 void SaveLensDBDialog::SetCameraMaker(std::string maker)
@@ -532,7 +525,7 @@ void SaveLensDBDialog::OnOk(wxCommandEvent & e)
     };
     if(GetLensName().empty() && (GetCameraMaker().empty() || GetCameraModel().empty()))
     {
-        wxMessageBox(_("There is too little information for saving data into database. Please check your input!"),_("Warning"),wxOK|wxICON_ERROR,this);
+        hugin_utils::HuginMessageBox(_("There is too little information for saving data into database. Please check your input!"), _("Hugin"), wxOK | wxICON_ERROR, this);
         return;
     };
     if(!str2double(this,XRCCTRL(*this,"save_lens_focallength",wxTextCtrl)->GetValue(),m_focal))
@@ -569,15 +562,15 @@ void SaveLensDBDialog::OnOk(wxCommandEvent & e)
     //store selected options
     wxConfigBase * config = wxConfigBase::Get();
     wxSize sz = this->GetClientSize();
-    config->Write(wxT("/SaveLensDialog/width"), sz.GetWidth());
-    config->Write(wxT("/SaveLensDialog/height"), sz.GetHeight());
+    config->Write("/SaveLensDialog/width", sz.GetWidth());
+    config->Write("/SaveLensDialog/height", sz.GetHeight());
     wxPoint ps = this->GetPosition();
-    config->Write(wxT("/SaveLensDialog/positionX"), ps.x);
-    config->Write(wxT("/SaveLensDialog/positionY"), ps.y);
-    config->Write(wxT("/SaveLensDialog/saveDistortion"),m_saveDistortion->GetValue());
+    config->Write("/SaveLensDialog/positionX", ps.x);
+    config->Write("/SaveLensDialog/positionY", ps.y);
+    config->Write("/SaveLensDialog/saveDistortion",m_saveDistortion->GetValue());
     if(m_saveVignetting->IsEnabled())
     {
-        config->Write(wxT("/SaveLensDialog/saveVignetting"),m_saveVignetting->GetValue());
+        config->Write("/SaveLensDialog/saveVignetting",m_saveVignetting->GetValue());
     };
     config->Flush(); 
     e.Skip();
@@ -628,12 +621,12 @@ bool SaveLensParameters(wxWindow * parent, const HuginBase::SrcPanoImage& img, b
         // save information with higher weight
         if (!lensDB.SaveLensFov(lensname, lensDlg.GetFocalLength(), newHFOV, 75))
         {
-            wxMessageBox(_("Could not save information into database."), _("Error"), wxOK | wxICON_ERROR, parent);
+            hugin_utils::HuginMessageBox(_("Could not save information into database."), _("Hugin"), wxOK | wxICON_ERROR, parent);
             return false;
         };
         if (!lensDB.SaveDistortion(lensname, focal, img.getRadialDistortion(), 75))
         {
-            wxMessageBox(_("Could not save information into database."), _("Error"), wxOK | wxICON_ERROR, parent);
+            hugin_utils::HuginMessageBox(_("Could not save information into database."), _("Hugin"), wxOK | wxICON_ERROR, parent);
             return false;
         };
     };
@@ -641,7 +634,7 @@ bool SaveLensParameters(wxWindow * parent, const HuginBase::SrcPanoImage& img, b
     {
         if (!lensDB.SaveVignetting(lensname, focal, lensDlg.GetAperture(), lensDlg.GetSubjectDistance(), img.getRadialVigCorrCoeff(), 75))
         {
-            wxMessageBox(_("Could not save information into database."), _("Error"), wxOK | wxICON_ERROR, parent);
+            hugin_utils::HuginMessageBox(_("Could not save information into database."), _("Hugin"), wxOK | wxICON_ERROR, parent);
             return false;
         };
     };

@@ -111,7 +111,7 @@ IF(WIN32)
       NO_SYSTEM_ENVIRONMENT_PATH
     )
     FIND_PATH(OPENEXR_BIN_DIR
-            NAMES OpenEXR-3_2.dll OpenEXR-3_1.dll OpenEXR-3_0.dll
+            NAMES OpenEXR-3_3.dll OpenEXR-3_2.dll OpenEXR-3_1.dll OpenEXR-3_0.dll
             PATHS ${DLL_SEARCH_PATH}
             DOC "Location of OpenEXR3 libraries"
             NO_SYSTEM_ENVIRONMENT_PATH
@@ -149,11 +149,6 @@ IF(WIN32)
              ${SOURCE_BASE_DIR}/vigra/bin 
        NO_SYSTEM_ENVIRONMENT_PATH
     )
-    IF(NOT HAVE_STD_FILESYSTEM)
-      FILE(GLOB BOOST_SYSTEM_DLL ${Boost_LIBRARY_DIRS}/*boost_system*.dll)
-      FILE(GLOB BOOST_FILESYSTEM_DLL ${Boost_LIBRARY_DIRS}/*boost_filesystem*.dll)
-      LIST(APPEND BOOST_DLLs ${BOOST_SYSTEM_DLL} ${BOOST_FILESYSTEM_DLL})
-    ENDIF()
     FIND_FILE(EXIV2_DLL 
       NAMES exiv2.dll libexiv2.dll
       PATHS ${DLL_SEARCH_PATH}
@@ -198,7 +193,7 @@ IF(WIN32)
     ENDIF()
 
     FIND_FILE(LCMS2_DLL
-      NAMES lcms2.dll liblcms2.dll liblcms2-2.dll lcms.dll
+      NAMES lcms2-2.dll lcms2.dll liblcms2.dll liblcms2-2.dll lcms.dll
       PATHS ${DLL_SEARCH_PATH}
             ${LCMS2_ROOT_DIR}/bin 
       NO_SYSTEM_ENVIRONMENT_PATH
@@ -288,7 +283,7 @@ IF(WIN32)
     ENDIF()
 
     INSTALL(FILES ${TIFF_DLL} ${JPEG_DLL} ${PNG_DLL} ${ZLIB_DLL} ${OPENEXR_DLL} ${VIGRA_DLL}
-        ${BOOST_DLLs} ${EXIV2_DLL} ${LCMS2_DLL}
+        ${EXIV2_DLL} ${LCMS2_DLL}
         ${WXWIDGETS_DLL}
         DESTINATION ${BINDIR}
     )

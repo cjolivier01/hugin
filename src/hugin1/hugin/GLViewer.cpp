@@ -52,24 +52,6 @@ bool GLViewer::initialised_glew=false;
 ViewState * GLViewer::m_view_state = NULL;
 size_t GLViewer::m_view_state_observer = 0;
 
-BEGIN_EVENT_TABLE(GLViewer, wxGLCanvas)
-    EVT_PAINT (GLViewer::RedrawE)
-    EVT_SIZE  (GLViewer::Resized)
-    EVT_ERASE_BACKGROUND(GLViewer::OnEraseBackground)
-    // mouse motion
-    EVT_MOTION (GLViewer::MouseMotion)
-    // mouse entered or left the preview
-    EVT_ENTER_WINDOW(GLViewer::MouseEnter)
-    EVT_LEAVE_WINDOW(GLViewer::MouseLeave)
-    // mouse buttons
-    EVT_MOUSEWHEEL(GLViewer::MouseWheel)
-    EVT_MOUSE_EVENTS(GLViewer::MouseButtons)
-    // keyboard events
-    EVT_KEY_DOWN(GLViewer::KeyDown)
-    EVT_KEY_UP(GLViewer::KeyUp)
-END_EVENT_TABLE()
-
-
 GLViewer::GLViewer(
             wxWindow* parent, 
             HuginBase::Panorama &pano, 
@@ -78,7 +60,7 @@ GLViewer::GLViewer(
             wxGLContext * shared_context
             ) :
           wxGLCanvas(parent, wxID_ANY, args, wxDefaultPosition, wxDefaultSize,
-                     0, wxT("GLPreviewCanvas"), wxNullPalette)
+                     0, "GLPreviewCanvas", wxNullPalette)
 {
     /* create OpenGL context... */
     m_glContext = new wxGLContext(this, shared_context);
@@ -97,6 +79,25 @@ GLViewer::GLViewer(
     m_toolsInitialized = false;
 
     active = true;
+    // bind event handler
+    Bind(wxEVT_PAINT, &GLViewer::RedrawE, this);
+    Bind(wxEVT_SIZE, &GLViewer::Resized, this);
+    Bind(wxEVT_ERASE_BACKGROUND, &GLViewer::OnEraseBackground, this);
+    Bind(wxEVT_MOTION, &GLViewer::MouseMotion, this);
+    Bind(wxEVT_ENTER_WINDOW, &GLViewer::MouseEnter, this);
+    Bind(wxEVT_LEAVE_WINDOW, &GLViewer::MouseLeave, this);
+    Bind(wxEVT_MOUSEWHEEL, &GLViewer::MouseWheel, this);
+    Bind(wxEVT_LEFT_DOWN, &GLViewer::MouseButtons, this);
+    Bind(wxEVT_LEFT_UP, &GLViewer::MouseButtons, this);
+    Bind(wxEVT_LEFT_DCLICK, &GLViewer::MouseButtons, this);
+    Bind(wxEVT_RIGHT_DOWN, &GLViewer::MouseButtons, this);
+    Bind(wxEVT_RIGHT_UP, &GLViewer::MouseButtons, this);
+    Bind(wxEVT_RIGHT_DCLICK, &GLViewer::MouseButtons, this);
+    Bind(wxEVT_MIDDLE_DOWN, &GLViewer::MouseButtons, this);
+    Bind(wxEVT_MIDDLE_UP, &GLViewer::MouseButtons, this);
+    Bind(wxEVT_MIDDLE_DCLICK, &GLViewer::MouseButtons, this);
+    Bind(wxEVT_KEY_DOWN, &GLViewer::KeyDown, this);
+    Bind(wxEVT_KEY_UP, &GLViewer::KeyUp, this);
 }
 
 GLViewer::~GLViewer()
@@ -135,11 +136,11 @@ void GLViewer::SetUpContext()
         if (!(epoxy_gl_version() > 11 && epoxy_has_gl_extension("GL_ARB_multitexture")))
         {
             started_creation = false;
-            wxConfigBase::Get()->Write(wxT("DisableOpenGL"), 1l);
+            wxConfigBase::Get()->Write("DisableOpenGL", 1l);
             wxConfigBase::Get()->Flush();
             DEBUG_ERROR("Sorry, OpenGL 1.1 + GL_ARB_multitexture extension required.");
             frame->Close();
-            wxMessageBox(_("Sorry, the fast preview window requires a system which supports OpenGL version 1.1 with the GL_ARB_multitexture extension.\nThe fast preview cannot be opened.\n\nHugin has been configured to start without fast preview.\nPlease restart Hugin."), _("Error"), wxOK | wxICON_ERROR);
+            hugin_utils::HuginMessageBox(_("Sorry, the fast preview window requires a system which supports OpenGL version 1.1 with the GL_ARB_multitexture extension.\nThe fast preview cannot be opened.\n\nHugin has been configured to start without fast preview.\nPlease restart Hugin."), _("Hugin"), wxOK | wxICON_ERROR, this);
             return;
         }
 #else
@@ -155,7 +156,7 @@ void GLViewer::SetUpContext()
                 DEBUG_ERROR("Error initialising GLEW: "
                         << glewGetErrorString(error_state) << ".");
                 frame->Close();
-                wxMessageBox(_("Error initializing GLEW\nFast preview window can not be opened."),_("Error"), wxOK | wxICON_ERROR);
+                hugin_utils::HuginMessageBox(_("Error initializing GLEW\nFast preview window can not be opened."), _("Hugin"), wxOK | wxICON_ERROR, this);
                 return;
             }
         }
@@ -163,11 +164,11 @@ void GLViewer::SetUpContext()
         if (!(GLEW_VERSION_1_1 && GLEW_ARB_multitexture))
         {
             started_creation=false;
-            wxConfigBase::Get()->Write(wxT("DisableOpenGL"), 1l);
+            wxConfigBase::Get()->Write("DisableOpenGL", 1l);
             wxConfigBase::Get()->Flush();
             DEBUG_ERROR("Sorry, OpenGL 1.1 + GL_ARB_multitexture extension required.");
             frame->Close();
-            wxMessageBox(_("Sorry, the fast preview window requires a system which supports OpenGL version 1.1 with the GL_ARB_multitexture extension.\nThe fast preview cannot be opened.\n\nHugin has been configured to start without fast preview.\nPlease restart Hugin."),_("Error"), wxOK | wxICON_ERROR);
+            hugin_utils::HuginMessageBox(_("Sorry, the fast preview window requires a system which supports OpenGL version 1.1 with the GL_ARB_multitexture extension.\nThe fast preview cannot be opened.\n\nHugin has been configured to start without fast preview.\nPlease restart Hugin."), _("Hugin"), wxOK | wxICON_ERROR, this);
             return;
         }
 #endif
@@ -391,7 +392,7 @@ void GLViewer::Redraw()
     
     // we should use the window background colour outside the panorama
     // FIXME shouldn't this work on textured backrounds?
-#if defined __WXMAC__ && wxCHECK_VERSION(3,1,0) 
+#if defined __WXMAC__
     wxColour col(128,128,128);
 #else
     wxColour col = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE);

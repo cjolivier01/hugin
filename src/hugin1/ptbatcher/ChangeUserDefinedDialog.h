@@ -65,8 +65,6 @@ private:
     wxRadioButton* m_radio_external;
     wxTextCtrl* m_text_external_file;
     wxButton* m_button_external_file;
-
-    DECLARE_EVENT_TABLE()
 };
 
 #endif //_CHANGEUSERDEFINEDDIALOG_H

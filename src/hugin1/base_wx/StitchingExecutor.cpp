@@ -49,7 +49,7 @@ namespace HuginQueue
             wxArrayString filenames;
             for (HuginBase::UIntSet::const_iterator it = img.begin(); it != img.end(); ++it)
             {
-                filenames.Add(wxString::Format(wxT("%s%04u%s"), prefix.c_str(), *it, postfix.c_str()));
+                filenames.Add(wxString::Format("%s%04u%s", prefix.c_str(), *it, postfix.c_str()));
             };
             return filenames;
         };
@@ -68,8 +68,8 @@ namespace HuginQueue
         */
         wxString GenerateFinalArgfile(const HuginBase::Panorama & pano, const wxString& projectName, const wxConfigBase* config, const HuginBase::UIntSet& images, const double exifToolVersion)
         {
-            wxString argfileInput = config->Read(wxT("/output/FinalArgfile"), wxEmptyString);
-            const bool generateGPanoTags = (config->Read(wxT("/output/writeGPano"), HUGIN_EXIFTOOL_CREATE_GPANO) == 1l) && (exifToolVersion >= 9.09);
+            wxString argfileInput = config->Read("/output/FinalArgfile", wxEmptyString);
+            const bool generateGPanoTags = (config->Read("/output/writeGPano", HUGIN_EXIFTOOL_CREATE_GPANO) == 1l) && (exifToolVersion >= 9.09);
             pano_projection_features proj;
             const HuginBase::PanoramaOptions &opts = pano.getOptions();
             const bool readProjectionName = panoProjectionFeaturesQuery(opts.getProjection(), &proj) != 0;
@@ -86,49 +86,49 @@ namespace HuginQueue
             };
             std::list<Placeholder> placeholders;
 #ifdef _WIN32
-            const wxString linebreak(wxT("&#xd;&#xa;"));
+            const wxString linebreak("&#xd;&#xa;");
 #else
-            const wxString linebreak(wxT("&#xa;"));
+            const wxString linebreak("&#xa;");
 #endif
             if (readProjectionName)
             {
                 // %projectionNumber have to be processed before %projection, otherwise it does not work
-                placeholders.push_back(Placeholder(wxT("%projectionNumber"), wxString::Format(wxT("%d"), opts.getProjection())));
-                placeholders.push_back(Placeholder(wxT("%projection"), wxString(proj.name, wxConvLocal)));
+                placeholders.push_back(Placeholder("%projectionNumber", wxString::Format("%d", opts.getProjection())));
+                placeholders.push_back(Placeholder("%projection", wxString(proj.name, wxConvLocal)));
             };
             // fill in some placeholders
-            placeholders.push_back(Placeholder(wxT("%hfov"), wxString::Format(wxT("%.0f"), opts.getHFOV())));
-            placeholders.push_back(Placeholder(wxT("%vfov"), wxString::Format(wxT("%.0f"), opts.getVFOV())));
-            placeholders.push_back(Placeholder(wxT("%ev"), wxString::Format(wxT("%.2f"), opts.outputExposureValue)));
-            placeholders.push_back(Placeholder(wxT("%nrImages"), wxString::Format(wxT("%lu"), (unsigned long)images.size())));
-            placeholders.push_back(Placeholder(wxT("%nrAllImages"), wxString::Format(wxT("%lu"), (unsigned long)pano.getNrOfImages())));
-            placeholders.push_back(Placeholder(wxT("%fullwidth"), wxString::Format(wxT("%u"), opts.getWidth())));
-            placeholders.push_back(Placeholder(wxT("%fullheight"), wxString::Format(wxT("%u"), opts.getHeight())));
-            placeholders.push_back(Placeholder(wxT("%width"), wxString::Format(wxT("%d"), opts.getROI().width())));
-            placeholders.push_back(Placeholder(wxT("%height"), wxString::Format(wxT("%d"), opts.getROI().height())));
+            placeholders.push_back(Placeholder("%hfov", wxString::Format("%.0f", opts.getHFOV())));
+            placeholders.push_back(Placeholder("%vfov", wxString::Format("%.0f", opts.getVFOV())));
+            placeholders.push_back(Placeholder("%ev", wxString::Format("%.2f", opts.outputExposureValue)));
+            placeholders.push_back(Placeholder("%nrImages", wxString::Format("%lu", (unsigned long)images.size())));
+            placeholders.push_back(Placeholder("%nrAllImages", wxString::Format("%lu", (unsigned long)pano.getNrOfImages())));
+            placeholders.push_back(Placeholder("%fullwidth", wxString::Format("%u", opts.getWidth())));
+            placeholders.push_back(Placeholder("%fullheight", wxString::Format("%u", opts.getHeight())));
+            placeholders.push_back(Placeholder("%width", wxString::Format("%d", opts.getROI().width())));
+            placeholders.push_back(Placeholder("%height", wxString::Format("%d", opts.getROI().height())));
             wxFileName projectFilename(projectName);
-            placeholders.push_back(Placeholder(wxT("%projectname"), projectFilename.GetFullName()));
+            placeholders.push_back(Placeholder("%projectname", projectFilename.GetFullName()));
             // now open the final argfile
-            wxFileName tempArgfileFinal(wxFileName::CreateTempFileName(GetConfigTempDir(config) + wxT("he")));
+            wxFileName tempArgfileFinal(wxFileName::CreateTempFileName(GetConfigTempDir(config) + "he"));
             wxFFileOutputStream outputStream(tempArgfileFinal.GetFullPath());
             wxTextOutputStream outputFile(outputStream);
             // write argfile
-            outputFile << wxT("-Software=Hugin ") << wxString(hugin_utils::GetHuginVersion().c_str(), wxConvLocal) << endl;
-            outputFile << wxT("-E") << endl;
-            outputFile << wxT("-UserComment<${UserComment}") << linebreak;
+            outputFile << "-Software=Hugin " << wxString(hugin_utils::GetHuginVersion().c_str(), wxConvLocal) << endl;
+            outputFile << "-E" << endl;
+            outputFile << "-UserComment<${UserComment}" << linebreak;
             if (readProjectionName)
             {
-                outputFile << wxT("Projection: ") << wxString(proj.name, wxConvLocal) << wxT(" (") << opts.getProjection() << wxT(")") << linebreak;
+                outputFile << "Projection: " << wxString(proj.name, wxConvLocal) << " (" << opts.getProjection() << ")" << linebreak;
             };
-            outputFile << wxT("FOV: ") << wxString::Format(wxT("%.0f"), opts.getHFOV()) << wxT(" x ") << wxString::Format(wxT("%.0f"), opts.getVFOV()) << linebreak;
-            outputFile << wxT("Ev: ") << wxString::Format(wxT("%.2f"), opts.outputExposureValue) << endl;
-            outputFile << wxT("-f") << endl;
+            outputFile << "FOV: " << wxString::Format("%.0f", opts.getHFOV()) << " x " << wxString::Format("%.0f", opts.getVFOV()) << linebreak;
+            outputFile << "Ev: " << wxString::Format("%.2f", opts.outputExposureValue) << endl;
+            outputFile << "-f" << endl;
             if (exifToolVersion >= 11.53)
             {
                 // add composite image tags from EXIF 2.32
                 // these are supported by exiftool 11.53 and later
-                outputFile << wxT("-CompositeImage=General Composite Image") << endl;
-                outputFile << wxString::Format(wxT("-CompositeImageCount=%lu %lu"), (unsigned long)pano.getNrOfImages(), (unsigned long)pano.getActiveImages().size()) << endl;
+                outputFile << "-CompositeImage=General Composite Image" << endl;
+                outputFile << wxString::Format("-CompositeImageCount=%lu %lu", (unsigned long)pano.getNrOfImages(), (unsigned long)pano.getActiveImages().size()) << endl;
             };
             if (generateGPanoTags)
             {
@@ -159,27 +159,27 @@ namespace HuginQueue
                         // different calculation of top parameter for cylindrical projection
                         top =  height/2 - top;
                     };
-                    outputFile << wxT("-UsePanoramaViewer=True") << endl;
-                    outputFile << wxT("-StitchingSoftware=Hugin") << endl;
+                    outputFile << "-UsePanoramaViewer=True" << endl;
+                    outputFile << "-StitchingSoftware=Hugin" << endl;
                     if (isCylindrical)
                     {
-                        outputFile << wxT("-ProjectionType=cylindrical") << endl;
+                        outputFile << "-ProjectionType=cylindrical" << endl;
                     }
                     else
                     {
-                        outputFile << wxT("-ProjectionType=equirectangular") << endl;
+                        outputFile << "-ProjectionType=equirectangular" << endl;
                     };
-                    outputFile << wxT("-CroppedAreaLeftPixels=") << left << endl;
-                    outputFile << wxT("-CroppedAreaTopPixels=") << top << endl;
-                    outputFile << wxT("-CroppedAreaImageWidthPixels=") << width << endl;
-                    outputFile << wxT("-CroppedAreaImageHeightPixels=") << height << endl;
-                    outputFile << wxT("-FullPanoWidthPixels=") << fullWidth << endl;
+                    outputFile << "-CroppedAreaLeftPixels=" << left << endl;
+                    outputFile << "-CroppedAreaTopPixels=" << top << endl;
+                    outputFile << "-CroppedAreaImageWidthPixels=" << width << endl;
+                    outputFile << "-CroppedAreaImageHeightPixels=" << height << endl;
+                    outputFile << "-FullPanoWidthPixels=" << fullWidth << endl;
                     if (!isCylindrical)
                     {
                         // for cylindrical projection FullPanoHeightPixels is infinity
-                        outputFile << wxT("-FullPanoHeightPixels=") << fullHeight << endl;
+                        outputFile << "-FullPanoHeightPixels=" << fullHeight << endl;
                     };
-                    outputFile << wxT("-SourcePhotosCount=") << static_cast<wxUint32>(pano.getNrOfImages()) << endl;
+                    outputFile << "-SourcePhotosCount=" << static_cast<wxUint32>(pano.getNrOfImages()) << endl;
                 };
             };
             // now open the input file and append it
@@ -208,16 +208,16 @@ namespace HuginQueue
         wxString PrintDetailInfo(const HuginBase::Panorama& pano, const HuginBase::PanoramaOptions& opts, const HuginBase::UIntSet& allActiveImages, const wxString& prefix, const wxString& bindir, wxConfigBase* config, double& exiftoolVersion)
         {
             wxString output;
-            const wxString wxEndl(wxT("\n"));
+            const wxString wxEndl("\n");
             output
-                << wxT("============================================") << wxEndl
+                << "============================================" << wxEndl
                 << _("Stitching panorama...") << wxEndl
-                << wxT("============================================") << wxEndl
+                << "============================================" << wxEndl
                 << wxEndl
-                << _("Platform:") << wxT(" ") << wxGetOsDescription() << wxEndl
-                << _("Version:") << wxT(" ") << wxString(hugin_utils::GetHuginVersion().c_str(), wxConvLocal) << wxEndl
-                << _("Working directory:") << wxT(" ") << wxFileName::GetCwd() << wxEndl
-                << _("Output prefix:") << wxT(" ") << prefix << wxEndl
+                << _("Platform:") << " " << wxGetOsDescription() << wxEndl
+                << _("Version:") << " " << wxString(hugin_utils::GetHuginVersion().c_str(), wxConvLocal) << wxEndl
+                << _("Working directory:") << " " << wxFileName::GetCwd() << wxEndl
+                << _("Output prefix:") << " " << prefix << wxEndl
                 << wxEndl;
             if (opts.outputLDRBlended || opts.outputLDRExposureBlended || opts.outputLDRExposureLayersFused || 
                 opts.outputHDRBlended || opts.outputLDRExposureLayers)
@@ -227,89 +227,89 @@ namespace HuginQueue
                     case HuginBase::PanoramaOptions::ENBLEND_BLEND:
                         {
                             wxArrayString version;
-                            if (wxExecute(wxEscapeFilename(GetExternalProgram(config, bindir, wxT("enblend"))) + wxT(" --version"), version, wxEXEC_SYNC) == 0l)
+                            if (wxExecute(wxEscapeFilename(GetExternalProgram(config, bindir, "enblend")) + " --version", version, wxEXEC_SYNC) == 0l)
                             {
-                                output << _("Blender:") << wxT(" ") << version[0] << wxEndl;
+                                output << _("Blender:") << " " << version[0] << wxEndl;
                             }
                             else
                             {
-                                output << _("Blender:") << wxT(" ") << _("Unknown blender (enblend --version failed)") << wxEndl;
+                                output << _("Blender:") << " " << _("Unknown blender (enblend --version failed)") << wxEndl;
                             };
                         };
                         break;
                     case HuginBase::PanoramaOptions::INTERNAL_BLEND:
                     default:  // switch to internal blender for all other cases, not exposed in GUI
-                        output << _("Blender:") << wxT(" ") << _("internal") << wxEndl;
+                        output << _("Blender:") << " " << _("internal") << wxEndl;
                         break;
                 };
             };
             if (opts.outputLDRExposureBlended || opts.outputLDRExposureLayersFused || opts.outputLDRStacks )
             {
                 wxArrayString version;
-                if (wxExecute(wxEscapeFilename(GetExternalProgram(config, bindir, wxT("enfuse"))) + wxT(" --version"), version, wxEXEC_SYNC) == 0l)
+                if (wxExecute(wxEscapeFilename(GetExternalProgram(config, bindir, "enfuse")) + " --version", version, wxEXEC_SYNC) == 0l)
                 {
-                    output << _("Exposure fusion:") << wxT(" ") << version[0] << wxEndl;
+                    output << _("Exposure fusion:") << " " << version[0] << wxEndl;
                 }
                 else
                 {
-                    output << _("Exposure fusion:") << wxT(" ") << _("Unknown exposure fusion (enfuse --version failed)") << wxEndl;
+                    output << _("Exposure fusion:") << " " << _("Unknown exposure fusion (enfuse --version failed)") << wxEndl;
                 };
             };
-            if (config->Read(wxT("/output/useExiftool"), HUGIN_USE_EXIFTOOL) == 1l)
+            if (config->Read("/output/useExiftool", HUGIN_USE_EXIFTOOL) == 1l)
             {
                 wxArrayString version;
-                if (wxExecute(wxEscapeFilename(GetExternalProgram(config, bindir, wxT("exiftool"))) + wxT(" -ver"), version, wxEXEC_SYNC) == 0l)
+                if (wxExecute(wxEscapeFilename(GetExternalProgram(config, bindir, "exiftool")) + " -ver", version, wxEXEC_SYNC) == 0l)
                 {
-                    output << _("ExifTool version:") << wxT(" ") << version[0] << wxEndl;
+                    output << _("ExifTool version:") << " " << version[0] << wxEndl;
                     version[0].ToCDouble(&exiftoolVersion);
                 }
                 else
                 {
-                    output << _("ExifTool:") << wxT(" ") << _("FAILED") << wxEndl;
+                    output << _("ExifTool:") << " " << _("FAILED") << wxEndl;
                     exiftoolVersion = 1;
                 };
             };
             output
                 << wxEndl
-                << _("Number of active images:") << wxT(" ") << allActiveImages.size() << wxEndl
+                << _("Number of active images:") << " " << allActiveImages.size() << wxEndl
                 << wxString::Format(_("Output exposure value: %.1f"), opts.outputExposureValue) << wxEndl
                 << wxString::Format(_("Canvas size: %dx%d"), opts.getSize().width(), opts.getSize().height()) << wxEndl
-                << wxString::Format(_("ROI: (%d, %d) - (%d, %d)"), opts.getROI().left(), opts.getROI().top(), opts.getROI().right(), opts.getROI().bottom()) << wxT(" ") << wxEndl
+                << wxString::Format(_("ROI: (%d, %d) - (%d, %d)"), opts.getROI().left(), opts.getROI().top(), opts.getROI().right(), opts.getROI().bottom()) << " " << wxEndl
                 << wxString::Format(_("FOV: %.0fx%.0f"), opts.getHFOV(), opts.getVFOV()) << wxEndl;
             pano_projection_features proj;
             const bool readProjectionName = panoProjectionFeaturesQuery(opts.getProjection(), &proj) != 0;
             if (readProjectionName)
             {
                 output
-                    << _("Projection:") << wxT(" ") << wxGetTranslation(wxString(proj.name, wxConvLocal))
-                    << wxT("(") << opts.getProjection() << wxT(")") << wxEndl;
+                    << _("Projection:") << " " << wxGetTranslation(wxString(proj.name, wxConvLocal))
+                    << "(" << opts.getProjection() << ")" << wxEndl;
             }
             else
             {
                 output
-                    << _("Projection:") << wxT(" ") << opts.getProjection() << wxEndl;
+                    << _("Projection:") << " " << opts.getProjection() << wxEndl;
             };
             output
-                << _("Using GPU for remapping:") << wxT(" ") << (opts.remapUsingGPU ? _("true") : _("false")) << wxEndl
+                << _("Using GPU for remapping:") << " " << (opts.remapUsingGPU ? _("true") : _("false")) << wxEndl
                 << wxEndl;
             if (opts.outputLDRBlended || opts.outputLDRExposureBlended || opts.outputLDRExposureLayersFused || opts.outputHDRBlended)
             {
                 output << _("Panorama Outputs:") << wxEndl;
                 if (opts.outputLDRBlended)
                 {
-                    output << wxT("* ") << _("Exposure corrected, low dynamic range") << wxEndl;
+                    output << "* " << _("Exposure corrected, low dynamic range") << wxEndl;
                 };
                 if (opts.outputLDRExposureBlended)
                 {
-                    output << wxT("* ") << _("Exposure fused from stacks") << wxEndl;
+                    output << "* " << _("Exposure fused from stacks") << wxEndl;
                 };
                 if (opts.outputLDRExposureLayersFused)
                 {
-                    output << wxT("* ") << _("Exposure fused from any arrangement") << wxEndl;
+                    output << "* " << _("Exposure fused from any arrangement") << wxEndl;
                 };
                 if (opts.outputHDRBlended)
                 {
-                    output << wxT("* ") << _("High dynamic range") << wxEndl;
+                    output << "* " << _("High dynamic range") << wxEndl;
                 };
                 output << wxEndl;
             };
@@ -318,15 +318,15 @@ namespace HuginQueue
                 output << _("Remapped Images:") << wxEndl;
                 if (opts.outputLDRBlended)
                 {
-                    output << wxT("* ") << _("Exposure corrected, low dynamic range") << wxEndl;
+                    output << "* " << _("Exposure corrected, low dynamic range") << wxEndl;
                 };
                 if (opts.outputLDRExposureRemapped)
                 {
-                    output << wxT("* ") << _("No exposure correction, low dynamic range") << wxEndl;
+                    output << "* " << _("No exposure correction, low dynamic range") << wxEndl;
                 };
                 if (opts.outputHDRLayers)
                 {
-                    output << wxT("* ") << _("High dynamic range") << wxEndl;
+                    output << "* " << _("High dynamic range") << wxEndl;
                 };
                 output << wxEndl;
             };
@@ -335,27 +335,27 @@ namespace HuginQueue
                 output << _("Combined stacks:") << wxEndl;
                 if (opts.outputLDRStacks)
                 {
-                    output << wxT("* ") << _("Exposure fused stacks") << wxEndl;
+                    output << "* " << _("Exposure fused stacks") << wxEndl;
                 };
                 if (opts.outputHDRStacks)
                 {
-                    output << wxT("* ") << _("High dynamic range") << wxEndl;
+                    output << "* " << _("High dynamic range") << wxEndl;
                 };
                 output << wxEndl;
             };
             if (opts.outputLDRExposureLayers)
             {
                 output << _("Layers:") << wxEndl
-                    << wxT("* ") << _("Blended layers of similar exposure, without exposure correction") << wxEndl
+                    << "* " << _("Blended layers of similar exposure, without exposure correction") << wxEndl
                     << wxEndl;
             };
             const HuginBase::SrcPanoImage img = pano.getImage(*allActiveImages.begin());
             output << _("First input image") << wxEndl
-                << _("Number:") << wxT(" ") << *allActiveImages.begin() << wxEndl
-                << _("Filename:") << wxT(" ") << img.getFilename() << wxEndl
+                << _("Number:") << " " << *allActiveImages.begin() << wxEndl
+                << _("Filename:") << " " << img.getFilename() << wxEndl
                 << wxString::Format(_("Size: %dx%d"), img.getWidth(), img.getHeight()) << wxEndl
-                << _("Projection:") << wxT(" ") << getProjectionString(img) << wxEndl
-                << _("Response type:") << wxT(" ") << getResponseString(img) << wxEndl
+                << _("Projection:") << " " << getProjectionString(img) << wxEndl
+                << _("Response type:") << " " << getResponseString(img) << wxEndl
                 << wxString::Format(_("HFOV: %.0f"), img.getHFOV()) << wxEndl
                 << wxString::Format(_("Exposure value: %.1f"), img.getExposureValue()) << wxEndl
                 << wxEndl;
@@ -393,7 +393,7 @@ namespace HuginQueue
             wxString s;
             for (size_t i = 0; i < blendOrder.size();++i)
             {
-                s.Append(wxEscapeFilename(files[blendOrder[i]]) + wxT(" "));
+                s.Append(wxEscapeFilename(files[blendOrder[i]]) + " ");
             };
             return s;
         };
@@ -404,7 +404,7 @@ namespace HuginQueue
             if (edgeFillMode == HuginBase::PanoramaOptions::EDGE_FILL_SOLID)
             {
                 commands->push_back(new NormalCommand(
-                    GetInternalProgram(ExePath, wxT("verdandi")),
+                    GetInternalProgram(ExePath, "verdandi"),
                     "--output=" + wxEscapeFilename(outputFilename) + " " + compression + " --seam=blend " + wxEscapeFilename(inputFilename),
                     _("Filling edges...")));
             }
@@ -426,7 +426,7 @@ namespace HuginQueue
         // check options, not all are currently supported
         HuginBase::PanoramaOptions opts = pano.getOptions();
         wxConfigBase* config = wxConfigBase::Get();
-        opts.remapUsingGPU = config->Read(wxT("/Nona/UseGPU"), HUGIN_NONA_USEGPU) == 1;
+        opts.remapUsingGPU = config->Read("/Nona/UseGPU", HUGIN_NONA_USEGPU) == 1;
         if (opts.remapper != HuginBase::PanoramaOptions::NONA)
         {
             errStream << "ERROR: Only nona remappper is supported by hugin_executor." << std::endl;
@@ -447,23 +447,23 @@ namespace HuginQueue
         // prepare some often needed variables
         const wxString quotedProject(wxEscapeFilename(project));
         // prepare nona arguments
-        wxString nonaArgs(wxT("-v "));
+        wxString nonaArgs("-v ");
         wxString enLayersCompressionArgs;
         if (!opts.outputLayersCompression.empty())
         {
-            nonaArgs.Append(wxT("-z ") + opts.outputLayersCompression + wxT(" "));
-            enLayersCompressionArgs.Append(wxT(" --compression=") + opts.outputLayersCompression + wxT(" "));
+            nonaArgs.Append("-z " + opts.outputLayersCompression + " ");
+            enLayersCompressionArgs.Append(" --compression=" + opts.outputLayersCompression + " ");
         }
         else
         {
             if (opts.outputImageType == "jpg")
             {
-                nonaArgs.Append(wxT("-z LZW "));
+                nonaArgs.Append("-z LZW ");
             }
         };
         if (opts.remapUsingGPU)
         {
-            nonaArgs.Append(wxT("-g "));
+            nonaArgs.Append("-g ");
         };
         // prepare enblend arguments
         wxString enblendArgs;
@@ -472,18 +472,18 @@ namespace HuginQueue
             enblendArgs.Append(opts.enblendOptions);
             if ((opts.getHFOV() == 360.0) && (opts.getWidth()==opts.getROI().width()))
             {
-                enblendArgs.Append(wxT(" -w"));
+                enblendArgs.Append(" -w");
             };
             const vigra::Rect2D roi (opts.getROI());
             if (roi.top() != 0 || roi.left() != 0)
             {
-                enblendArgs << wxT(" -f") << roi.width() << wxT("x") << roi.height() << wxT("+") << roi.left() << wxT("+") << roi.top();
+                enblendArgs << " -f" << roi.width() << "x" << roi.height() << "+" << roi.left() << "+" << roi.top();
             }
             else
             {
-                enblendArgs << wxT(" -f") << roi.width() << wxT("x") << roi.height();
+                enblendArgs << " -f" << roi.width() << "x" << roi.height();
             };
-            enblendArgs.Append(wxT(" "));
+            enblendArgs.Append(" ");
         };
         // prepare internal blending arguments
         wxString verdandiArgs;
@@ -492,62 +492,62 @@ namespace HuginQueue
             verdandiArgs.Append(opts.verdandiOptions);
             if ((opts.getHFOV() == 360.0) && (opts.getWidth() == opts.getROI().width()))
             {
-                verdandiArgs.Append(wxT(" -w"));
+                verdandiArgs.Append(" -w");
             };
         };
         // prepare the compression switches
         wxString finalCompressionArgs;
         if (opts.outputImageType == "tif" && !opts.outputImageTypeCompression.empty())
         {
-            finalCompressionArgs << wxT(" --compression=") << opts.outputImageTypeCompression;
+            finalCompressionArgs << " --compression=" << opts.outputImageTypeCompression;
         }
         else
         {
             if (opts.outputImageType == "jpg")
             {
-                finalCompressionArgs << wxT(" --compression=") << opts.quality;
+                finalCompressionArgs << " --compression=" << opts.quality;
             };
         };
-        finalCompressionArgs.Append(wxT(" "));
+        finalCompressionArgs.Append(" ");
         // prepare enfuse arguments
-        wxString enfuseArgs(opts.enfuseOptions + wxT(" "));
+        wxString enfuseArgs(opts.enfuseOptions + " ");
         if ((opts.getHFOV() == 360.0) && (opts.getWidth() == opts.getROI().width()))
         {
-            enfuseArgs.Append(wxT(" -w"));
+            enfuseArgs.Append(" -w");
         };
         const vigra::Rect2D roi (opts.getROI());
         if (roi.top() != 0 || roi.left() != 0)
         {
-            enfuseArgs << wxT(" -f") << roi.width() << wxT("x") << roi.height() << wxT("+") << roi.left() << wxT("+") << roi.top();
+            enfuseArgs << " -f" << roi.width() << "x" << roi.height() << "+" << roi.left() << "+" << roi.top();
         }
         else
         {
-            enfuseArgs << wxT(" -f") << roi.width() << wxT("x") << roi.height();
+            enfuseArgs << " -f" << roi.width() << "x" << roi.height();
         };
-        enfuseArgs.Append(wxT(" "));
+        enfuseArgs.Append(" ");
 
         // prepare exiftool args
-        const bool copyMetadata = config->Read(wxT("/output/useExiftool"), HUGIN_USE_EXIFTOOL) == 1l;
+        const bool copyMetadata = config->Read("/output/useExiftool", HUGIN_USE_EXIFTOOL) == 1l;
         wxString exiftoolArgs;
         wxString exiftoolArgsFinal;
         if (copyMetadata)
         {
-            exiftoolArgs = wxT("-overwrite_original -TagsFromFile ");
+            exiftoolArgs = "-overwrite_original -TagsFromFile ";
             exiftoolArgs.Append(wxEscapeFilename(wxString(pano.getImage(0).getFilename().c_str(), HUGIN_CONV_FILENAME)));
             // required tags, can not be overwritten
-            exiftoolArgs.Append(wxT(" -WhitePoint -ColorSpace"));
-            wxString exiftoolArgfile = config->Read(wxT("/output/CopyArgfile"), wxEmptyString);
+            exiftoolArgs.Append(" -WhitePoint -ColorSpace");
+            wxString exiftoolArgfile = config->Read("/output/CopyArgfile", wxEmptyString);
             if (exiftoolArgfile.IsEmpty())
             {
                 exiftoolArgfile = wxString(std::string(hugin_utils::GetDataDir() + "hugin_exiftool_copy.arg").c_str(), HUGIN_CONV_FILENAME);
             };
             wxFileName argfile(exiftoolArgfile);
             argfile.Normalize(wxPATH_NORM_ABSOLUTE | wxPATH_NORM_DOTS | wxPATH_NORM_TILDE | wxPATH_NORM_SHORTCUT);
-            exiftoolArgs.Append(wxT(" -@ ") + wxEscapeFilename(argfile.GetFullPath()) + wxT(" "));
+            exiftoolArgs.Append(" -@ " + wxEscapeFilename(argfile.GetFullPath()) + " ");
             wxString finalArgfile = detail::GenerateFinalArgfile(pano, project, config, allActiveImages, exiftoolVersion);
             if (!finalArgfile.IsEmpty())
             {
-                exiftoolArgsFinal.Append(wxT(" -@ ") + wxEscapeFilename(finalArgfile) + wxT(" "));
+                exiftoolArgsFinal.Append(" -@ " + wxEscapeFilename(finalArgfile) + " ");
                 tempFilesDelete.Add(finalArgfile);
             };
         };
@@ -559,19 +559,19 @@ namespace HuginQueue
         // normal output
         if (opts.outputLDRBlended || opts.outputLDRLayers)
         {
-            const wxArrayString remappedImages(detail::GetNumberedFilename(prefix, wxT(".tif"), allActiveImages));
-            const wxString finalFilename(prefix + wxT(".") + opts.outputImageType);
+            const wxArrayString remappedImages(detail::GetNumberedFilename(prefix, ".tif", allActiveImages));
+            const wxString finalFilename(prefix + "." + opts.outputImageType);
             if (opts.blendMode == HuginBase::PanoramaOptions::INTERNAL_BLEND && opts.outputLDRBlended)
             {
-                wxString finalNonaArgs(wxT("-v -r ldr "));
+                wxString finalNonaArgs("-v -r ldr ");
                 if (opts.remapUsingGPU)
                 {
-                    finalNonaArgs.Append(wxT("-g "));
+                    finalNonaArgs.Append("-g ");
                 }
                 if (!opts.verdandiOptions.empty())
                 {
                     finalNonaArgs.Append(opts.verdandiOptions);
-                    finalNonaArgs.Append(wxT(" "));
+                    finalNonaArgs.Append(" ");
                 };
                 wxString edgeInputFile;
                 if (doEdgeFill)
@@ -595,24 +595,24 @@ namespace HuginQueue
                 {
                     if (opts.outputImageType == "tif")
                     {
-                        finalNonaArgs.Append(wxT("-m TIFF "));
+                        finalNonaArgs.Append("-m TIFF ");
                         if (!opts.outputImageTypeCompression.empty())
                         {
-                            finalNonaArgs.Append(wxT("-z ") + opts.outputImageTypeCompression + wxT(" "));
+                            finalNonaArgs.Append("-z " + opts.outputImageTypeCompression + " ");
                         };
                     }
                     else
                     {
                         if (opts.outputImageType == "jpg")
                         {
-                            finalNonaArgs.Append(wxT("-m JPEG -z "));
-                            finalNonaArgs << opts.quality << wxT(" ");
+                            finalNonaArgs.Append("-m JPEG -z ");
+                            finalNonaArgs << opts.quality << " ";
                         }
                         else
                         {
                             if (opts.outputImageType == "png")
                             {
-                                finalNonaArgs.Append(wxT("-m PNG "));
+                                finalNonaArgs.Append("-m PNG ");
                             }
                             else
                             {
@@ -624,11 +624,11 @@ namespace HuginQueue
                 };
                 if (opts.outputLDRLayers)
                 {
-                    finalNonaArgs.Append(wxT("--save-intermediate-images "));
+                    finalNonaArgs.Append("--save-intermediate-images ");
                     detail::AddToArray(remappedImages, outputFiles);
                 }
-                finalNonaArgs.Append(wxT("-o ") + wxEscapeFilename(prefix) + wxT(" ") + quotedProject);
-                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("nona")),
+                finalNonaArgs.Append("-o " + wxEscapeFilename(prefix) + " " + quotedProject);
+                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "nona"),
                     finalNonaArgs, _("Remapping and blending LDR images...")));
                 outputFiles.Add(finalFilename);
                 if (doEdgeFill)
@@ -642,8 +642,8 @@ namespace HuginQueue
             }
             else
             {
-                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("nona")),
-                    nonaArgs + wxT("-r ldr -m TIFF_m -o ") + wxEscapeFilename(prefix) + wxT(" ") + quotedProject,
+                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "nona"),
+                    nonaArgs + "-r ldr -m TIFF_m -o " + wxEscapeFilename(prefix) + " " + quotedProject,
                     _("Remapping LDR images...")));
                 detail::AddToArray(remappedImages, outputFiles);
                 if (opts.outputLDRBlended)
@@ -659,11 +659,11 @@ namespace HuginQueue
                         }
                         else
                         {
-                            finalEnblendArgs.Append(finalCompressionArgs + wxT(" -o ") + wxEscapeFilename(finalFilename) + wxT(" -- "));
+                            finalEnblendArgs.Append(finalCompressionArgs + " -o " + wxEscapeFilename(finalFilename) + " -- ");
                         };
                         commands->push_back(new NormalCommand(
-                            GetExternalProgram(config, ExePath, wxT("enblend")), 
-                            finalEnblendArgs + wxT(" ") + GetQuotedFilenamesString(remappedImages), 
+                            GetExternalProgram(config, ExePath, "enblend"), 
+                            finalEnblendArgs + " " + GetQuotedFilenamesString(remappedImages), 
                             _("Blending images..."))
                         );
                         if (doEdgeFill)
@@ -696,7 +696,7 @@ namespace HuginQueue
         if (opts.outputLDRExposureRemapped || opts.outputLDRStacks || opts.outputLDRExposureLayers ||
             opts.outputLDRExposureBlended || opts.outputLDRExposureLayersFused)
         {
-            const wxArrayString remappedImages = detail::GetNumberedFilename(prefix + wxT("_exposure_layers_"), wxT(".tif"), allActiveImages);
+            const wxArrayString remappedImages = detail::GetNumberedFilename(prefix + "_exposure_layers_", ".tif", allActiveImages);
             std::vector<HuginBase::UIntSet> exposureLayers;
             wxArrayString exposureLayersFiles;
             if (opts.outputLDRExposureLayers || opts.outputLDRExposureLayersFused)
@@ -711,25 +711,25 @@ namespace HuginQueue
                 if (!opts.verdandiOptions.empty())
                 {
                     finalNonaArgs.Append(opts.verdandiOptions);
-                    finalNonaArgs.Append(wxT(" "));
+                    finalNonaArgs.Append(" ");
                 };
-                finalNonaArgs.append(wxT("-r ldr --create-exposure-layers --ignore-exposure -o ") + wxEscapeFilename(prefix + wxT("_exposure_")));
+                finalNonaArgs.append("-r ldr --create-exposure-layers --ignore-exposure -o " + wxEscapeFilename(prefix + "_exposure_"));
                 if (opts.outputLDRExposureRemapped || opts.outputLDRStacks || opts.outputLDRExposureBlended)
                 {
-                    finalNonaArgs.append(wxT(" --save-intermediate-images --intermediate-suffix=layers_"));
+                    finalNonaArgs.append(" --save-intermediate-images --intermediate-suffix=layers_");
                     detail::AddToArray(remappedImages, outputFiles);
                     if (!opts.outputLDRExposureRemapped)
                     {
                         detail::AddToArray(remappedImages, tempFilesDelete);
                     }
                 };
-                finalNonaArgs.append(wxT(" "));
+                finalNonaArgs.append(" ");
                 finalNonaArgs.append(quotedProject);
-                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("nona")),
+                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "nona"),
                     finalNonaArgs, _("Remapping LDR images and blending exposure layers...")));
                 HuginBase::UIntSet exposureLayersNumber;
                 fill_set(exposureLayersNumber, 0, exposureLayers.size() - 1);
-                exposureLayersFiles = detail::GetNumberedFilename(prefix + wxT("_exposure_"), wxT(".tif"), exposureLayersNumber);
+                exposureLayersFiles = detail::GetNumberedFilename(prefix + "_exposure_", ".tif", exposureLayersNumber);
                 detail::AddToArray(exposureLayersFiles, outputFiles);
                 if (!opts.outputLDRExposureLayers)
                 {
@@ -742,8 +742,8 @@ namespace HuginQueue
             }
             else
             {
-                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("nona")),
-                    nonaArgs + wxT("-r ldr -m TIFF_m --ignore-exposure -o ") + wxEscapeFilename(prefix + wxT("_exposure_layers_")) + wxT(" ") + quotedProject,
+                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "nona"),
+                    nonaArgs + "-r ldr -m TIFF_m --ignore-exposure -o " + wxEscapeFilename(prefix + "_exposure_layers_") + " " + quotedProject,
                     _("Remapping LDR images without exposure correction...")));
                 detail::AddToArray(remappedImages, outputFiles);
                 if (!opts.outputLDRExposureRemapped)
@@ -756,14 +756,14 @@ namespace HuginQueue
                     // fuse all exposure layers
                     for (unsigned exposureLayer = 0; exposureLayer < exposureLayers.size(); ++exposureLayer)
                     {
-                        const wxArrayString exposureLayersImgs = detail::GetNumberedFilename(prefix + wxT("_exposure_layers_"), wxT(".tif"), exposureLayers[exposureLayer]);
-                        const wxString exposureLayerImgName = wxString::Format(wxT("%s_exposure_%04u%s"), prefix.c_str(), exposureLayer, wxT(".tif"));
+                        const wxArrayString exposureLayersImgs = detail::GetNumberedFilename(prefix + "_exposure_layers_", ".tif", exposureLayers[exposureLayer]);
+                        const wxString exposureLayerImgName = wxString::Format("%s_exposure_%04u%s", prefix.c_str(), exposureLayer, ".tif");
                         exposureLayersFiles.Add(exposureLayerImgName);
                         outputFiles.Add(exposureLayerImgName);
                         // variant with internal blender is handled before, so we need only enblend
                         commands->push_back(new NormalCommand(
-                            GetExternalProgram(config, ExePath, wxT("enblend")),
-                            enblendArgs + enLayersCompressionArgs + wxT(" -o ") + wxEscapeFilename(exposureLayerImgName) + wxT(" -- ") + GetQuotedFilenamesString(exposureLayersImgs),
+                            GetExternalProgram(config, ExePath, "enblend"),
+                            enblendArgs + enLayersCompressionArgs + " -o " + wxEscapeFilename(exposureLayerImgName) + " -- " + GetQuotedFilenamesString(exposureLayersImgs),
                             wxString::Format(_("Blending exposure layer %u..."), exposureLayer))
                         );
                         if (copyMetadata && opts.outputLDRExposureLayers)
@@ -779,7 +779,7 @@ namespace HuginQueue
             };
             if (opts.outputLDRExposureLayersFused)
             {
-                const wxString fusedExposureLayersFilename(prefix + wxT("_blended_fused.") + opts.outputImageType);
+                const wxString fusedExposureLayersFilename(prefix + "_blended_fused." + opts.outputImageType);
                 wxString finalEnfuseArgs(enfuseArgs);
                 wxString edgeFillInput;
                 if (doEdgeFill)
@@ -789,11 +789,11 @@ namespace HuginQueue
                 }
                 else
                 {
-                    finalEnfuseArgs.Append(finalCompressionArgs + wxT(" -o ") + wxEscapeFilename(fusedExposureLayersFilename) + wxT(" -- "));
+                    finalEnfuseArgs.Append(finalCompressionArgs + " -o " + wxEscapeFilename(fusedExposureLayersFilename) + " -- ");
                 };
                 commands->push_back(new NormalCommand(
-                    GetExternalProgram(config, ExePath, wxT("enfuse")),
-                    finalEnfuseArgs + wxT(" ")+GetQuotedFilenamesString(exposureLayersFiles), 
+                    GetExternalProgram(config, ExePath, "enfuse"),
+                    finalEnfuseArgs + " "+GetQuotedFilenamesString(exposureLayersFiles), 
                     _("Fusing all exposure layers..."))
                 );
                 outputFiles.Add(fusedExposureLayersFilename);
@@ -823,13 +823,13 @@ namespace HuginQueue
                 // fuse all stacks
                 for (unsigned stackNr = 0; stackNr < stacks.size(); ++stackNr)
                 {
-                    const wxArrayString stackImgs = detail::GetNumberedFilename(prefix + wxT("_exposure_layers_"), wxT(".tif"), stacks[stackNr]);
-                    const wxString stackImgName = wxString::Format(wxT("%s_stack_ldr_%04u%s"), prefix.c_str(), stackNr, wxT(".tif"));
+                    const wxArrayString stackImgs = detail::GetNumberedFilename(prefix + "_exposure_layers_", ".tif", stacks[stackNr]);
+                    const wxString stackImgName = wxString::Format("%s_stack_ldr_%04u%s", prefix.c_str(), stackNr, ".tif");
                     outputFiles.Add(stackImgName);
                     stackedImages.Add(stackImgName);
                     commands->push_back(new NormalCommand(
-                        GetExternalProgram(config, ExePath, wxT("enfuse")),
-                        enfuseArgs + enLayersCompressionArgs + wxT(" -o ") + wxEscapeFilename(stackImgName) + wxT(" -- ") + GetQuotedFilenamesString(stackImgs),
+                        GetExternalProgram(config, ExePath, "enfuse"),
+                        enfuseArgs + enLayersCompressionArgs + " -o " + wxEscapeFilename(stackImgName) + " -- " + GetQuotedFilenamesString(stackImgs),
                         wxString::Format(_("Fusing stack number %u..."), stackNr))
                     );
                     if (copyMetadata && opts.outputLDRStacks)
@@ -843,7 +843,7 @@ namespace HuginQueue
                 };
                 if (opts.outputLDRExposureBlended)
                 {
-                    const wxString fusedStacksFilename(prefix + wxT("_fused.") + opts.outputImageType);
+                    const wxString fusedStacksFilename(prefix + "_fused." + opts.outputImageType);
                     wxString edgeFillInput;
                     if (doEdgeFill)
                     {
@@ -860,11 +860,11 @@ namespace HuginQueue
                             }
                             else
                             {
-                                finalEnblendArgs.Append(finalCompressionArgs + wxT(" -o ") + wxEscapeFilename(fusedStacksFilename) + wxT(" -- "));
+                                finalEnblendArgs.Append(finalCompressionArgs + " -o " + wxEscapeFilename(fusedStacksFilename) + " -- ");
                             };
                             commands->push_back(new NormalCommand(
-                                GetExternalProgram(config, ExePath, wxT("enblend")),
-                                finalEnblendArgs+wxT(" ")+GetQuotedFilenamesString(stackedImages), 
+                                GetExternalProgram(config, ExePath, "enblend"),
+                                finalEnblendArgs+" "+GetQuotedFilenamesString(stackedImages), 
                                 _("Blending all stacks..."))
                             );
                         };
@@ -879,10 +879,10 @@ namespace HuginQueue
                             }
                             else
                             {
-                                finalVerdandiArgs.Append(finalCompressionArgs + wxT(" -o ") + wxEscapeFilename(fusedStacksFilename));
+                                finalVerdandiArgs.Append(finalCompressionArgs + " -o " + wxEscapeFilename(fusedStacksFilename));
                             };
-                            finalVerdandiArgs.Append(wxT(" -- ") + detail::GetQuotedFilenamesStringForVerdandi(stackedImages, pano, stacks, opts.colorReferenceImage, opts.verdandiOptions.find("--seam=blend") == std::string::npos));
-                            commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("verdandi")),
+                            finalVerdandiArgs.Append(" -- " + detail::GetQuotedFilenamesStringForVerdandi(stackedImages, pano, stacks, opts.colorReferenceImage, opts.verdandiOptions.find("--seam=blend") == std::string::npos));
+                            commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "verdandi"),
                                 finalVerdandiArgs, _("Blending all stacks...")));
                         };
                         break;
@@ -911,11 +911,11 @@ namespace HuginQueue
         // hdr output
         if (opts.outputHDRLayers || opts.outputHDRStacks || opts.outputHDRBlended)
         {
-            commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("nona")),
-                nonaArgs + wxT("-r hdr -m EXR_m  -o ") + wxEscapeFilename(prefix + wxT("_hdr_")) + wxT(" ") + quotedProject,
+            commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "nona"),
+                nonaArgs + "-r hdr -m EXR_m  -o " + wxEscapeFilename(prefix + "_hdr_") + " " + quotedProject,
                 _("Remapping HDR images...")));
-            const wxArrayString remappedHDR = detail::GetNumberedFilename(prefix + wxT("_hdr_"), wxT(".exr"), allActiveImages);
-            const wxArrayString remappedHDRComp = detail::GetNumberedFilename(prefix + wxT("_hdr_"), wxT("_gray.pgm"), allActiveImages);
+            const wxArrayString remappedHDR = detail::GetNumberedFilename(prefix + "_hdr_", ".exr", allActiveImages);
+            const wxArrayString remappedHDRComp = detail::GetNumberedFilename(prefix + "_hdr_", "_gray.pgm", allActiveImages);
             detail::AddToArray(remappedHDR, outputFiles);
             detail::AddToArray(remappedHDRComp, outputFiles);
             if (opts.outputHDRStacks || opts.outputHDRBlended)
@@ -929,12 +929,12 @@ namespace HuginQueue
                 // merge all stacks
                 for (unsigned stackNr = 0; stackNr < stacks.size(); ++stackNr)
                 {
-                    const wxArrayString stackImgs = detail::GetNumberedFilename(prefix + wxT("_hdr_"), wxT(".exr"), stacks[stackNr]);
-                    const wxString stackImgName = wxString::Format(wxT("%s_stack_hdr_%04u%s"), prefix.c_str(), stackNr, wxT(".exr"));
+                    const wxArrayString stackImgs = detail::GetNumberedFilename(prefix + "_hdr_", ".exr", stacks[stackNr]);
+                    const wxString stackImgName = wxString::Format("%s_stack_hdr_%04u%s", prefix.c_str(), stackNr, ".exr");
                     stackedImages.Add(stackImgName);
                     outputFiles.Add(stackImgName);
-                    commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("hugin_hdrmerge")),
-                        opts.hdrmergeOptions + wxT(" -o ") + wxEscapeFilename(stackImgName) + wxT(" -- ") + GetQuotedFilenamesString(stackImgs),
+                    commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "hugin_hdrmerge"),
+                        opts.hdrmergeOptions + " -o " + wxEscapeFilename(stackImgName) + " -- " + GetQuotedFilenamesString(stackImgs),
                         wxString::Format(_("Merging HDR stack number %u..."), stackNr)));
                     if (!opts.outputHDRStacks)
                     {
@@ -943,30 +943,30 @@ namespace HuginQueue
                 };
                 if (opts.outputHDRBlended)
                 {
-                    const wxString mergedStacksFilename(prefix + wxT("_hdr.") + opts.outputImageTypeHDR);
+                    const wxString mergedStacksFilename(prefix + "_hdr." + opts.outputImageTypeHDR);
                     wxString finalBlendArgs;
                     wxString edgeFillInput;
                     if (doEdgeFill)
                     {
                         edgeFillInput = prefix + "_hdr_nofill.exr";
-                        finalBlendArgs.Append(wxT(" -o ") + wxEscapeFilename(edgeFillInput) + wxT(" -- "));
+                        finalBlendArgs.Append(" -o " + wxEscapeFilename(edgeFillInput) + " -- ");
                     }
                     else
                     {
-                        finalBlendArgs.Append(wxT(" -o ") + wxEscapeFilename(mergedStacksFilename) + wxT(" -- "));
+                        finalBlendArgs.Append(" -o " + wxEscapeFilename(mergedStacksFilename) + " -- ");
                     };
                     switch (opts.blendMode)
                     {
                         case HuginBase::PanoramaOptions::ENBLEND_BLEND:
                             commands->push_back(new NormalCommand(
-                                GetExternalProgram(config, ExePath, wxT("enblend")),
-                                enblendArgs + finalBlendArgs + wxT(" ") + GetQuotedFilenamesString(stackedImages),
+                                GetExternalProgram(config, ExePath, "enblend"),
+                                enblendArgs + finalBlendArgs + " " + GetQuotedFilenamesString(stackedImages),
                                     _("Blending HDR stacks..."))
                             );
                             break;
                         case HuginBase::PanoramaOptions::INTERNAL_BLEND:
                         default:  // switch to internal blender for all other cases, not exposed in GUI
-                            commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("verdandi")),
+                            commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "verdandi"),
                                 verdandiArgs + finalBlendArgs + detail::GetQuotedFilenamesStringForVerdandi(stackedImages, pano, stacks, opts.colorReferenceImage, opts.verdandiOptions.find("--seam=blend") == std::string::npos),
                                 _("Blending HDR stacks...")));
                             break;
@@ -1000,13 +1000,13 @@ namespace HuginQueue
         // update metadata
         if (!filesForCopyTagsExiftool.IsEmpty())
         {
-            commands->push_back(new OptionalCommand(GetExternalProgram(config, ExePath, wxT("exiftool")),
+            commands->push_back(new OptionalCommand(GetExternalProgram(config, ExePath, "exiftool"),
                 exiftoolArgs + GetQuotedFilenamesString(filesForCopyTagsExiftool),
                 _("Updating metadata...")));
         };
         if (!filesForFullExiftool.IsEmpty())
         {
-            commands->push_back(new OptionalCommand(GetExternalProgram(config, ExePath, wxT("exiftool")),
+            commands->push_back(new OptionalCommand(GetExternalProgram(config, ExePath, "exiftool"),
                 exiftoolArgs + exiftoolArgsFinal + GetQuotedFilenamesString(filesForFullExiftool),
                 _("Updating metadata...")));
         };
@@ -1032,15 +1032,15 @@ namespace HuginQueue
             // check program name
             // get full path for some internal commands
             wxString program;
-            if (prog.CmpNoCase(wxT("verdandi")) == 0)
+            if (prog.CmpNoCase("verdandi") == 0)
             { 
-                program = GetInternalProgram(ExePath, wxT("verdandi"));
+                program = GetInternalProgram(ExePath, "verdandi");
             }
             else
             {
-                if (prog.CmpNoCase(wxT("hugin_hdrmerge")) == 0)
+                if (prog.CmpNoCase("hugin_hdrmerge") == 0)
                 {
-                    program = GetInternalProgram(ExePath, wxT("hugin_hdrmerge"));
+                    program = GetInternalProgram(ExePath, "hugin_hdrmerge");
                 }
                 else
                 {
@@ -1144,13 +1144,13 @@ namespace HuginQueue
         }
         wxFileConfig settings(input);
         long stepCount;
-        settings.Read(wxT("/General/StepCount"), &stepCount, 0);
+        settings.Read("/General/StepCount", &stepCount, 0);
         if (stepCount == 0)
         {
             errStream << "ERROR: User-setting does not define any output steps." << std::endl;
             return commands;
         }
-        const wxString desc = GetSettingStringTranslated(&settings, wxT("/General/Description"), wxEmptyString);
+        const wxString desc = GetSettingStringTranslated(&settings, "/General/Description", wxEmptyString);
         if (desc.IsEmpty())
         {
             statusText = wxString::Format(_("Stitching using \"%s\""), outputSettings.c_str());
@@ -1159,11 +1159,11 @@ namespace HuginQueue
         {
             statusText = wxString::Format(_("Stitching using \"%s\""), desc.c_str());
         };
-        wxString intermediateImageType = GetSettingString(&settings, wxT("/General/IntermediateImageType"), wxT(".tif"));
+        wxString intermediateImageType = GetSettingString(&settings, "/General/IntermediateImageType", ".tif");
         // add point if missing
-        if (intermediateImageType.Left(1).Cmp(wxT("."))!=0)
+        if (intermediateImageType.Left(1).Cmp(".")!=0)
         {
-            intermediateImageType.Prepend(wxT("."));
+            intermediateImageType.Prepend(".");
         }
         // prepare some often needed variables/strings
         const HuginBase::PanoramaOptions opts = pano.getOptions();
@@ -1172,11 +1172,11 @@ namespace HuginQueue
         wxString sizeString;
         if (roi.top() != 0 || roi.left() != 0)
         {
-            sizeString << roi.width() << wxT("x") << roi.height() << wxT("+") << roi.left() << wxT("+") << roi.top();
+            sizeString << roi.width() << "x" << roi.height() << "+" << roi.left() << "+" << roi.top();
         }
         else
         {
-            sizeString << roi.width() << wxT("x") << roi.height();
+            sizeString << roi.width() << "x" << roi.height();
         };
         const wxArrayString remappedImages(detail::GetNumberedFilename(prefix, intermediateImageType, allActiveImages));
         wxArrayString inputImages;
@@ -1194,7 +1194,7 @@ namespace HuginQueue
         // now iterate all steps
         for (size_t i = 0; i < stepCount; ++i)
         {
-            wxString stepString(wxT("/Step"));
+            wxString stepString("/Step");
             stepString << i;
             if (!settings.HasGroup(stepString))
             {
@@ -1203,35 +1203,35 @@ namespace HuginQueue
                 return commands;
             }
             settings.SetPath(stepString);
-            const wxString stepType=GetSettingString(&settings, wxT("Type"));
+            const wxString stepType=GetSettingString(&settings, "Type");
             if (stepType.IsEmpty())
             {
                 errStream << "ERROR: \"" << stepString.mb_str(wxConvLocal) << "\" has no type defined." << std::endl;
                 CleanQueue(commands);
                 return commands;
             };
-            wxString args = GetSettingString(&settings, wxT("Arguments"));
+            wxString args = GetSettingString(&settings, "Arguments");
             if (args.IsEmpty())
             {
                 errStream << "ERROR: Step " << i << " has no arguments given." << std::endl;
                 CleanQueue(commands);
                 return commands;
             }
-            const wxString description = GetSettingStringTranslated(&settings, wxT("Description"));
-            if (stepType.CmpNoCase(wxT("remap")) == 0)
+            const wxString description = GetSettingStringTranslated(&settings, "Description");
+            if (stepType.CmpNoCase("remap") == 0)
             {
                 // build nona command
-                const bool outputLayers = (settings.Read(wxT("OutputExposureLayers"), 0l) == 1l);
+                const bool outputLayers = (settings.Read("OutputExposureLayers", 0l) == 1l);
                 if (outputLayers)
                 {
-                    args.Append(wxT(" --create-exposure-layers -o ") + wxEscapeFilename(prefix + wxT("_layer")));
+                    args.Append(" --create-exposure-layers -o " + wxEscapeFilename(prefix + "_layer"));
                 }
                 else
                 {
-                    args.Append(wxT(" -o ") + wxEscapeFilename(prefix));
+                    args.Append(" -o " + wxEscapeFilename(prefix));
                 };
-                args.Append(wxT(" ") + wxEscapeFilename(project));
-                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, wxT("nona")),
+                args.Append(" " + wxEscapeFilename(project));
+                commands->push_back(new NormalCommand(GetInternalProgram(ExePath, "nona"),
                     args, description));
                 if (outputLayers)
                 {
@@ -1240,24 +1240,24 @@ namespace HuginQueue
                         exposureLayers = getExposureLayers(pano, allActiveImages, opts);
                         HuginBase::UIntSet exposureLayersNumber;
                         fill_set(exposureLayersNumber, 0, exposureLayers.size() - 1);
-                        exposureLayersFiles = detail::GetNumberedFilename(prefix + wxT("_layer"), intermediateImageType, exposureLayersNumber);
+                        exposureLayersFiles = detail::GetNumberedFilename(prefix + "_layer", intermediateImageType, exposureLayersNumber);
                     };
                     detail::AddToArray(exposureLayersFiles, outputFiles);
-                    if (settings.Read(wxT("Keep"), 0l) == 0l)
+                    if (settings.Read("Keep", 0l) == 0l)
                     {
                         detail::AddToArray(exposureLayersFiles, tempFilesDelete);
                     };
                 }
                 else
                 {
-                    const wxArrayString remappedHDRComp = detail::GetNumberedFilename(prefix, wxT("_gray.pgm"), allActiveImages);
-                    const bool hdrOutput = args.MakeLower().Find(wxT("-r hdr")) != wxNOT_FOUND;
+                    const wxArrayString remappedHDRComp = detail::GetNumberedFilename(prefix, "_gray.pgm", allActiveImages);
+                    const bool hdrOutput = args.MakeLower().Find("-r hdr") != wxNOT_FOUND;
                     detail::AddToArray(remappedImages, outputFiles);
                     if (hdrOutput)
                     {
                         detail::AddToArray(remappedHDRComp, outputFiles);
                     };
-                    if (settings.Read(wxT("Keep"), 0l) == 0l)
+                    if (settings.Read("Keep", 0l) == 0l)
                     {
                         detail::AddToArray(remappedImages, tempFilesDelete);
                         if (hdrOutput)
@@ -1269,28 +1269,28 @@ namespace HuginQueue
             }
             else
             {
-                if (stepType.CmpNoCase(wxT("merge")) == 0)
+                if (stepType.CmpNoCase("merge") == 0)
                 {
                     // build a merge command
-                    wxString resultFile = GetSettingString(&settings, wxT("Result"));
+                    wxString resultFile = GetSettingString(&settings, "Result");
                     if (resultFile.IsEmpty())
                     {
                         errStream << "ERROR: Step " << i << " has no result file specified." << std::endl;
                         CleanQueue(commands);
                         return commands;
                     };
-                    resultFile.Replace(wxT("%prefix%"), prefix, true);
-                    if (args.Replace(wxT("%result%"), wxEscapeFilename(resultFile), true) == 0)
+                    resultFile.Replace("%prefix%", prefix, true);
+                    if (args.Replace("%result%", wxEscapeFilename(resultFile), true) == 0)
                     {
                         errStream << "ERROR: Step " << i << " has missing %result% placeholder in arguments." << std::endl;
                         CleanQueue(commands);
                         return commands;
                     };
-                    const wxString BlenderInput = GetSettingString(&settings, wxT("Input"), wxT("all"));
+                    const wxString BlenderInput = GetSettingString(&settings, "Input", "all");
                     // set the input images depending on the input
-                    if (BlenderInput.CmpNoCase(wxT("all")) == 0)
+                    if (BlenderInput.CmpNoCase("all") == 0)
                     {
-                        if (args.Replace(wxT("%input%"), GetQuotedFilenamesString(remappedImages), true) == 0)
+                        if (args.Replace("%input%", GetQuotedFilenamesString(remappedImages), true) == 0)
                         {
                             errStream << "ERROR: Step " << i << " has missing %input% placeholder in arguments." << std::endl;
                             CleanQueue(commands);
@@ -1299,16 +1299,16 @@ namespace HuginQueue
                     }
                     else
                     {
-                        if (BlenderInput.CmpNoCase(wxT("stacks")) == 0)
+                        if (BlenderInput.CmpNoCase("stacks") == 0)
                         {
                             if (stacks.empty())
                             {
                                 stacks= HuginBase::getHDRStacks(pano, allActiveImages, opts);
                                 HuginBase::UIntSet stackNumbers;
                                 fill_set(stackNumbers, 0, stacks.size() - 1);
-                                stacksFiles = detail::GetNumberedFilename(prefix + wxT("_stack"), intermediateImageType, stackNumbers);
+                                stacksFiles = detail::GetNumberedFilename(prefix + "_stack", intermediateImageType, stackNumbers);
                             };
-                            if (args.Replace(wxT("%input%"), GetQuotedFilenamesString(stacksFiles), true) == 0)
+                            if (args.Replace("%input%", GetQuotedFilenamesString(stacksFiles), true) == 0)
                             {
                                 errStream << "ERROR: Step " << i << " has missing %input% placeholder in arguments." << std::endl;
                                 CleanQueue(commands);
@@ -1317,16 +1317,16 @@ namespace HuginQueue
                         }
                         else
                         {
-                            if (BlenderInput.CmpNoCase(wxT("layers")) == 0)
+                            if (BlenderInput.CmpNoCase("layers") == 0)
                             {
                                 if (exposureLayers.empty())
                                 { 
                                     exposureLayers = getExposureLayers(pano, allActiveImages, opts);
                                     HuginBase::UIntSet exposureLayersNumber;
                                     fill_set(exposureLayersNumber, 0, exposureLayers.size() - 1);
-                                    exposureLayersFiles = detail::GetNumberedFilename(prefix + wxT("_layer"), intermediateImageType, exposureLayersNumber);
+                                    exposureLayersFiles = detail::GetNumberedFilename(prefix + "_layer", intermediateImageType, exposureLayersNumber);
                                 };
-                                if (args.Replace(wxT("%input%"), GetQuotedFilenamesString(exposureLayersFiles), true) == 0)
+                                if (args.Replace("%input%", GetQuotedFilenamesString(exposureLayersFiles), true) == 0)
                                 {
                                     errStream << "ERROR: Step " << i << " has missing %input% placeholder in arguments." << std::endl;
                                     CleanQueue(commands);
@@ -1341,26 +1341,26 @@ namespace HuginQueue
                             };
                         };
                     };
-                    args.Replace(wxT("%size%"), sizeString, true);
-                    wxString wrapSwitch = GetSettingString(&settings, wxT("WrapArgument"));
+                    args.Replace("%size%", sizeString, true);
+                    wxString wrapSwitch = GetSettingString(&settings, "WrapArgument");
                     if (needsWrapSwitch && !wrapSwitch.IsEmpty())
                     {
-                        args.Prepend(wrapSwitch + wxT(" "));
+                        args.Prepend(wrapSwitch + " ");
                     }
-                    if (!detail::AddBlenderCommand(commands, ExePath, GetSettingString(&settings, wxT("Program")), i,
+                    if (!detail::AddBlenderCommand(commands, ExePath, GetSettingString(&settings, "Program"), i,
                         args, description, errStream))
                     {
                         return commands;
                     };
                     outputFiles.Add(resultFile);
-                    if (settings.Read(wxT("Keep"), 1l) == 0l)
+                    if (settings.Read("Keep", 1l) == 0l)
                     {
                         tempFilesDelete.Add(resultFile);
                     };
                 }
                 else
                 {
-                    if (stepType.CmpNoCase(wxT("stack")) == 0)
+                    if (stepType.CmpNoCase("stack") == 0)
                     {
                         // build command for each stack
                         if (stacks.empty())
@@ -1368,28 +1368,28 @@ namespace HuginQueue
                             stacks = HuginBase::getHDRStacks(pano, allActiveImages, opts);
                             HuginBase::UIntSet stackNumbers;
                             fill_set(stackNumbers, 0, stacks.size() - 1);
-                            stacksFiles = detail::GetNumberedFilename(prefix + wxT("_stack"), intermediateImageType, stackNumbers);
+                            stacksFiles = detail::GetNumberedFilename(prefix + "_stack", intermediateImageType, stackNumbers);
                         };
-                        const bool clean = (settings.Read(wxT("Keep"), 0l) == 0l);
-                        args.Replace(wxT("%size%"), sizeString, true);
+                        const bool clean = (settings.Read("Keep", 0l) == 0l);
+                        args.Replace("%size%", sizeString, true);
                         // now iterate each stack
                         for (size_t stackNr = 0; stackNr < stacks.size(); ++stackNr)
                         {
                             wxString finalArgs(args);
                             wxArrayString remappedStackImages = detail::GetNumberedFilename(prefix, intermediateImageType, stacks[stackNr]);
-                            if (finalArgs.Replace(wxT("%input%"), GetQuotedFilenamesString(remappedStackImages), true) == 0)
+                            if (finalArgs.Replace("%input%", GetQuotedFilenamesString(remappedStackImages), true) == 0)
                             {
                                 errStream << "ERROR: Step " << i << " has missing %input% placeholder in arguments." << std::endl;
                                 CleanQueue(commands);
                                 return commands;
                             };
-                            if (finalArgs.Replace(wxT("%output%"), wxEscapeFilename(stacksFiles[stackNr]), true) == 0)
+                            if (finalArgs.Replace("%output%", wxEscapeFilename(stacksFiles[stackNr]), true) == 0)
                             {
                                 errStream << "ERROR: Step " << i << " has missing %output% placeholder in arguments." << std::endl;
                                 CleanQueue(commands);
                                 return commands;
                             };
-                            if (!detail::AddBlenderCommand(commands, ExePath, GetSettingString(&settings, wxT("Program")), i,
+                            if (!detail::AddBlenderCommand(commands, ExePath, GetSettingString(&settings, "Program"), i,
                                 finalArgs, description, errStream))
                             {
                                 return commands;
@@ -1403,7 +1403,7 @@ namespace HuginQueue
                     }
                     else
                     {
-                        if (stepType.CmpNoCase(wxT("layer")) == 0)
+                        if (stepType.CmpNoCase("layer") == 0)
                         {
                             // build command for each exposure layer
                             if (exposureLayers.empty())
@@ -1411,28 +1411,28 @@ namespace HuginQueue
                                 exposureLayers = HuginBase::getExposureLayers(pano, allActiveImages, opts);
                                 HuginBase::UIntSet exposureLayersNumber;
                                 fill_set(exposureLayersNumber, 0, exposureLayers.size() - 1);
-                                exposureLayersFiles = detail::GetNumberedFilename(prefix + wxT("_layer"), intermediateImageType, exposureLayersNumber);
+                                exposureLayersFiles = detail::GetNumberedFilename(prefix + "_layer", intermediateImageType, exposureLayersNumber);
                             };
-                            const bool clean = (settings.Read(wxT("Keep"), 0l) == 0l);
-                            args.Replace(wxT("%size%"), sizeString, true);
+                            const bool clean = (settings.Read("Keep", 0l) == 0l);
+                            args.Replace("%size%", sizeString, true);
                             // iterate all exposure layers
                             for (size_t exposureLayerNr = 0; exposureLayerNr < exposureLayers.size(); ++exposureLayerNr)
                             {
                                 wxString finalArgs(args);
                                 wxArrayString remappedLayerImages = detail::GetNumberedFilename(prefix, intermediateImageType, exposureLayers[exposureLayerNr]);
-                                if (finalArgs.Replace(wxT("%input%"), GetQuotedFilenamesString(remappedLayerImages), true) == 0)
+                                if (finalArgs.Replace("%input%", GetQuotedFilenamesString(remappedLayerImages), true) == 0)
                                 {
                                     errStream << "ERROR: Step " << i << " has missing %input% placeholder in arguments." << std::endl;
                                     CleanQueue(commands);
                                     return commands;
                                 };
-                                if (finalArgs.Replace(wxT("%output%"), wxEscapeFilename(exposureLayersFiles[exposureLayerNr]), true) == 0)
+                                if (finalArgs.Replace("%output%", wxEscapeFilename(exposureLayersFiles[exposureLayerNr]), true) == 0)
                                 {
                                     errStream << "ERROR: Step " << i << " has missing %output% placeholder in arguments." << std::endl;
                                     CleanQueue(commands);
                                     return commands;
                                 };
-                                if (!detail::AddBlenderCommand(commands, ExePath, GetSettingString(&settings, wxT("Program")), i,
+                                if (!detail::AddBlenderCommand(commands, ExePath, GetSettingString(&settings, "Program"), i,
                                     finalArgs, description, errStream))
                                 {
                                     return commands;
@@ -1446,23 +1446,23 @@ namespace HuginQueue
                         }
                         else
                         {
-                            if (stepType.CmpNoCase(wxT("modify")) == 0)
+                            if (stepType.CmpNoCase("modify") == 0)
                             {
                                 // build a modify command
-                                wxString inputFiles = GetSettingString(&settings, wxT("File"));
+                                wxString inputFiles = GetSettingString(&settings, "File");
                                 if (inputFiles.IsEmpty())
                                 {
                                     errStream << "ERROR: Step " << i << " has no input/output file specified." << std::endl;
                                     CleanQueue(commands);
                                     return commands;
                                 };
-                                if (args.Find(wxT("%file%")) == wxNOT_FOUND)
+                                if (args.Find("%file%") == wxNOT_FOUND)
                                 {
                                     errStream << "ERROR: Step " << i << " has missing %file% placeholder in arguments." << std::endl;
                                     CleanQueue(commands);
                                     return commands;
                                 };
-                                args.Replace(wxT("%project%"), wxEscapeFilename(project), true);
+                                args.Replace("%project%", wxEscapeFilename(project), true);
                                 if (!detail::ReplacePrefixPlaceholder(args, prefix))
                                 {
                                     errStream << "ERROR: Step " << i << " has invalid %prefix% placeholder in arguments." << std::endl;
@@ -1481,7 +1481,7 @@ namespace HuginQueue
                                     CleanQueue(commands);
                                     return commands;
                                 }
-                                const wxString progName = GetSettingString(&settings, wxT("Program"));
+                                const wxString progName = GetSettingString(&settings, "Program");
                                 if (progName.IsEmpty())
                                 {
                                     errStream << "ERROR: Step " << i << " has no program name specified." << std::endl;
@@ -1497,19 +1497,19 @@ namespace HuginQueue
 #else
                                 const wxString prog = progName;
 #endif
-                                if (inputFiles.CmpNoCase(wxT("all")) == 0)
+                                if (inputFiles.CmpNoCase("all") == 0)
                                 {
                                     for (size_t imgNr = 0; imgNr < remappedImages.size(); ++imgNr)
                                     {
                                         wxString finalArgs(args);
-                                        finalArgs.Replace(wxT("%file%"), wxEscapeFilename(remappedImages[imgNr]), true);
-                                        finalArgs.Replace(wxT("%sourceimage%"), wxEscapeFilename(inputImages[imgNr]), true);
+                                        finalArgs.Replace("%file%", wxEscapeFilename(remappedImages[imgNr]), true);
+                                        finalArgs.Replace("%sourceimage%", wxEscapeFilename(inputImages[imgNr]), true);
                                         commands->push_back(new NormalCommand(prog, finalArgs, description));
                                     };
                                 }
                                 else
                                 {
-                                    if (inputFiles.CmpNoCase(wxT("stacks")) == 0)
+                                    if (inputFiles.CmpNoCase("stacks") == 0)
                                     {
                                         if (stacks.empty())
                                         {
@@ -1520,13 +1520,13 @@ namespace HuginQueue
                                         for (size_t stackNr = 0; stackNr < stacksFiles.size(); ++stackNr)
                                         {
                                             wxString finalArgs(args);
-                                            finalArgs.Replace(wxT("%file%"), wxEscapeFilename(stacksFiles[stackNr]), true);
+                                            finalArgs.Replace("%file%", wxEscapeFilename(stacksFiles[stackNr]), true);
                                             commands->push_back(new NormalCommand(prog, finalArgs, description));
                                         };
                                     }
                                     else
                                     {
-                                        if (inputFiles.CmpNoCase(wxT("layers")) == 0)
+                                        if (inputFiles.CmpNoCase("layers") == 0)
                                         {
                                             if (exposureLayers.empty())
                                             {
@@ -1537,14 +1537,14 @@ namespace HuginQueue
                                             for (size_t layerNr = 0; layerNr < exposureLayersFiles.size(); ++layerNr)
                                             {
                                                 wxString finalArgs(args);
-                                                finalArgs.Replace(wxT("%file%"), wxEscapeFilename(exposureLayersFiles[layerNr]), true);
+                                                finalArgs.Replace("%file%", wxEscapeFilename(exposureLayersFiles[layerNr]), true);
                                                 commands->push_back(new NormalCommand(prog, finalArgs, description));
                                             };
                                         }
                                         else
                                         {
-                                            inputFiles.Replace(wxT("%prefix%"), prefix, true);
-                                            args.Replace(wxT("%file%"), wxEscapeFilename(inputFiles), true);
+                                            inputFiles.Replace("%prefix%", prefix, true);
+                                            args.Replace("%file%", wxEscapeFilename(inputFiles), true);
                                             commands->push_back(new NormalCommand(prog , args, description));
                                         };
                                     };
@@ -1552,24 +1552,24 @@ namespace HuginQueue
                             }
                             else
                             {
-                                if (stepType.CmpNoCase(wxT("exiftool")) == 0)
+                                if (stepType.CmpNoCase("exiftool") == 0)
                                 {
-                                    wxString resultFile = GetSettingString(&settings, wxT("Result"));
+                                    wxString resultFile = GetSettingString(&settings, "Result");
                                     if (resultFile.IsEmpty())
                                     {
                                         errStream << "ERROR: Step " << i << " has no result file specified." << std::endl;
                                         CleanQueue(commands);
                                         return commands;
                                     };
-                                    resultFile.Replace(wxT("%prefix%"), prefix, true);
-                                    if (args.Replace(wxT("%result%"), wxEscapeFilename(resultFile), true) == 0)
+                                    resultFile.Replace("%prefix%", prefix, true);
+                                    if (args.Replace("%result%", wxEscapeFilename(resultFile), true) == 0)
                                     {
                                         errStream << "ERROR: Step " << i << " has missing %result% placeholder in arguments." << std::endl;
                                         CleanQueue(commands);
                                         return commands;
                                     };
-                                    args.Replace(wxT("%image0%"), wxEscapeFilename(wxString(pano.getImage(0).getFilename().c_str(), HUGIN_CONV_FILENAME)), true);
-                                    commands->push_back(new OptionalCommand(GetExternalProgram(wxConfigBase::Get(), ExePath, wxT("exiftool")),
+                                    args.Replace("%image0%", wxEscapeFilename(wxString(pano.getImage(0).getFilename().c_str(), HUGIN_CONV_FILENAME)), true);
+                                    commands->push_back(new OptionalCommand(GetExternalProgram(wxConfigBase::Get(), ExePath, "exiftool"),
                                         args, description));
                                 }
                                 else
@@ -1593,7 +1593,7 @@ namespace HuginQueue
         wxString s;
         for (size_t i = 0; i < files.size(); ++i)
         {
-            s.Append(wxEscapeFilename(files[i]) + wxT(" "));
+            s.Append(wxEscapeFilename(files[i]) + " ");
         };
         return s;
     };

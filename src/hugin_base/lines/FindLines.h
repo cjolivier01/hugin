@@ -76,5 +76,7 @@ namespace HuginLines
      */
     IMPEX HuginBase::CPVector GetVerticalLines(const HuginBase::Panorama& pano, const unsigned int imgNr, vigra::UInt8RGBImage& image, vigra::BImage& mask, const unsigned int nrLines);
     IMPEX HuginBase::CPVector GetVerticalLines(const HuginBase::Panorama& pano, const unsigned int imgNr, vigra::BImage& image, vigra::BImage& mask, const unsigned int nrLines);
+    /** searches for all lines, the same as GetVerticalLines execpt that no filtering according to roll angle is done */
+    IMPEX HuginBase::CPVector GetLines(const HuginBase::Panorama& pano, const unsigned int imgNr, vigra::UInt8RGBImage& image, vigra::BImage& mask);
 };
 #endif

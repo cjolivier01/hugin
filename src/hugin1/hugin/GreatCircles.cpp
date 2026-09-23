@@ -60,10 +60,17 @@ void GreatCircles::setVisualizationState(VisualizationState * visualizationState
 }
 
 void GreatCircles::drawLineFromSpherical(double startLat, double startLong,
-                                         double endLat, double endLong, double width)
+                                         double endLat, double endLong, double width, bool straightLine)
 {
     DEBUG_ASSERT(m_visualizationState); 
-    GreatCircleArc(startLat, startLong, endLat, endLong, *m_visualizationState).draw(true, width);
+    if (straightLine)
+    {
+        StraightLineFromSphericals(startLat, startLong, endLat, endLong, *m_visualizationState).draw(true, width);
+    }
+    else
+    {
+        GreatCircleArc(startLat, startLong, endLat, endLong, *m_visualizationState).draw(true, width);
+    };
 }
 
 GreatCircleArc::GreatCircleArc() : m_xscale(DBL_MAX), m_visualizationState(NULL)
@@ -121,14 +128,14 @@ GreatCircleArc::GreatCircleArc(double startLat, double startLong,
     endLong *= (M_PI / 180.0);
     
     // find sines and cosines, they are used multiple times.
-    double sineStartLat = std::sin(startLat);
-    double sineStartLong = std::sin(startLong);
-    double sineEndLat = std::sin(endLat);
-    double sineEndLong = std::sin(endLong);
-    double cosineStartLat = std::cos(startLat);
-    double cosineStartLong = std::cos(startLong);
-    double cosineEndLat = std::cos(endLat);
-    double cosineEndLong = std::cos(endLong);
+    const double sineStartLat = std::sin(startLat);
+    const double sineStartLong = std::sin(startLong);
+    const double sineEndLat = std::sin(endLat);
+    const double sineEndLong = std::sin(endLong);
+    const double cosineStartLat = std::cos(startLat);
+    const double cosineStartLong = std::cos(startLong);
+    const double cosineEndLat = std::cos(endLat);
+    const double cosineEndLong = std::cos(endLong);
     
     /* to get points on the great circle, we linearly interpolate between the
      * two 3D coordinates for the given spherical coordinates, then normalise
@@ -144,14 +151,13 @@ GreatCircleArc::GreatCircleArc(double startLat, double startLong,
     ///@todo don't check the +/- 180 degree boundary when projection does not break there.
     bool hasSeam = true;
     // draw a line strip and transform the coordinates as we go.
-    double b1 = 0.0;
-    double b2 = 1.0;
+    double b = 0.0;
     
     const double line_v[3] = {p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]};
     const double line_length = sqrt(line_v[0] * line_v[0] + line_v[1] * line_v[1] + line_v[2] * line_v[2]);
     unsigned int segments = hugin_utils::roundi(line_length / min_segment_angle);
     segments = std::max(2u, std::min(max_segments, segments));
-    const double bDifference = 1.0 / double(segments);
+    const double bDifference = 1.0 / (segments - 1.0);
     // for discontinuity detection.
     int lastSegment = 1;
     // The last processed vertex's position.
@@ -160,10 +166,10 @@ GreatCircleArc::GreatCircleArc(double startLat, double startLong,
      * i.e. We just crossed a discontinuity. */
     bool skip = true;
     for (unsigned int segment_index = 0; segment_index < segments;
-         segment_index++, b1 += bDifference, b2 -= bDifference)
+         segment_index++, b += bDifference)
     {
         // linearly interpolate positions
-        double v[3] = {p1[0] * b1 + p2[0] * b2, p1[1] * b1 + p2[1] * b2, p1[2] * b1 + p2[2] * b2};
+        double v[3] = {p1[0] * b + p2[0] * (1.0 - b), p1[1] * b + p2[1] * (1.0 - b), p1[2] * b + p2[2] * (1.0 - b)};
         // normalise
         double length = sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
         v[0] /= length;
@@ -243,13 +249,8 @@ void GreatCircleArc::draw(bool withCross, double width) const
         double scale = 4 / getxscale();
         // The scale to draw them: this is 5 pixels outside in every direction.
         {
-            std::vector<GreatCircleArc::LineSegment>::const_iterator it;
-            it = m_lines.begin();
-            it->doGLcross(0,scale, m_visualizationState);
-
-            it = m_lines.end();
-            --it;	//.end points beyond last point.
-            it->doGLcross(1,scale, m_visualizationState);
+            m_lines.begin()->doGLcross(0,scale, m_visualizationState);
+            m_lines.rbegin()->doGLcross(1,scale, m_visualizationState);
         }
     };
 }
@@ -515,3 +516,27 @@ float GreatCircleArc::LineSegment::squareDistance(hugin_utils::FDiff2D point) co
 }
 
 
+StraightLineFromSphericals::StraightLineFromSphericals(double startLat, double startLong,
+    double endLat, double endLong, 
+    VisualizationState& visualizationState)
+
+{
+    m_visualizationState = &visualizationState;
+    // get the output projection
+    const HuginBase::PanoramaOptions& options = *(visualizationState.GetOptions());
+    // make an image to transform spherical coordinates into the output projection
+    static const HuginBase::SrcPanoImage equirectangularImage(HuginBase::SrcPanoImage::EQUIRECTANGULAR, 360.0, vigra::Size2D(360.0, 180.0));
+    // make a transformation from spherical coordinates to the output projection
+    HuginBase::PTools::Transform transform;
+    transform.createInvTransform(equirectangularImage, options);
+
+    double x1, y1, x2, y2;
+    if (transform.transformImgCoord(x1, y1, startLat, startLong) && transform.transformImgCoord(x2, y2, endLat, endLong))
+    {
+        m_xscale = visualizationState.GetScale();
+        LineSegment line;
+        line.vertices[0] = hugin_utils::FDiff2D(x1, y1);
+        line.vertices[1] = hugin_utils::FDiff2D(x2, y2);
+        m_lines.push_back(line);
+    };
+}

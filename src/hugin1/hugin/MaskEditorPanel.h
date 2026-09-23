@@ -34,7 +34,7 @@
 #include <panodata/Panorama.h>
 #include <wx/clrpicker.h>
 #include "MaskImageCtrl.h"
-#include "ImagesList.h"
+#include <panodata/StandardImageVariableGroups.h>
 
 /** mask editor panel.
  *
@@ -48,7 +48,7 @@ public:
      */
     MaskEditorPanel();
 
-    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxT("panel"));
+    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = "panel");
 
     void Init(HuginBase::Panorama * pano);
 
@@ -90,6 +90,8 @@ public:
     void panoramaChanged(HuginBase::Panorama &pano);
     void panoramaImagesChanged(HuginBase::Panorama &pano, const HuginBase::UIntSet & imgNr);
 
+    /** key handler for images list */
+    void OnImageListChar(wxKeyEvent& e);
     /** called when user selected another image */
     void OnImageSelect(wxListEvent &e);
     /** called when user selected another mask */
@@ -131,23 +133,31 @@ private:
     void UpdateMaskList(bool restoreSelection=false);
     /** return index of currently selected masks, return UINT_MAX if no mask is selected */
     unsigned int GetSelectedMask();
+    /** return the currently selected image(s) */
+    const HuginBase::UIntSet GetSelectedImages();
+    /** called, when column with of images list box was changed */
+    void OnImagesColumnWidthChange(wxListEvent& e);
     /** called, when column with of mask list box was changed */
-    void OnColumnWidthChange( wxListEvent & e );
+    void OnMaskColumnWidthChange( wxListEvent & e );
     /** determines, if the image should be rotated for display */
     MaskImageCtrl::ImageRotation GetRot(const unsigned int imgNr);
     /** copies the crop information from the Panorama object to GUI */
     void DisplayCrop(int imgNr);
+    /** update the list box for the given imgNr */
+    void UpdateImage(size_t imgNr);
 
     /** update GUI display */
     void UpdateCropDisplay();
     // ensure that the crop roi is centered
     void CenterCrop();
+    // switch between single or multiselectio mode for images list box
+    void SetSingleSelection(bool singleSelMode);
 
     size_t GetImgNr();
 
     // GUI controls
     MaskImageCtrl *m_editImg;
-    ImagesListMask *m_imagesListMask;
+    wxListCtrl *m_imagesListMask;
     wxListCtrl *m_maskList;
     wxChoice *m_maskType;
     wxNotebook *m_maskCropCtrl;
@@ -160,8 +170,6 @@ private:
     HuginBase::MaskPolygon::MaskType m_defaultMaskType;
     // mask or crop mode
     bool m_maskMode;
-    // the current images
-    HuginBase::UIntSet m_selectedImages;
     // the current mask
     unsigned int m_MaskNr;
     // the filename of the current image
@@ -179,7 +187,6 @@ private:
     bool m_autoCenterCrop = true;
     vigra::Point2D m_cropCenter;
 
-    DECLARE_EVENT_TABLE();
     DECLARE_DYNAMIC_CLASS(MaskEditorPanel)
 };
 

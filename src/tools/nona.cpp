@@ -305,7 +305,13 @@ int main(int argc, char* argv[])
                 compression=hugin_utils::toupper(compression);
                 break;
             case 'g':
+#if defined __APPLE__ && defined __aarch64__
+                // disable GPU remapping on ARM Macs, GPU code is not working on these systems
+                useGPU = false;
+                std::cout << "WARNING: GPU remapping is not supported on ARM Macs. Switching back to CPU remapping." << std::endl;
+#else
                 useGPU = true;
+#endif
                 break;
             case 'd':
                 vigra_ext::SetGPUDebugMessages(true);

@@ -173,7 +173,7 @@ void SplitButton::OnPaint(wxPaintEvent& WXUNUSED(event))
     // draw label and bitmap
     if (HasBitmap())
     {
-        dc.DrawLabel(m_label, m_bitmap, r1, wxALIGN_CENTER);
+        dc.DrawLabel(m_label, GetBitmap(), r1, wxALIGN_CENTER);
     }
     else
     {
@@ -193,7 +193,7 @@ void SplitButton::OnPaint(wxPaintEvent& WXUNUSED(event))
 
 bool SplitButton::HasBitmap() const
 {
-    return m_bitmap.IsOk() && m_bitmap.GetWidth() > 0 && m_bitmap.GetHeight() > 0;
+    return m_bitmap.IsOk() && m_bitmap.GetDefaultSize().GetWidth() * m_bitmap.GetDefaultSize().GetHeight() > 0;
 }
 
 void SplitButton::UpdateMinSize()
@@ -205,7 +205,7 @@ void SplitButton::UpdateMinSize()
     wxSize bitmapSize;
     if (HasBitmap())
     {
-        bitmapSize = m_bitmap.GetSize();
+        bitmapSize = m_bitmap.GetDefaultSize();
 #ifdef __WXMSW__
         // add some border to match the size of other buttons
         bitmapSize.IncBy(0, 8);
@@ -244,15 +244,14 @@ wxBitmap SplitButton::GetBitmap() const
 {
     if (HasBitmap())
     {
-        return m_bitmap;
+        return m_bitmap.GetBitmap(m_bitmap.GetDefaultSize());
     };
     return wxNullBitmap;
 }
 
-void SplitButton::SetBitmap(const wxBitmap& bitmap)
+void SplitButton::SetBitmap(const wxBitmapBundle& bitmap)
 {
     m_bitmap = bitmap;
-    // update minimum size
     UpdateMinSize();
 }
 
@@ -274,6 +273,8 @@ wxString SplitButton::GetLabel() const
     return m_label;
 }
 
+IMPLEMENT_DYNAMIC_CLASS(SplitButtonXmlHandler, wxXmlResourceHandler)
+
 SplitButtonXmlHandler::SplitButtonXmlHandler() : wxXmlResourceHandler()
 {
     AddWindowStyles();
@@ -282,10 +283,10 @@ SplitButtonXmlHandler::SplitButtonXmlHandler() : wxXmlResourceHandler()
 wxObject *SplitButtonXmlHandler::DoCreateResource()
 {
     XRC_MAKE_INSTANCE(control, SplitButton)
-    control->Create(m_parentAsWindow, GetID(), GetText(wxT("label")), GetPosition(), GetSize(), GetName());
+    control->Create(m_parentAsWindow, GetID(), GetText("label"), GetPosition(), GetSize(), GetName());
     if (GetParamNode("bitmap"))
     {
-        control->SetBitmap(GetBitmap("bitmap", wxART_BUTTON));
+        control->SetBitmap(GetBitmapBundle("bitmap", wxART_BUTTON));
     };
 
     SetupWindow(control);
@@ -294,7 +295,6 @@ wxObject *SplitButtonXmlHandler::DoCreateResource()
 
 bool SplitButtonXmlHandler::CanHandle(wxXmlNode *node)
 {
-    return IsOfClass(node, wxT("SplitButton"));
+    return IsOfClass(node, "SplitButton");
 }
 
-IMPLEMENT_DYNAMIC_CLASS(SplitButtonXmlHandler, wxXmlResourceHandler)

@@ -28,13 +28,22 @@
 #include <wx/progdlg.h>
 #include <appbase/ProgressDisplay.h>
 
-class WXIMPEX ProgressReporterDialog : public wxProgressDialog, public AppBase::ProgressDisplay
+class WXIMPEX ProgressReporterDialog : 
+#ifdef __WXMSW__
+    public wxGenericProgressDialog, public AppBase::ProgressDisplay
+#else
+    public wxProgressDialog, public AppBase::ProgressDisplay
+#endif
 {
 public:
     ProgressReporterDialog(int maxProgress, const wxString& title, const wxString& message,
                          wxWindow * parent = NULL, 
                          int style = wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT | wxPD_ELAPSED_TIME)
+#ifdef __WXMSW__
+                         : wxGenericProgressDialog(title, message + wxString((wxChar)' ', 10), 100, parent, style),
+#else
                          : wxProgressDialog(title, message + wxString((wxChar)' ', 10), 100, parent, style), 
+#endif
                          ProgressDisplay(maxProgress)
       {  };
     // overwritten to work with wxString

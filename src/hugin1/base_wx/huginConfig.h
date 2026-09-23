@@ -32,9 +32,9 @@
 #include <panoinc_WX.h>
 
 /** gets the default project name, as defined in the preferences */
-WXIMPEX wxString getDefaultProjectName(const HuginBase::Panorama & pano, const wxString filenameTemplate=wxT(""));
+WXIMPEX wxString getDefaultProjectName(const HuginBase::Panorama & pano, const wxString filenameTemplate=wxEmptyString);
 /** gets the default output prefix, based on filename and images in project
   * the setting is read from the preferences */
-WXIMPEX wxString getDefaultOutputName(const wxString projectname, const HuginBase::Panorama & pano, const wxString filenameTemplate=wxT(""));
+WXIMPEX wxString getDefaultOutputName(const wxString projectname, const HuginBase::Panorama & pano, const wxString filenameTemplate=wxEmptyString);
 
 #endif

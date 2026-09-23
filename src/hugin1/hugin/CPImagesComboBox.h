@@ -38,6 +38,9 @@
 class CPImagesComboBox : public wxOwnerDrawnComboBox
 {
 public:
+    /** create control, bind events */
+    bool Create(wxWindow* parent, wxWindowID id, const wxString& value, const wxPoint& pos, const wxSize& size,
+        long style = 0, const wxValidator& validator = wxDefaultValidator, const wxString& name = wxASCII_STR(wxComboBoxNameStr));
     /** Paint method for drawing text and indication bar of combo box	*/
     virtual void OnDrawItem(wxDC& dc,
                             const wxRect& rect,
@@ -70,7 +73,6 @@ private:
     void SelectPrev(int step = 1);
     void NotifyParent();
 
-    DECLARE_EVENT_TABLE()
     DECLARE_DYNAMIC_CLASS(CPImagesComboBox)
 };
 

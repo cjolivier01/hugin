@@ -41,7 +41,6 @@
 #include "base_wx/CommandHistory.h"
 #include "hugin/TextKillFocusHandler.h"
 #include "hugin/CPEditorPanel.h"
-#include "hugin/ImagesList.h"
 #include "hugin/MainFrame.h"
 #include "hugin/huginApp.h"
 #include "icpfind/AutoCtrlPointCreator.h"
@@ -51,24 +50,9 @@
 #include "hugin/ImagesTree.h"
 #include "panodata/OptimizerSwitches.h"
 #include "base_wx/PanoCommand.h"
+#include "base_wx/wxutils.h"
 
 #include <panodata/StandardImageVariableGroups.h>
-
-BEGIN_EVENT_TABLE(ImagesPanel, wxPanel)
-    EVT_TREE_SEL_CHANGED(XRCID("images_tree_ctrl"), ImagesPanel::OnSelectionChanged )
-    EVT_CHOICE     ( XRCID("images_lens_type"), ImagesPanel::OnLensTypeChanged)
-    EVT_CHOICE     ( XRCID("images_group_mode"), ImagesPanel::OnGroupModeChanged)
-    EVT_RADIOBOX   ( XRCID("images_column_radiobox"), ImagesPanel::OnDisplayModeChanged)
-    EVT_CHOICE     ( XRCID("images_optimize_mode"), ImagesPanel::OnOptimizerSwitchChanged)
-    EVT_CHOICE     ( XRCID("images_photo_optimize_mode"), ImagesPanel::OnPhotometricOptimizerSwitchChanged)
-    EVT_TEXT_ENTER ( XRCID("images_focal_length"), ImagesPanel::OnFocalLengthChanged)
-    EVT_TEXT_ENTER ( XRCID("images_crop_factor"),  ImagesPanel::OnCropFactorChanged)
-    EVT_TEXT_ENTER ( XRCID("images_overlap"), ImagesPanel::OnMinimumOverlapChanged)
-    EVT_TEXT_ENTER ( XRCID("images_maxev"), ImagesPanel::OnMaxEvDiffChanged)
-    EVT_BUTTON     ( XRCID("images_feature_matching"), ImagesPanel::CPGenerate)
-    EVT_BUTTON     ( XRCID("images_optimize"), ImagesPanel::OnOptimizeButton)
-    EVT_BUTTON     ( XRCID("images_photo_optimize"), ImagesPanel::OnPhotometricOptimizeButton)
-END_EVENT_TABLE()
 
 ImagesPanel::ImagesPanel()
 {
@@ -83,7 +67,7 @@ bool ImagesPanel::Create(wxWindow *parent, wxWindowID id, const wxPoint& pos, co
         return false;
     }
 
-    wxXmlResource::Get()->LoadPanel(this, wxT("images_panel"));
+    wxXmlResource::Get()->LoadPanel(this, "images_panel");
     wxPanel * panel = XRCCTRL(*this, "images_panel", wxPanel);
     wxBoxSizer *topsizer = new wxBoxSizer( wxVERTICAL );
     topsizer->Add(panel, 1, wxEXPAND, 0);
@@ -91,11 +75,13 @@ bool ImagesPanel::Create(wxWindow *parent, wxWindowID id, const wxPoint& pos, co
 
     m_images_tree = XRCCTRL(*this, "images_tree_ctrl", ImagesTreeCtrl);
     DEBUG_ASSERT(m_images_tree);
+    m_images_tree->Bind(wxEVT_TREE_SEL_CHANGED, &ImagesPanel::OnSelectionChanged, this);
 
     m_showImgNr = INT_MAX;
 
     m_matchingButton = XRCCTRL(*this, "images_feature_matching", wxButton);
     DEBUG_ASSERT(m_matchingButton);
+    m_matchingButton->Bind(wxEVT_BUTTON, &ImagesPanel::CPGenerate, this);
 
     m_CPDetectorChoice = XRCCTRL(*this, "cpdetector_settings", wxChoice);
 
@@ -113,26 +99,29 @@ bool ImagesPanel::Create(wxWindow *parent, wxWindowID id, const wxPoint& pos, co
 
     m_lenstype = XRCCTRL(*this, "images_lens_type", wxChoice);
     DEBUG_ASSERT(m_lenstype);
+    m_lenstype->Bind(wxEVT_CHOICE, &ImagesPanel::OnLensTypeChanged, this);
     FillLensProjectionList(m_lenstype);
     m_lenstype->SetSelection(0);
 
     m_focallength = XRCCTRL(*this, "images_focal_length", wxTextCtrl);
     DEBUG_ASSERT(m_focallength);
     m_focallength->PushEventHandler(new TextKillFocusHandler(this));
+    m_focallength->Bind(wxEVT_TEXT_ENTER, &ImagesPanel::OnFocalLengthChanged, this);
 
     m_cropfactor = XRCCTRL(*this, "images_crop_factor", wxTextCtrl);
     DEBUG_ASSERT(m_cropfactor);
     m_cropfactor->PushEventHandler(new TextKillFocusHandler(this));
+    m_cropfactor->Bind(wxEVT_TEXT_ENTER, &ImagesPanel::OnCropFactorChanged, this);
 
     m_overlap = XRCCTRL(*this, "images_overlap", wxTextCtrl);
     DEBUG_ASSERT(m_overlap);
     m_overlap->PushEventHandler(new TextKillFocusHandler(this));
+    m_overlap->Bind(wxEVT_TEXT_ENTER, &ImagesPanel::OnMinimumOverlapChanged, this);
 
     m_maxEv = XRCCTRL(*this, "images_maxev", wxTextCtrl);
     DEBUG_ASSERT(m_maxEv);
     m_maxEv->PushEventHandler(new TextKillFocusHandler(this));
-
-    FillGroupChoice();
+    m_maxEv->Bind(wxEVT_TEXT_ENTER, &ImagesPanel::OnMaxEvDiffChanged, this);
 
     wxTreeEvent ev;
     OnSelectionChanged(ev);
@@ -140,16 +129,22 @@ bool ImagesPanel::Create(wxWindow *parent, wxWindowID id, const wxPoint& pos, co
 
     m_optChoice = XRCCTRL(*this, "images_optimize_mode", wxChoice);
     DEBUG_ASSERT(m_optChoice);
+    m_optChoice->Bind(wxEVT_CHOICE, &ImagesPanel::OnOptimizerSwitchChanged, this);
 
     m_optPhotoChoice = XRCCTRL(*this, "images_photo_optimize_mode", wxChoice);
     DEBUG_ASSERT(m_optPhotoChoice);
+    m_optPhotoChoice->Bind(wxEVT_CHOICE, &ImagesPanel::OnPhotometricOptimizerSwitchChanged, this);
 
     FillOptimizerChoice();
 
+    m_groupModeChoice = XRCCTRL(*this, "images_group_mode", wxChoice);
+    m_groupModeChoice->Bind(wxEVT_CHOICE, &ImagesPanel::OnGroupModeChanged, this);
+    FillGroupChoice();
+
     wxConfigBase* config=wxConfigBase::Get();
-    m_degDigits = config->Read(wxT("/General/DegreeFractionalDigitsEdit"),3);
+    m_degDigits = config->Read("/General/DegreeFractionalDigitsEdit",3);
     //read autopano generator settings
-    cpdetector_config.Read(config,huginApp::Get()->GetDataPath()+wxT("default.setting"));
+    cpdetector_config.Read(config,huginApp::Get()->GetDataPath()+"default.setting");
     //write current autopano generator settings
     cpdetector_config.Write(config);
     config->Flush();
@@ -159,6 +154,9 @@ bool ImagesPanel::Create(wxWindow *parent, wxWindowID id, const wxPoint& pos, co
     // explicitly set focus to propogate correctly key presses/shortcuts
     m_images_tree->SetFocus();
 #endif
+    Bind(wxEVT_RADIOBOX, &ImagesPanel::OnDisplayModeChanged, this, XRCID("images_column_radiobox"));
+    Bind(wxEVT_BUTTON, &ImagesPanel::OnOptimizeButton, this, XRCID("images_optimize"));
+    Bind(wxEVT_BUTTON, &ImagesPanel::OnPhotometricOptimizeButton, this, XRCID("images_photo_optimize"));
     return true;
 }
 
@@ -189,8 +187,7 @@ ImagesPanel::~ImagesPanel()
     m_overlap->PopEventHandler(true);
     m_maxEv->PopEventHandler(true);
     m_pano->removeObserver(this);
-    wxChoice* group=XRCCTRL(*this,"images_group_mode", wxChoice);
-    DeleteClientData(group);
+    DeleteClientData(m_groupModeChoice);
     DeleteClientData(m_optChoice);
     DeleteClientData(m_optPhotoChoice);
     DEBUG_TRACE("dtor end");
@@ -292,7 +289,7 @@ void ImagesPanel::CPGenerate(wxCommandEvent & e)
     HuginBase::UIntSet selImg = m_images_tree->GetSelectedImages();
     //if only one image is selected, run detector on all images, except for linefind
     wxString progName = cpdetector_config.settings[m_CPDetectorChoice->GetSelection()].GetProg().Lower();
-    if ((selImg.empty()) || (selImg.size() == 1 && progName.Find(wxT("linefind")) == wxNOT_FOUND))
+    if ((selImg.empty()) || (selImg.size() == 1 && progName.Find("linefind") == wxNOT_FOUND))
     {
         // add all images.
         selImg.clear();
@@ -317,7 +314,7 @@ void ImagesPanel::RunCPGenerator(CPDetectorSetting &setting, const HuginBase::UI
     long nFeatures = HUGIN_ASS_NCONTROLPOINTS;
     if(wxGetKeyState(WXK_COMMAND))
     {
-        nFeatures = config->Read(wxT("/MainFrame/nControlPoints"), HUGIN_ASS_NCONTROLPOINTS);
+        nFeatures = config->Read("/MainFrame/nControlPoints", HUGIN_ASS_NCONTROLPOINTS);
         nFeatures = wxGetNumberFromUser(
                             _("Enter maximal number of control points per image pair"),
                             _("Points per Overlap"),
@@ -328,17 +325,17 @@ void ImagesPanel::RunCPGenerator(CPDetectorSetting &setting, const HuginBase::UI
         {
             return;
         };
-        config->Write(wxT("/MainFrame/nControlPoints"), nFeatures);
+        config->Write("/MainFrame/nControlPoints", nFeatures);
     }
     else
     {
-        nFeatures = config->Read(wxT("/Assistant/nControlPoints"), HUGIN_ASS_NCONTROLPOINTS);
+        nFeatures = config->Read("/Assistant/nControlPoints", HUGIN_ASS_NCONTROLPOINTS);
     };
 
     AutoCtrlPointCreator matcher;
     HuginBase::CPVector cps = matcher.automatch(setting, *m_pano, img, nFeatures, this);
     wxString msg;
-    wxMessageBox(wxString::Format(_("Added %lu control points"), (unsigned long) cps.size()), _("Control point detector result"),wxOK|wxICON_INFORMATION,this);
+    hugin_utils::HuginMessageBox(wxString::Format(_("Added %lu control points"), (unsigned long)cps.size()), _("Hugin"), wxOK | wxICON_INFORMATION, this);
     PanoCommand::GlobalCmdHist::getInstance().addCommand(
             new PanoCommand::AddCtrlPointsCmd(*m_pano, cps)
                                            );
@@ -510,10 +507,8 @@ void ImagesPanel::UpdatePreviewImage()
             HuginBase::Color::CorrectImage(scaled, *(cacheEntry->iccProfile), huginApp::Get()->GetMonitorProfile());
         };
         wxBitmap scaledBitmap(scaled);
-#if wxCHECK_VERSION(3,1,6)
         // set the DPI scale factor in wxBitmap, otherwise wxStaticBitmap scales the wxBitmap also
         scaledBitmap.SetScaleFactor(m_smallImgCtrl->GetDPIScaleFactor());
-#endif
         m_smallImgCtrl->SetBitmap(scaledBitmap);
         m_smallImgCtrl->GetParent()->Layout();
         m_smallImgCtrl->Refresh();
@@ -544,7 +539,7 @@ void ImagesPanel::OnLensTypeChanged (wxCommandEvent & e)
             new PanoCommand::CombinedPanoCommand(*m_pano, commands)
         );
         // check if fisheye projections is selected
-        if (wxConfig::Get()->Read(wxT("/ShowFisheyeCropHint"), 1l) == 1 &&
+        if (wxConfig::Get()->Read("/ShowFisheyeCropHint", 1l) == 1 &&
             !(var == HuginBase::BaseSrcPanoImage::RECTILINEAR ||
                 var == HuginBase::BaseSrcPanoImage::PANORAMIC ||
                 var == HuginBase::BaseSrcPanoImage::EQUIRECTANGULAR ||
@@ -552,14 +547,14 @@ void ImagesPanel::OnLensTypeChanged (wxCommandEvent & e)
         {
             // if so, show hint about crop and open tab when requested
             wxDialog dlg;
-            wxXmlResource::Get()->LoadDialog(&dlg, NULL, wxT("fisheye_show_crop_dlg"));
+            wxXmlResource::Get()->LoadDialog(&dlg, NULL, "fisheye_show_crop_dlg");
             if (dlg.ShowModal() == wxID_OK)
             {
                 MainFrame::Get()->ShowMaskEditor(*(images.begin()), true);
             };
             if (XRCCTRL(dlg, "fisheye_crop_dont_ask_checkbox", wxCheckBox)->IsChecked())
             {
-                wxConfig::Get()->Write(wxT("/ShowFisheyeCropHint"), 0l);
+                wxConfig::Get()->Write("/ShowFisheyeCropHint", 0l);
             };
         };
     };
@@ -596,14 +591,9 @@ void ImagesPanel::OnFocalLengthChanged(wxCommandEvent & e)
         double hfov=srcImg.calcHFOV(srcImg.getProjection(), val, srcImg.getCropFactor(), srcImg.getSize());
         if(hfov>190)
         {
-            if(wxMessageBox(
+            if (hugin_utils::HuginMessageBox(
                 wxString::Format(_("You have given a field of view of %.2f degrees.\n But the orthographic projection is limited to a field of view of 180 degress.\nDo you want still use that high value?"), hfov),
-#ifdef __WXMSW__
-                _("Hugin"),
-#else
-                wxT(""),
-#endif
-                wxICON_EXCLAMATION | wxYES_NO)==wxNO)
+                _("Hugin"), wxICON_EXCLAMATION | wxYES_NO, this) == wxNO)
             {
                 wxTreeEvent dummy;
                 OnSelectionChanged(dummy);
@@ -660,13 +650,8 @@ void ImagesPanel::OnMinimumOverlapChanged(wxCommandEvent & e)
     }
     if(fabs(val)<0.001 || val>1)
     {
-        wxMessageBox(_("The minimum overlap has to be greater than 0 and smaller than 1."),
-#ifdef _WIN32
-            _("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxOK | wxICON_INFORMATION, this);
+        hugin_utils::HuginMessageBox(_("The minimum overlap has to be greater than 0 and smaller than 1."),
+            _("Hugin"), wxOK | wxICON_INFORMATION, this);
         return;
     };
     if (val < 0)
@@ -694,13 +679,7 @@ void ImagesPanel::OnMaxEvDiffChanged(wxCommandEvent& e)
     }
     if(val<0)
     {
-        wxMessageBox(_("The maximum Ev difference has to be greater than 0."),
-#ifdef _WIN32
-            _("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxOK | wxICON_INFORMATION, this);
+        hugin_utils::HuginMessageBox(_("The maximum Ev difference has to be greater than 0."), _("Hugin"), wxOK | wxICON_INFORMATION, this);
         return;
     };
     HuginBase::PanoramaOptions opt = m_pano->getOptions();
@@ -712,36 +691,35 @@ void ImagesPanel::OnMaxEvDiffChanged(wxCommandEvent& e)
 
 void ImagesPanel::FillGroupChoice()
 {
-    wxChoice* group=XRCCTRL(*this,"images_group_mode", wxChoice);
-    size_t sel=group->GetSelection();
-    DeleteClientData(group);
-    group->Clear();
+    size_t sel=m_groupModeChoice->GetSelection();
+    DeleteClientData(m_groupModeChoice);
+    m_groupModeChoice->Clear();
     int* i=new int;
     *i=ImagesTreeCtrl::GROUP_NONE;
-    group->Append(_("None"), i);
+    m_groupModeChoice->Append(_("None"), i);
     i=new int;
     *i=ImagesTreeCtrl::GROUP_LENS;
-    group->Append(_("Lens"), i);
+    m_groupModeChoice->Append(_("Lens"), i);
     if(m_guiLevel>GUI_SIMPLE)
     {
         i=new int;
         *i=ImagesTreeCtrl::GROUP_STACK;
-        group->Append(_("Stacks"), i);
+        m_groupModeChoice->Append(_("Stacks"), i);
         if(m_guiLevel==GUI_EXPERT)
         {
             i=new int;
             *i=ImagesTreeCtrl::GROUP_OUTPUTLAYERS;
-            group->Append(_("Output layers"), i);
+            m_groupModeChoice->Append(_("Output layers"), i);
             i=new int;
             *i=ImagesTreeCtrl::GROUP_OUTPUTSTACK;
-            group->Append(_("Output stacks"), i);
+            m_groupModeChoice->Append(_("Output stacks"), i);
         };
     };
     if((m_guiLevel==GUI_ADVANCED && sel>2) || (m_guiLevel==GUI_SIMPLE && sel>1))
     {
         sel=0;
     };
-    group->SetSelection(sel);
+    m_groupModeChoice->SetSelection(sel);
     wxCommandEvent dummy;
     OnGroupModeChanged(dummy);
 };
@@ -825,8 +803,7 @@ wxString ImagesPanel::GetCurrentOptimizerString()
 
 void ImagesPanel::OnGroupModeChanged(wxCommandEvent & e)
 {
-    wxChoice* group=XRCCTRL(*this,"images_group_mode", wxChoice);
-    ImagesTreeCtrl::GroupMode mode=ImagesTreeCtrl::GroupMode(*static_cast<int*>(group->GetClientData(group->GetSelection())));
+    ImagesTreeCtrl::GroupMode mode=ImagesTreeCtrl::GroupMode(*static_cast<int*>(m_groupModeChoice->GetClientData(m_groupModeChoice->GetSelection())));
     m_images_tree->SetGroupMode(mode);
     XRCCTRL(*this, "images_text_overlap", wxStaticText)->Show(mode==ImagesTreeCtrl::GROUP_OUTPUTSTACK);
     m_overlap->Show(mode==ImagesTreeCtrl::GROUP_OUTPUTSTACK);
@@ -892,11 +869,13 @@ void ImagesPanel::SetGuiLevel(GuiLevel newGuiLevel)
 
 void ImagesPanel::OnOptimizeButton(wxCommandEvent &e)
 {
+    hugin_utils::DisableWindow disableButton(XRCCTRL(*this, "images_optimize", wxButton));
     MainFrame::Get()->OnOptimize(e);
 };
 
 void ImagesPanel::OnPhotometricOptimizeButton(wxCommandEvent &e)
 {
+    hugin_utils::DisableWindow disableButton(XRCCTRL(*this, "images_photo_optimize", wxButton));
     MainFrame::Get()->OnPhotometricOptimize(e);
 };
 
@@ -915,7 +894,7 @@ wxObject *ImagesPanelXmlHandler::DoCreateResource()
     cp->Create(m_parentAsWindow,
                    GetID(),
                    GetPosition(), GetSize(),
-                   GetStyle(wxT("style")),
+                   GetStyle("style"),
                    GetName());
 
     SetupWindow( cp);
@@ -924,7 +903,7 @@ wxObject *ImagesPanelXmlHandler::DoCreateResource()
 
 bool ImagesPanelXmlHandler::CanHandle(wxXmlNode *node)
 {
-    return IsOfClass(node, wxT("ImagesPanel"));
+    return IsOfClass(node, "ImagesPanel");
 }
 
 IMPLEMENT_DYNAMIC_CLASS(ImagesPanelXmlHandler, wxXmlResourceHandler)

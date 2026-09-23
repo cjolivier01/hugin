@@ -28,6 +28,7 @@
 #include "wx/msw/wrapwin.h"
 #endif
 #include "ProjectListBox.h"
+#include "base_wx/wxutils.h"
 
 enum
 {
@@ -37,17 +38,6 @@ enum
     ID_REMOVE_PROJECT=wxID_HIGHEST+203,
     ID_CHANGE_USER_DEFINED=wxID_HIGHEST+204
 };
-
-BEGIN_EVENT_TABLE(ProjectListBox, wxListCtrl)
-    EVT_LIST_COL_END_DRAG(wxID_ANY, ProjectListBox::OnColumnWidthChange)
-    EVT_CONTEXT_MENU(ProjectListBox::OnContextMenu)
-    EVT_MENU(ID_CHANGE_PREFIX, ProjectListBox::OnChangePrefix)
-    EVT_MENU(ID_RESET_PROJECT, ProjectListBox::OnResetProject)
-    EVT_MENU(ID_EDIT_PROJECT, ProjectListBox::OnEditProject)
-    EVT_MENU(ID_REMOVE_PROJECT, ProjectListBox::OnRemoveProject)
-    EVT_MENU(ID_CHANGE_USER_DEFINED, ProjectListBox::OnChangeUserDefined)
-    EVT_CHAR(ProjectListBox::OnChar)
-END_EVENT_TABLE()
 
 bool ProjectListBox::Create(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name)
 {
@@ -78,12 +68,21 @@ bool ProjectListBox::Create(wxWindow* parent, wxWindowID id, const wxPoint& pos,
     //get saved width
     for( int i=0; i < GetColumnCount() ; i++ )
     {
-        int width = wxConfigBase::Get()->Read(wxString::Format(wxT("/BatchList/ColumnWidth%d"), columns[i] ), -1);
+        int width = wxConfigBase::Get()->Read(wxString::Format("/BatchList/ColumnWidth%d", columns[i] ), -1);
         if(width != -1)
         {
             SetColumnWidth(i, width);
         }
     }
+    // connect event handler
+    Bind(wxEVT_LIST_COL_END_DRAG, &ProjectListBox::OnColumnWidthChange, this);
+    Bind(wxEVT_CONTEXT_MENU, &ProjectListBox::OnContextMenu, this);
+    Bind(wxEVT_CHAR, &ProjectListBox::OnChar, this);
+    Bind(wxEVT_MENU, &ProjectListBox::OnChangePrefix, this, ID_CHANGE_PREFIX);
+    Bind(wxEVT_MENU, &ProjectListBox::OnResetProject, this, ID_RESET_PROJECT);
+    Bind(wxEVT_MENU, &ProjectListBox::OnEditProject, this, ID_EDIT_PROJECT);
+    Bind(wxEVT_MENU, &ProjectListBox::OnRemoveProject, this, ID_REMOVE_PROJECT);
+    Bind(wxEVT_MENU, &ProjectListBox::OnChangeUserDefined, this, ID_CHANGE_USER_DEFINED);
     return true;
 }
 
@@ -195,7 +194,7 @@ int ProjectListBox::GetProjectId(int index)
     long id=-1;
     if(!GetText(index,0).ToLong(&id))
     {
-        wxMessageBox(_("Error, cannot convert id"),_("Error"));
+        hugin_utils::HuginMessageBox(_("Error, cannot convert id"), _("PTBatcherGUI"), wxOK | wxICON_ERROR, wxGetActiveWindow());
     }
     return (int)id;
 }
@@ -324,7 +323,7 @@ wxString ProjectListBox::GetAttributeString(int i, Project* project)
             if(project->status!=Project::MISSING)
             {
                 str = GetLongerFormatName(project->options.outputImageType);
-                str = str+wxT(" (.")+wxString::FromAscii(project->options.outputImageType.c_str())+wxT(")");
+                str = str+" (."+wxString::FromAscii(project->options.outputImageType.c_str())+")";
                 return str;
             };
             return wxEmptyString;
@@ -390,7 +389,7 @@ wxString ProjectListBox::GetLongerFormatName(std::string str)
 void ProjectListBox::OnColumnWidthChange(wxListEvent& event)
 {
     int col = event.GetColumn();
-    wxConfigBase::Get()->Write(wxString::Format(wxT("/BatchList/ColumnWidth%d"),columns[col]), GetColumnWidth(col));
+    wxConfigBase::Get()->Write(wxString::Format("/BatchList/ColumnWidth%d",columns[col]), GetColumnWidth(col));
 }
 
 // functions for context menu
@@ -565,7 +564,7 @@ wxObject* ProjectListBoxXmlHandler::DoCreateResource()
     cp->Create(m_parentAsWindow,
                GetID(),
                GetPosition(), GetSize(),
-               GetStyle(wxT("style")),
+               GetStyle("style"),
                GetName());
 
     SetupWindow( cp);
@@ -575,7 +574,7 @@ wxObject* ProjectListBoxXmlHandler::DoCreateResource()
 
 bool ProjectListBoxXmlHandler::CanHandle(wxXmlNode* node)
 {
-    return IsOfClass(node, wxT("ProjectListBox"));
+    return IsOfClass(node, "ProjectListBox");
 }
 
 IMPLEMENT_DYNAMIC_CLASS(ProjectListBoxXmlHandler, wxListCtrlXmlHandler)

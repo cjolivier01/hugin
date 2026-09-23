@@ -38,8 +38,8 @@ public:
         wxFileName fileName(file);
         wxString ext = fileName.GetExt();
         //we add all project files to array
-        if (ext.CmpNoCase(wxT("pto")) == 0 || ext.CmpNoCase(wxT("ptp")) == 0||
-                ext.CmpNoCase(wxT("pts")) == 0|| ext.CmpNoCase(wxT("oto")) == 0)
+        if (ext.CmpNoCase("pto") == 0 || ext.CmpNoCase("ptp") == 0||
+                ext.CmpNoCase("pts") == 0|| ext.CmpNoCase("oto") == 0)
         {
             projectFiles.Add(file);
         }

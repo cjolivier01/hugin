@@ -36,6 +36,7 @@
 #include "platform.h"
 #include "wxPanoCommand.h"
 #include "HFOVDialog.h"
+#include "wxutils.h"
 #include <panodata/OptimizerSwitches.h>
 
 #include <vigra/cornerdetection.hxx>
@@ -219,7 +220,7 @@ std::string GetICCProfileNameChecked(const std::string& iccName)
 bool wxAddImagesCmd::processPanorama(HuginBase::Panorama& pano)
 {
     // check if the files should be sorted by date
-    const long sort = wxConfigBase::Get()->Read(wxT("General/SortNewImgOnAdd"), HUGIN_GUI_SORT_NEW_IMG_ON_ADD);
+    const long sort = wxConfigBase::Get()->Read("General/SortNewImgOnAdd", HUGIN_GUI_SORT_NEW_IMG_ON_ADD);
 
     switch (sort) {
         case 1:
@@ -252,7 +253,7 @@ bool wxAddImagesCmd::processPanorama(HuginBase::Panorama& pano)
             vigra::ImageImportInfo info(filename.c_str());
             if(info.width()==0 || info.height()==0)
             {
-                wxMessageBox(wxString::Format(_("Could not decode image:\n%s\nAbort"), fname.c_str()), _("Unsupported image file format"));
+                hugin_utils::HuginMessageBox(wxString::Format(_("Could not decode image:\n%s\nAbort"), fname.c_str()), _("Hugin"), wxOK | wxICON_HAND, wxGetActiveWindow());
                 return false;
             };
             srcImg.setSize(info.size());
@@ -260,8 +261,8 @@ bool wxAddImagesCmd::processPanorama(HuginBase::Panorama& pano)
             // refuse black/white images
             if (pixelType == "BILEVEL")
             {
-                wxMessageBox(wxString::Format(_("File \"%s\" is a black/white image.\nHugin does not support this image type. Skipping this image.\nConvert image to grayscale image and try loading again."), fname.c_str()),
-                    _("Warning"), wxOK|wxICON_EXCLAMATION);
+                hugin_utils::HuginMessageBox(wxString::Format(_("File \"%s\" is a black/white image.\nHugin does not support this image type. Skipping this image.\nConvert image to grayscale image and try loading again."), fname.c_str()),
+                    _("Hugin"), wxOK|wxICON_EXCLAMATION, wxGetActiveWindow());
                 continue;
             }
             // check if images is grayscale or RGB image, maybe with alpha channel
@@ -270,8 +271,8 @@ bool wxAddImagesCmd::processPanorama(HuginBase::Panorama& pano)
             const int extraBands = info.numExtraBands();
             if (bands != 1 && bands != 3 && !(bands == 2 && extraBands == 1) && !(bands == 4 && extraBands == 1))
             {
-                wxMessageBox(wxString::Format(_("Hugin supports only grayscale and RGB images (without and with alpha channel).\nBut file \"%s\" has %d channels and %d extra channels (probably alpha channels).\nHugin does not support this image type. Skipping this image.\nConvert this image to grayscale or RGB image and try loading again."), fname.c_str(), bands, extraBands),
-                    _("Warning"), wxOK | wxICON_EXCLAMATION);
+                hugin_utils::HuginMessageBox(wxString::Format(_("Hugin supports only grayscale and RGB images (without and with alpha channel).\nBut file \"%s\" has %d channels and %d extra channels (probably alpha channels).\nHugin does not support this image type. Skipping this image.\nConvert this image to grayscale or RGB image and try loading again."), fname.c_str(), bands, extraBands),
+                    _("Hugin"), wxOK | wxICON_EXCLAMATION, wxGetActiveWindow());
                 continue;
             };
             if (pano.getNrOfImages() == 0)
@@ -281,7 +282,7 @@ bool wxAddImagesCmd::processPanorama(HuginBase::Panorama& pano)
             if (pano.getNrOfBands() != bands - extraBands)
             {
                 wxString s(_("Hugin supports only grayscale or RGB images (without and with alpha channel)."));
-                s.Append(wxT("\n"));
+                s.Append("\n");
                 if (pano.getNrOfBands() == 3)
                 {
                     s.Append(wxString::Format(_("File \"%s\" is a grayscale image, but other images in project are color images."), fname.c_str()));
@@ -290,13 +291,22 @@ bool wxAddImagesCmd::processPanorama(HuginBase::Panorama& pano)
                 {
                     s.Append(wxString::Format(_("File \"%s\" is a color image, but other images in project are grayscale images."), fname.c_str()));
                 };
-                s.Append(wxT("\n"));
+                s.Append("\n");
                 s.Append(_("Hugin does not support this mixing. Skipping this image.\nConvert this image to grayscale or RGB image respectively and try loading again."));
-                wxMessageBox(s, _("Warning"), wxOK | wxICON_EXCLAMATION);
+                hugin_utils::HuginMessageBox(s, _("Warning"), wxOK | wxICON_EXCLAMATION, wxGetActiveWindow());
                 continue;
             };
-            if((pixelType=="UINT8") || (pixelType=="UINT16") || (pixelType=="INT16"))
-                srcImg.setResponseType(HuginBase::SrcPanoImage::RESPONSE_EMOR);
+            if ((pixelType == "UINT8") || (pixelType == "UINT16") || (pixelType == "INT16"))
+            {
+                if (hugin_utils::IsLinearICCProfile(info.getICCProfile()))
+                {
+                    srcImg.setResponseType(HuginBase::SrcPanoImage::RESPONSE_LINEAR);
+                }
+                else
+                {
+                    srcImg.setResponseType(HuginBase::SrcPanoImage::RESPONSE_EMOR);
+                }
+            }
             else
                 srcImg.setResponseType(HuginBase::SrcPanoImage::RESPONSE_LINEAR);
             if (pano.getNrOfImages() > 0)
@@ -321,9 +331,9 @@ bool wxAddImagesCmd::processPanorama(HuginBase::Panorama& pano)
                             warning = wxString::Format(_("File \"%s\" has icc profile \"%s\" embedded, but other images in project have color profile \"%s\" embedded."), fname.c_str(), wxString(newICCProfileDesc.c_str(), wxConvLocal).c_str(), wxString(pano.getICCProfileDesc().c_str(), wxConvLocal).c_str());
                         }
                     }
-                    warning.Append(wxT("\n"));
+                    warning.Append("\n");
                     warning.Append(_("Hugin expects all images in the same color profile.\nPlease convert all images to same color profile and try again."));
-                    wxMessageBox(warning, _("Warning"), wxOK | wxICON_EXCLAMATION);
+                    hugin_utils::HuginMessageBox(warning, _("Hugin"), wxOK | wxICON_EXCLAMATION, wxGetActiveWindow());
                     continue;
                 }
             }
@@ -344,7 +354,7 @@ bool wxAddImagesCmd::processPanorama(HuginBase::Panorama& pano)
         {
             std::cerr << "ERROR: caught exception: " << e.what() << std::endl;
             std::cerr << "Could not get pixel type for file " << filename << std::endl;
-             wxMessageBox(wxString::Format(_("Could not decode image:\n%s\nAbort"), fname.c_str()), _("Unsupported image file format"));
+            hugin_utils::HuginMessageBox(wxString::Format(_("Could not decode image:\n%s\nAbort"), fname.c_str()), _("Hugin"), wxOK | wxICON_EXCLAMATION, wxGetActiveWindow());
              return false;
         };
         bool ok = srcImg.readEXIF();
@@ -361,7 +371,7 @@ bool wxAddImagesCmd::processPanorama(HuginBase::Panorama& pano)
             {
                 // if projection is equirectangular, we loaded info from gpano tags
                 // in this case we don't need to look up the database
-                const bool ignoreFovRectilinear = wxConfigBase::Get()->Read(wxT("/General/IgnoreFovRectilinearOnAdd"), 1l) == 1l;
+                const bool ignoreFovRectilinear = wxConfigBase::Get()->Read("/General/IgnoreFovRectilinearOnAdd", 1l) == 1l;
                 srcImg.readProjectionFromDB(ignoreFovRectilinear);
             };
         };
@@ -476,25 +486,19 @@ bool wxAddImagesCmd::processPanorama(HuginBase::Panorama& pano)
         {
             message = _("Hugin has image stacks detected in the whole project. Stack numbers will be re-assigned on base of this detection. Existing stack assignments will be overwritten.");
         };
-        message.append(wxT("\n"));
+        message.append("\n");
         message.append(_("Should the position of images in each stack be linked?"));
-        wxMessageDialog dialog(wxGetActiveWindow(), message,
-#ifdef _WIN32
-            _("Hugin"),
-#else
-            wxT(""),
-#endif
-            wxICON_EXCLAMATION | wxYES_NO | wxCANCEL);
-        dialog.SetExtendedMessage(_("When shooting bracketed image stacks from a sturdy tripod the position of the images in each stack can be linked to help Hugin to process the panorama. But if the images in each stack require a fine tune of the position (e. g. when shooting hand held), then don't link the position."));
+        hugin_utils::MessageDialog dialog = hugin_utils::GetMessageDialog(message, _("Hugin"), wxICON_EXCLAMATION | wxYES_NO | wxCANCEL, wxGetActiveWindow());
+        dialog->SetExtendedMessage(_("When shooting bracketed image stacks from a sturdy tripod the position of the images in each stack can be linked to help Hugin to process the panorama. But if the images in each stack require a fine tune of the position (e. g. when shooting hand held), then don't link the position."));
         if (oldImgCount == 0)
         {
-            dialog.SetYesNoCancelLabels(_("Link position"), _("Don't link position"), _("Don't assign stacks"));
+            dialog->SetYesNoCancelLabels(_("Link position"), _("Don't link position"), _("Don't assign stacks"));
         }
         else
         {
-            dialog.SetYesNoCancelLabels(_("Link position"), _("Don't link position"), _("Keep existing stacks"));
+            dialog->SetYesNoCancelLabels(_("Link position"), _("Don't link position"), _("Keep existing stacks"));
         };
-        switch (dialog.ShowModal())
+        switch (dialog->ShowModal())
         {
             case wxID_OK:
             case wxID_YES:
@@ -517,20 +521,20 @@ bool wxAddImagesCmd::processPanorama(HuginBase::Panorama& pano)
             };
         };
         wxConfigBase* config = wxConfigBase::Get();
-        bool showExposureWarning = config->Read(wxT("/ShowExposureWarning"), 1l) == 1l;
+        bool showExposureWarning = config->Read("/ShowExposureWarning", 1l) == 1l;
         if (!hasStacks && pano.getMaxExposureDifference() > 2 && showExposureWarning)
         {
             wxDialog dlg;
-            wxXmlResource::Get()->LoadDialog(&dlg, NULL, wxT("warning_exposure_dlg"));
+            wxXmlResource::Get()->LoadDialog(&dlg, NULL, "warning_exposure_dlg");
             if (dlg.ShowModal() == wxID_OK)
             {
                 if (XRCCTRL(dlg, "dont_show_again_checkbox", wxCheckBox)->GetValue())
                 {
-                    config->Write(wxT("/ShowExposureWarning"), 0l);
+                    config->Write("/ShowExposureWarning", 0l);
                 }
                 else
                 {
-                    config->Write(wxT("/ShowExposureWarning"), 1l);
+                    config->Write("/ShowExposureWarning", 1l);
                 };
                 config->Flush();
             }
@@ -555,12 +559,12 @@ bool wxLoadPTProjectCmd::processPanorama(HuginBase::Panorama& pano)
         if (ptoVersion < 2)
         {
             // no options stored in file, use default arguments in config file
-            opts.enblendOptions = wxConfigBase::Get()->Read(wxT("/Enblend/Args"), wxT(HUGIN_ENBLEND_ARGS)).mb_str(wxConvLocal);
-            opts.enfuseOptions = wxConfigBase::Get()->Read(wxT("/Enfuse/Args"), wxT(HUGIN_ENFUSE_ARGS)).mb_str(wxConvLocal);
+            opts.enblendOptions = wxConfigBase::Get()->Read("/Enblend/Args", HUGIN_ENBLEND_ARGS).mb_str(wxConvLocal);
+            opts.enfuseOptions = wxConfigBase::Get()->Read("/Enfuse/Args", HUGIN_ENFUSE_ARGS).mb_str(wxConvLocal);
         }
         // Set the nona gpu flag base on what is in preferences as it is not
         // stored in the file.
-        opts.remapUsingGPU = wxConfigBase::Get()->Read(wxT("/Nona/UseGPU"),HUGIN_NONA_USEGPU) == 1;
+        opts.remapUsingGPU = wxConfigBase::Get()->Read("/Nona/UseGPU",HUGIN_NONA_USEGPU) == 1;
         pano.setOptions(opts);
 
         HuginBase::StandardImageVariableGroups variableGroups(pano);
@@ -575,7 +579,7 @@ bool wxLoadPTProjectCmd::processPanorama(HuginBase::Panorama& pano)
             wxFileName fname(wxString (pano.getImage(i).getFilename().c_str(), HUGIN_CONV_FILENAME));
             while (! fname.FileExists()){
                         // Is file in the new path
-                if (basedir != wxT("")) {
+                if (basedir != wxEmptyString) {
                     DEBUG_DEBUG("Old filename: " << pano.getImage(i).getFilename());
                     std::string fn = hugin_utils::stripPath(pano.getImage(i).getFilename());
                     DEBUG_DEBUG("Old filename, without path): " << fn);
@@ -593,9 +597,9 @@ bool wxLoadPTProjectCmd::processPanorama(HuginBase::Panorama& pano)
                     }
                 }
 
-                wxMessageBox(wxString::Format(_("The project file \"%s\" refers to image \"%s\" which was not found.\nPlease manually select the correct image."), filename, fname.GetFullPath()), _("Image file not found"));
+                hugin_utils::HuginMessageBox(wxString::Format(_("The project file \"%s\" refers to image \"%s\" which was not found.\nPlease manually select the correct image."), filename, fname.GetFullPath()), _("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
 
-                if (basedir == wxT("")) {
+                if (basedir == wxEmptyString) {
                     basedir = fname.GetPath();
                 }
 
@@ -719,7 +723,7 @@ bool wxLoadPTProjectCmd::processPanorama(HuginBase::Panorama& pano)
     if (bad_cp_count > 0)
     {
         wxString errMsg = wxString::Format(_("%d invalid control point(s) found.\n\nPress OK to remove."), bad_cp_count);
-        wxMessageBox(errMsg, _("Error Detected"), wxICON_ERROR);
+        hugin_utils::HuginMessageBox(errMsg, _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
         pano.setCtrlPoints(goodCPs);
     }
 
@@ -741,8 +745,8 @@ bool wxNewProjectCmd::processPanorama(HuginBase::Panorama& pano)
     // Setup pano with options from preferences
     HuginBase::PanoramaOptions opts = pano.getOptions();
     wxConfigBase* config = wxConfigBase::Get();
-    opts.quality = config->Read(wxT("/output/jpeg_quality"),HUGIN_JPEG_QUALITY);
-    switch(config->Read(wxT("/output/tiff_compression"), HUGIN_TIFF_COMPRESSION))
+    opts.quality = config->Read("/output/jpeg_quality",HUGIN_JPEG_QUALITY);
+    switch(config->Read("/output/tiff_compression", HUGIN_TIFF_COMPRESSION))
     {
         case 0:
         default:
@@ -762,7 +766,7 @@ bool wxNewProjectCmd::processPanorama(HuginBase::Panorama& pano)
             opts.tiffCompression = "DEFLATE";
             break;
     }
-    switch (config->Read(wxT("/output/ldr_format"), HUGIN_LDR_OUTPUT_FORMAT)) {
+    switch (config->Read("/output/ldr_format", HUGIN_LDR_OUTPUT_FORMAT)) {
     case 1:
         opts.outputImageType ="jpg";
         break;
@@ -778,15 +782,15 @@ bool wxNewProjectCmd::processPanorama(HuginBase::Panorama& pano)
         break;
     }
     // HDR disabled because there is no real choice at the moment:  HDR TIFF is broken and there is only EXR
-    // opts.outputImageTypeHDR = config->Read(wxT("/output/hdr_format"), HUGIN_HDR_OUTPUT_FORMAT);
+    // opts.outputImageTypeHDR = config->Read("/output/hdr_format", HUGIN_HDR_OUTPUT_FORMAT);
     opts.outputFormat = HuginBase::PanoramaOptions::TIFF_m;
-    opts.blendMode = static_cast<HuginBase::PanoramaOptions::BlendingMechanism>(config->Read(wxT("/default_blender"), HUGIN_DEFAULT_BLENDER));
-    opts.enblendOptions = config->Read(wxT("Enblend/Args"),wxT(HUGIN_ENBLEND_ARGS)).mb_str(wxConvLocal);
-    opts.enfuseOptions = config->Read(wxT("Enfuse/Args"),wxT(HUGIN_ENFUSE_ARGS)).mb_str(wxConvLocal);
-    opts.verdandiOptions = config->Read(wxT("/VerdandiDefaultArgs"), wxEmptyString).mb_str(wxConvLocal);
-    opts.interpolator = (vigra_ext::Interpolator)config->Read(wxT("Nona/Interpolator"),HUGIN_NONA_INTERPOLATOR);
-    opts.remapUsingGPU = config->Read(wxT("Nona/useGPU"),HUGIN_NONA_USEGPU)!=0;
-    opts.tiff_saveROI = config->Read(wxT("Nona/CroppedImages"),HUGIN_NONA_CROPPEDIMAGES)!=0;
+    opts.blendMode = static_cast<HuginBase::PanoramaOptions::BlendingMechanism>(config->Read("/default_blender", HUGIN_DEFAULT_BLENDER));
+    opts.enblendOptions = config->Read("Enblend/Args",HUGIN_ENBLEND_ARGS).mb_str(wxConvLocal);
+    opts.enfuseOptions = config->Read("Enfuse/Args",HUGIN_ENFUSE_ARGS).mb_str(wxConvLocal);
+    opts.verdandiOptions = config->Read("/VerdandiDefaultArgs", wxEmptyString).mb_str(wxConvLocal);
+    opts.interpolator = (vigra_ext::Interpolator)config->Read("Nona/Interpolator",HUGIN_NONA_INTERPOLATOR);
+    opts.remapUsingGPU = config->Read("Nona/useGPU",HUGIN_NONA_USEGPU)!=0;
+    opts.tiff_saveROI = config->Read("Nona/CroppedImages",HUGIN_NONA_CROPPEDIMAGES)!=0;
     opts.hdrMergeMode = HuginBase::PanoramaOptions::HDRMERGE_AVERAGE;
     opts.hdrmergeOptions = HUGIN_HDRMERGE_ARGS;
     pano.setOptions(opts);
@@ -803,30 +807,30 @@ bool wxApplyTemplateCmd::processPanorama(HuginBase::Panorama& pano)
 
     if (pano.getNrOfImages() == 0) {
         // TODO: prompt for images!
-        wxString path = config->Read(wxT("actualPath"), wxT(""));
+        wxString path = config->Read("actualPath", wxEmptyString);
         wxFileDialog dlg(wxGetActiveWindow(), _("Add images"),
-                path, wxT(""),
+                path, wxEmptyString,
                 GetFileDialogImageFilters(), wxFD_OPEN|wxFD_MULTIPLE | wxFD_FILE_MUST_EXIST | wxFD_PREVIEW , wxDefaultPosition);
         dlg.SetDirectory(path);
 
         // remember the image extension
         wxString img_ext;
-        if (config->HasEntry(wxT("lastImageType"))){
-            img_ext = config->Read(wxT("lastImageType")).c_str();
+        if (config->HasEntry("lastImageType")){
+            img_ext = config->Read("lastImageType").c_str();
         }
-        if (img_ext == wxT("all images"))
+        if (img_ext == "all images")
             dlg.SetFilterIndex(0);
-        else if (img_ext == wxT("jpg"))
+        else if (img_ext == "jpg")
             dlg.SetFilterIndex(1);
-        else if (img_ext == wxT("tiff"))
+        else if (img_ext == "tiff")
             dlg.SetFilterIndex(2);
-        else if (img_ext == wxT("png"))
+        else if (img_ext == "png")
             dlg.SetFilterIndex(3);
-        else if (img_ext == wxT("hdr"))
+        else if (img_ext == "hdr")
             dlg.SetFilterIndex(4);
-        else if (img_ext == wxT("exr"))
+        else if (img_ext == "exr")
             dlg.SetFilterIndex(5);
-        else if (img_ext == wxT("all files"))
+        else if (img_ext == "all files")
             dlg.SetFilterIndex(6);
         DEBUG_INFO ( "Image extention: " << img_ext.mb_str(wxConvLocal) );
 
@@ -839,20 +843,20 @@ bool wxApplyTemplateCmd::processPanorama(HuginBase::Panorama& pano)
             // save the current path to config
 #ifdef __WXGTK__
             //workaround a bug in GTK, see https://bugzilla.redhat.com/show_bug.cgi?id=849692 and http://trac.wxwidgets.org/ticket/14525
-            config->Write(wxT("/actualPath"), wxPathOnly(Pathnames[0]));
+            config->Write("/actualPath", wxPathOnly(Pathnames[0]));
 #else
-            config->Write(wxT("/actualPath"), dlg.GetDirectory());
+            config->Write("/actualPath", dlg.GetDirectory());
 #endif
-            DEBUG_INFO ( wxString::Format(wxT("img_ext: %d"), dlg.GetFilterIndex()).mb_str(wxConvLocal) );
+            DEBUG_INFO ( wxString::Format("img_ext: %d", dlg.GetFilterIndex()).mb_str(wxConvLocal) );
             // save the image extension
             switch ( dlg.GetFilterIndex() ) {
-                case 0: config->Write(wxT("lastImageType"), wxT("all images")); break;
-                case 1: config->Write(wxT("lastImageType"), wxT("jpg")); break;
-                case 2: config->Write(wxT("lastImageType"), wxT("tiff")); break;
-                case 3: config->Write(wxT("lastImageType"), wxT("png")); break;
-                case 4: config->Write(wxT("lastImageType"), wxT("hdr")); break;
-                case 5: config->Write(wxT("lastImageType"), wxT("exr")); break;
-                case 6: config->Write(wxT("lastImageType"), wxT("all files")); break;
+                case 0: config->Write("lastImageType", "all images"); break;
+                case 1: config->Write("lastImageType", "jpg"); break;
+                case 2: config->Write("lastImageType", "tiff"); break;
+                case 3: config->Write("lastImageType", "png"); break;
+                case 4: config->Write("lastImageType", "hdr"); break;
+                case 5: config->Write("lastImageType", "exr"); break;
+                case 6: config->Write("lastImageType", "all files"); break;
             }
 
             HuginBase::StandardImageVariableGroups variable_groups(pano);
@@ -885,7 +889,7 @@ bool wxApplyTemplateCmd::processPanorama(HuginBase::Panorama& pano)
         unsigned int nNewImg = newPano.getNrOfImages();
         if (nOldImg != nNewImg) {
             wxString errMsg = wxString::Format(_("Error, template expects %d images,\ncurrent project contains %d images\n"), nNewImg, nOldImg);
-            wxMessageBox(errMsg, _("Could not apply template"), wxICON_ERROR);
+            hugin_utils::HuginMessageBox(errMsg, _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
             return false;
         }
 
@@ -926,7 +930,7 @@ bool wxApplyTemplateCmd::processPanorama(HuginBase::Panorama& pano)
         pano.setNrOfBands(bands);
         pano.setICCProfileDesc(iccProfile);
     } else {
-        wxMessageBox(_("Error loading project file"), _("Could not apply template"), wxICON_ERROR);
+        hugin_utils::HuginMessageBox(_("Error loading project file"), _("Hugin"), wxOK | wxICON_ERROR, wxGetActiveWindow());
     }
     HuginBase::PTools::calcCtrlPointErrors(pano);
     return true;
@@ -941,7 +945,7 @@ bool PythonScriptPanoCmd::processPanorama(HuginBase::Panorama& pano)
                    "HuginBase::Panorama*" , &pano ) ;
 
     if(success!=0)
-        wxMessageBox(wxString::Format(wxT("Script returned %d"),success),_("Result"), wxICON_INFORMATION);
+        hugin_utils::HuginMessageBox(wxString::Format("Script returned %d",success),_("Hugin"), wxOK | wxICON_INFORMATION, wxGetActiveWindow());
     std::cout << "Python interface returned " << success << endl ;
     // notify other of change in panorama
     if(pano.getNrOfImages()>0)

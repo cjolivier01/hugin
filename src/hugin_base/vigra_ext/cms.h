@@ -93,7 +93,14 @@ void ApplyICCProfile(ImageType& image, const vigra::ImageImportInfo::ICCProfile&
     // now build transform and do actual transformation
     cmsHTRANSFORM transform = cmsCreateTransform(inputICC, imageFormat, outputICC, imageFormat,
         INTENT_PERCEPTUAL, cmsFLAGS_BLACKPOINTCOMPENSATION);
-    cmsDoTransform(transform, image.begin(), image.begin(), image.width()*image.height());
+    if (transform)
+    {
+        cmsDoTransform(transform, image.begin(), image.begin(), image.width() * image.height());
+    }
+    else
+    {
+        std::cerr << "Creating cmsCreateTransform failed. Invalid icc profile?" << std::endl;
+    }
     // clean up
     cmsDeleteTransform(transform);
     cmsCloseProfile(inputICC);

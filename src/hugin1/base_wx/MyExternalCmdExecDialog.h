@@ -80,6 +80,8 @@ public:
     wxArrayString GetLogAsArrayString();
     /** display the string in the panel */
     void AddString(const wxString& s);
+    /** clear the output */
+    void ClearOutput();
 
     virtual ~MyExecPanel();
 
@@ -112,8 +114,6 @@ private:
     bool m_checkReturnCode;
     wxExecuteEnv m_executeEnv;
     wxStopWatch m_stopWatch;
-    // any class wishing to process wxWidgets events must use this macro
-    DECLARE_EVENT_TABLE()
 };
 
 // ----------------------------------------------------------------------------
@@ -160,9 +160,6 @@ private:
     
     MyExecPanel * m_execPanel;
     bool m_cancelled;
-
-    // any class wishing to process wxWidgets events must use this macro
-    DECLARE_EVENT_TABLE()
 };
 
 wxDECLARE_EXPORTED_EVENT(WXIMPEX, EVT_QUEUE_PROGRESS, wxCommandEvent);

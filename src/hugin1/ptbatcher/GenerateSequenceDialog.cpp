@@ -25,10 +25,9 @@
 
 #include "GenerateSequenceDialog.h"
 #include "base_wx/wxPlatform.h"
-#if wxCHECK_VERSION(3,1,0)
 #include <wx/busyinfo.h>
-#endif
 #include "panoinc.h"
+#include "base_wx/wxutils.h"
 
 /** return a list of all sub-directories */
 wxArrayString GetAllSubDirectories(const wxString baseDir)
@@ -57,40 +56,12 @@ wxString GetNumberString(size_t x, size_t width)
     return wxString::Format(formatString, x);
 }
 
-BEGIN_EVENT_TABLE(GenerateSequenceDialog, wxDialog)
-    EVT_BUTTON(XRCID("sequence_select_base_path"), GenerateSequenceDialog::OnSelectBasePath)
-    EVT_CHOICE(XRCID("sequence_choice_subdirectory"), GenerateSequenceDialog::OnSelectSubDir)
-    EVT_LIST_ITEM_SELECTED(XRCID("sequence_images_list"), GenerateSequenceDialog::OnImageListSelected)
-    EVT_LIST_ITEM_DESELECTED(XRCID("sequence_images_list"), GenerateSequenceDialog::OnImageListSelected)
-    EVT_BUTTON(XRCID("sequence_change_image"), GenerateSequenceDialog::OnUpdateImageTemplate)
-    EVT_BUTTON(XRCID("sequence_change_all_images"), GenerateSequenceDialog::OnUpdateAllImagesTemplate)
-    EVT_SPINCTRL(XRCID("sequence_p_offset"), GenerateSequenceDialog::OnUpdateCounters)
-    EVT_SPINCTRL(XRCID("sequence_p_step"), GenerateSequenceDialog::OnUpdateCounters)
-    EVT_SPINCTRL(XRCID("sequence_p_end"), GenerateSequenceDialog::OnUpdateCounters)
-    EVT_SPINCTRL(XRCID("sequence_i_offset"), GenerateSequenceDialog::OnUpdateCounters)
-    EVT_SPINCTRL(XRCID("sequence_i_step"), GenerateSequenceDialog::OnUpdateCounters)
-    EVT_SPINCTRL(XRCID("sequence_i_end"), GenerateSequenceDialog::OnUpdateCounters)
-    EVT_SPINCTRL(XRCID("sequence_x_offset"), GenerateSequenceDialog::OnUpdateCounters)
-    EVT_SPINCTRL(XRCID("sequence_x_step"), GenerateSequenceDialog::OnUpdateCounters)
-    EVT_SPINCTRL(XRCID("sequence_x_end"), GenerateSequenceDialog::OnUpdateCounters)
-    EVT_BUTTON(XRCID("sequence_generate_preview"), GenerateSequenceDialog::OnGeneratePreview)
-    EVT_BUTTON(XRCID("sequence_generate_stitching"), GenerateSequenceDialog::OnGenerateStitchingPanorama)
-    EVT_BUTTON(XRCID("sequence_generate_assistant"), GenerateSequenceDialog::OnGenerateAssistantPanorama)
-END_EVENT_TABLE()
-
 GenerateSequenceDialog::GenerateSequenceDialog(BatchFrame* batchframe, wxString xrcPrefix, wxString ptoFilename)
 {
     // load our children. some children might need special
     // initialization. this will be done later.
     wxXmlResource::Get()->LoadDialog(this,batchframe, "generate_sequence_dialog");
 
-#ifdef __WXMSW__
-    wxIconBundle myIcons(xrcPrefix+ "data/ptbatcher.ico",wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(xrcPrefix + "data/ptbatcher.png",wxBITMAP_TYPE_PNG);
-    SetIcon(myIcon);
-#endif
     m_batchframe=batchframe;
     m_filename = ptoFilename;
     ReadPTOFile();
@@ -101,27 +72,42 @@ GenerateSequenceDialog::GenerateSequenceDialog(BatchFrame* batchframe, wxString 
         m_basepath->SetValue(wxPathOnly(m_filename));
 
         m_choiceSubDir = XRCCTRL(*this, "sequence_choice_subdirectory", wxChoice);
+        m_choiceSubDir->Bind(wxEVT_CHOICE, &GenerateSequenceDialog::OnSelectSubDir, this);
         m_subDirTextCtrl = XRCCTRL(*this, "sequence_directory_name", wxTextCtrl);
 
         m_imagesListCtrl = XRCCTRL(*this, "sequence_images_list", wxListCtrl);
         m_imagesListCtrl->InsertColumn(0, _("Template image name"));
         m_imagesListCtrl->InsertColumn(1, _("Sequence image name"));
         FillImagesList();
+        m_imagesListCtrl->Bind(wxEVT_LIST_ITEM_SELECTED, &GenerateSequenceDialog::OnImageListSelected, this);
+        m_imagesListCtrl->Bind(wxEVT_LIST_ITEM_DESELECTED, &GenerateSequenceDialog::OnImageListSelected, this);
+
 
         m_originalImage = XRCCTRL(*this, "sequence_orignal_image_text", wxStaticText);
         m_imageTemplate = XRCCTRL(*this, "sequence_image_text", wxTextCtrl);
         m_changeImageTemplate = XRCCTRL(*this, "sequence_change_image", wxButton);
+        m_changeImageTemplate->Bind(wxEVT_BUTTON, &GenerateSequenceDialog::OnUpdateImageTemplate, this);
         m_changeAllImagesTemplate = XRCCTRL(*this, "sequence_change_all_images", wxButton);
+        m_changeAllImagesTemplate->Bind(wxEVT_BUTTON, &GenerateSequenceDialog::OnUpdateAllImagesTemplate, this);
 
         m_spinCounterP_offset = XRCCTRL(*this, "sequence_p_offset", wxSpinCtrl);
+        m_spinCounterP_offset->Bind(wxEVT_SPINCTRL, &GenerateSequenceDialog::OnUpdateCounters, this);
         m_spinCounterP_step = XRCCTRL(*this, "sequence_p_step", wxSpinCtrl);
+        m_spinCounterP_step->Bind(wxEVT_SPINCTRL, &GenerateSequenceDialog::OnUpdateCounters, this);
         m_spinCounterP_end = XRCCTRL(*this, "sequence_p_end", wxSpinCtrl);
+        m_spinCounterP_end->Bind(wxEVT_SPINCTRL, &GenerateSequenceDialog::OnUpdateCounters, this);
         m_spinCounterI_offset = XRCCTRL(*this, "sequence_i_offset", wxSpinCtrl);
+        m_spinCounterI_offset->Bind(wxEVT_SPINCTRL, &GenerateSequenceDialog::OnUpdateCounters, this);
         m_spinCounterI_step = XRCCTRL(*this, "sequence_i_step", wxSpinCtrl);
+        m_spinCounterI_step->Bind(wxEVT_SPINCTRL, &GenerateSequenceDialog::OnUpdateCounters, this);
         m_spinCounterI_end = XRCCTRL(*this, "sequence_i_end", wxSpinCtrl);
+        m_spinCounterI_end->Bind(wxEVT_SPINCTRL, &GenerateSequenceDialog::OnUpdateCounters, this);
         m_spinCounterX_offset = XRCCTRL(*this, "sequence_x_offset", wxSpinCtrl);
+        m_spinCounterX_offset->Bind(wxEVT_SPINCTRL, &GenerateSequenceDialog::OnUpdateCounters, this);
         m_spinCounterX_step = XRCCTRL(*this, "sequence_x_step", wxSpinCtrl);
+        m_spinCounterI_step->Bind(wxEVT_SPINCTRL, &GenerateSequenceDialog::OnUpdateCounters, this);
         m_spinCounterX_end = XRCCTRL(*this, "sequence_x_end", wxSpinCtrl);
+        m_spinCounterX_end->Bind(wxEVT_SPINCTRL, &GenerateSequenceDialog::OnUpdateCounters, this);
 
         wxCommandEvent dummy;
         OnSelectSubDir(dummy);
@@ -168,6 +154,11 @@ GenerateSequenceDialog::GenerateSequenceDialog(BatchFrame* batchframe, wxString 
         XRCCTRL(*this, "sequence_naming", wxChoice)->SetSelection(config->Read("/GenerateSequenceDialog/NamingConvention", 0l));        
     };
     XRCCTRL(*this, "sequence_counter_help", wxTextCtrl)->SetBackgroundColour(this->GetBackgroundColour());
+    Bind(wxEVT_BUTTON, &GenerateSequenceDialog::OnSelectBasePath, this, XRCID("sequence_select_base_path"));
+    Bind(wxEVT_BUTTON, &GenerateSequenceDialog::OnGeneratePreview, this, XRCID("sequence_generate_preview"));
+    Bind(wxEVT_BUTTON, &GenerateSequenceDialog::OnGenerateStitchingPanorama, this, XRCID("sequence_generate_stitching"));
+    Bind(wxEVT_BUTTON, &GenerateSequenceDialog::OnGenerateAssistantPanorama, this, XRCID("sequence_generate_assistant"));
+
 };
 
 GenerateSequenceDialog::~GenerateSequenceDialog()
@@ -185,7 +176,7 @@ GenerateSequenceDialog::~GenerateSequenceDialog()
     }
     else
     {
-        config->Write(wxT("/GenerateSequenceDialog/maximized"), 1l);
+        config->Write("/GenerateSequenceDialog/maximized", 1l);
     };
     config->Write("/GenerateSequenceDialog/ImageListColumn0Width", m_imagesListCtrl->GetColumnWidth(0));
     config->Write("/GenerateSequenceDialog/ImageListColumn1Width", m_imagesListCtrl->GetColumnWidth(1));
@@ -440,16 +431,12 @@ void GenerateSequenceDialog::GenerateFileList(wxArrayString& panoSubDirs, std::v
 void GenerateSequenceDialog::OnGeneratePreview(wxCommandEvent& e)
 {
     wxWindowDisabler winDisable;
-#if wxCHECK_VERSION(3,1,0)
     wxBusyInfo waitInfo(
         wxBusyInfoFlags()
         .Parent(this)
         .Text(_("Generating preview list. Please wait..."))
         .Icon(GetIcon())
     );
-#else
-    wxBusyCursor waitCursor;
-#endif
     // generate a preview of all images in text form
     wxArrayString subDirList;
     std::vector<wxArrayString> fileList;
@@ -543,7 +530,7 @@ bool GetNewProjectFilename(long index, const HuginBase::Panorama& pano, const wx
 {
     wxString mask;
     projectFile.SetPath(basePath);
-    projectFile.SetExt(wxT("pto"));
+    projectFile.SetExt("pto");
     if (!projectFile.IsDirWritable())
     {
         return false;
@@ -559,7 +546,7 @@ bool GetNewProjectFilename(long index, const HuginBase::Panorama& pano, const wx
             {
                 const wxFileName f1(wxString(pano.getImage(0).getFilename().c_str(), HUGIN_CONV_FILENAME));
                 const wxFileName f2(wxString(pano.getImage(pano.getNrOfImages() - 1).getFilename().c_str(), HUGIN_CONV_FILENAME));
-                mask = f1.GetName() + wxT("-") + f2.GetName();
+                mask = f1.GetName() + "-" + f2.GetName();
             }
             break;
         case 2:
@@ -608,28 +595,18 @@ bool GetNewProjectFilename(long index, const HuginBase::Panorama& pano, const wx
 void GenerateSequenceDialog::DoGeneratePanorama(const Project::Target target)
 {
     wxWindowDisabler winDisable;
-#if wxCHECK_VERSION(3,1,0)
     wxBusyInfo waitInfo(
         wxBusyInfoFlags()
             .Parent(this)
             .Text(_("Generating panorama files. Please wait..."))
             .Icon(GetIcon())
     );
-#else
-    wxBusyCursor waitCursor;
-#endif
     wxArrayString subDirList;
     std::vector<wxArrayString> fileList;
     GenerateFileList(subDirList, fileList);
     if (fileList.empty())
     {
-        wxMessageBox(_("No matching sub-directories found."),
-#ifdef __WXMSW__
-            wxT("PTBatcherGUI"),
-#else
-            wxEmptyString,
-#endif
-            wxOK | wxICON_EXCLAMATION, NULL);
+        hugin_utils::HuginMessageBox(_("No matching sub-directories found."), _("PTBatcherGUI"), wxOK | wxICON_EXCLAMATION, this);
     }
     else
     {

@@ -118,12 +118,17 @@ namespace hugin_utils
                 return *this;
             }
         
-        TDiff2D operator*(double val)
+        TDiff2D operator*(double val) const
             {
                 TDiff2D<T> result;
                 result.x = x * val;
                 result.y = y * val;
                 return result;
+            }
+
+        double operator*(TDiff2D val) const
+            {
+                return x * val.x + y * val.y;
             }
 
         vigra::Diff2D toDiff2D() const

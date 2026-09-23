@@ -28,6 +28,7 @@
 #include "hugin_config.h"
 #include "panoinc_WX.h"
 #include "hugin/huginApp.h"
+#include "base_wx/wxutils.h"
 #include <wx/fileconf.h>
 #include <wx/wfstream.h>
 #include <wx/sstream.h>
@@ -129,15 +130,6 @@ bool contains(const wxArrayString& stringArray, const wxString& string, bool cas
 
 EditOutputIniDialog::EditOutputIniDialog(wxWindow* parent) :wxDialog(parent, wxID_ANY, _("Edit assistant output settings"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
 {
-#ifdef __WXMSW__
-    wxIconBundle myIcons(huginApp::Get()->GetXRCPath() + wxT("data/hugin.ico"), wxBITMAP_TYPE_ICO);
-    SetIcons(myIcons);
-#else
-    wxIcon myIcon(huginApp::Get()->GetXRCPath() + wxT("data/hugin.png"), wxBITMAP_TYPE_PNG);
-    // set the icon in the title bar
-    SetIcon(myIcon);
-#endif
-
     wxSizer* topSizer = new wxBoxSizer(wxVERTICAL);
     m_grid = new wxPropertyGridManager(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxPG_AUTO_SORT | wxPG_DESCRIPTION | wxPG_SPLITTER_AUTO_CENTER);
     // bind context menu only to the grid
@@ -150,12 +142,12 @@ EditOutputIniDialog::EditOutputIniDialog(wxWindow* parent) :wxDialog(parent, wxI
     SetSizerAndFit(topSizer);
     InitArrays();
     ReadIni();
-    RestoreFramePosition(this, "EditOutputIniDialog");
+    hugin_utils::RestoreFramePosition(this, "EditOutputIniDialog");
 }
 
 EditOutputIniDialog::~EditOutputIniDialog()
 {
-    StoreFramePosition(this, "EditOutputIniDialog");
+    hugin_utils::StoreFramePosition(this, "EditOutputIniDialog");
 }
 
 void EditOutputIniDialog::OnOk(wxCommandEvent& e)
@@ -395,7 +387,7 @@ void EditOutputIniDialog::WriteIni()
     };
     if (!success)
     {
-        wxMessageBox(wxString::Format(_("Could not save ini file \"%s\"."), GetIniFileName().GetFullPath()), _("Error"), wxOK | wxICON_ERROR, this);
+        hugin_utils::HuginMessageBox(wxString::Format(_("Could not save ini file \"%s\"."), GetIniFileName().GetFullPath()), _("Hugin"), wxOK | wxICON_ERROR, this);
     };
 }
 
@@ -520,7 +512,7 @@ void EditOutputIniDialog::OnAddSection(wxCommandEvent& e)
         // check if new name is unique
         if (contains(knownSections, newSection))
         {
-            wxMessageBox(wxString::Format(_("Section \"%s\" is already defined.\nPlease use another name."), newSection.c_str()), _("Duplicate value."), wxOK | wxICON_ERROR);
+            hugin_utils::HuginMessageBox(wxString::Format(_("Section \"%s\" is already defined.\nPlease use another name."), newSection), _("Hugin"), wxOK | wxICON_ERROR, this);
         }
         else
         {
@@ -550,7 +542,7 @@ void EditOutputIniDialog::OnRenameSection(wxCommandEvent& e)
         // check if new name is unique
         if (contains(knownSections, newSection))
         {
-            wxMessageBox(wxString::Format(_("Section \"%s\" is already defined.\nPlease use another name."), newSection.c_str()), _("Duplicate value."), wxOK | wxICON_ERROR);
+            hugin_utils::HuginMessageBox(wxString::Format(_("Section \"%s\" is already defined.\nPlease use another name."), newSection), _("Hugin"), wxOK | wxICON_ERROR, this);
         }
         else
         {

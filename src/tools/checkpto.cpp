@@ -38,7 +38,7 @@
 #include "hugin_base/panodata/StandardImageVariableGroups.h"
 #include "algorithms/basic/CalculateCPStatistics.h"
 #include "algorithms/basic/LayerStacks.h"
-#include "hugin_base/hugin_utils/filesystem.h"
+#include <filesystem>
 #include "vigra/impexalpha.hxx"
 
 static void usage(const char* name)
@@ -95,20 +95,20 @@ void InspectRGBImage(const vigra::FRGBImage &image)
 {
     vigra::FindMinMax<float> minmax;
     vigra::inspectImage(srcImageRange(image, vigra::RedAccessor<vigra::RGBValue<float>>()), minmax);
-    std::cout << "    Red channel: " << minmax.min << "-" << minmax.max << std::endl;
+    std::cout << "    Red channel: " << minmax.min << " - " << minmax.max << std::endl;
     minmax.reset();
     vigra::inspectImage(srcImageRange(image, vigra::GreenAccessor<vigra::RGBValue<float>>()), minmax);
-    std::cout << "    Green channel: " << minmax.min << "-" << minmax.max << std::endl;
+    std::cout << "    Green channel: " << minmax.min << " - " << minmax.max << std::endl;
     minmax.reset();
     vigra::inspectImage(srcImageRange(image, vigra::BlueAccessor<vigra::RGBValue<float>>()), minmax);
-    std::cout << "    Blue channel: " << minmax.min << "-" << minmax.max << std::endl;
+    std::cout << "    Blue channel: " << minmax.min << " - " << minmax.max << std::endl;
 }
 
 void InspectGrayscaleImage(const vigra::FImage &image, const std::string text)
 {
     vigra::FindMinMax<float> minmax;
     vigra::inspectImage(srcImageRange(image), minmax);
-    std::cout << "    " << text << ": " << minmax.min << "-" << minmax.max << std::endl;
+    std::cout << "    " << text << ": " << minmax.min << " - " << minmax.max << std::endl;
 }
 
 void PrintImageInfo(const HuginBase::Panorama& pano)
@@ -118,16 +118,15 @@ void PrintImageInfo(const HuginBase::Panorama& pano)
     for (int imgNr = 0; imgNr < pano.getNrOfImages(); ++imgNr)
     {
         const std::string filename = pano.getImage(imgNr).getFilename();
-        std::cout << "Image " << imgNr << ": " << filename;
+        std::cout << "Image " << imgNr << ": " << filename << std::endl;
         if (hugin_utils::FileExists(filename))
         {
             if (vigra::isImage(filename.c_str()))
             {
                 vigra::ImageImportInfo info(filename.c_str());
-                fs::path file(filename);
-                std::cout << std::endl
-                    << "    File type: " << info.getFileType() << std::endl;
-                const auto fileSize = fs::file_size(file);
+                std::filesystem::path file(filename);
+                std::cout << "    File type: " << info.getFileType() << std::endl;
+                const auto fileSize = std::filesystem::file_size(file);
                 std::cout << "    File size: ";
                 if (fileSize > 1000)
                 {
@@ -216,9 +215,9 @@ void PrintImageInfo(const HuginBase::Panorama& pano)
             else
             {
                 // no recognized image type
-                fs::path file(filename);
+                std::filesystem::path file(filename);
                 std::cout << std::endl << "    not recognized by vigra as image file" << std::endl
-                    << "    File size: " << fs::file_size(file) / 1024 << " kiB" << std::endl << std::endl;
+                    << "    File size: " << std::filesystem::file_size(file) / 1024 << " kiB" << std::endl << std::endl;
             };
         }
         else
@@ -239,21 +238,21 @@ void CreateMissingImages(HuginBase::Panorama& pano, const std::string& output)
     bool requiresPTOrewrite = false;
     // store path to pto file for easier access
     const std::string ptoPath = hugin_utils::getPathPrefix(hugin_utils::GetAbsoluteFilename(output));
-    const fs::path imagePath(ptoPath);
+    const std::filesystem::path imagePath(ptoPath);
     // check all images
     for (int imgNr = 0; imgNr < pano.getNrOfImages(); ++imgNr)
     {
-        fs::path srcFile(pano.getImage(imgNr).getFilename());
+        std::filesystem::path srcFile(pano.getImage(imgNr).getFilename());
         std::cout << "Image " << imgNr << ": " << srcFile.string();
-        if (fs::exists(srcFile))
+        if (std::filesystem::exists(srcFile))
         {
             std::cout << " exists." << std::endl;
         }
         else
         {
             // image does not exists
-            srcFile = fs::absolute(srcFile);
-            fs::path newImage(imagePath);
+            srcFile = std::filesystem::absolute(srcFile);
+            std::filesystem::path newImage(imagePath);
             newImage /= srcFile.filename();
             // file is not in the same directory as pto file, adjust path
             if (newImage != srcFile)
@@ -389,12 +388,15 @@ int main(int argc, char* argv[])
         HuginBase::CalculateCPStatisticsError::calcCtrlPntsErrorStats(pano, min, max, mean, var);
         if(max>0)
         {
+            std::ios oldstate(nullptr);
+            oldstate.copyfmt(std::cout);
             std::cout << "Control points statistics" << std::endl
                       << std::fixed << std::setprecision(2)
                       << "\tMean error        : " << mean << std::endl
                       << "\tStandard deviation: " << sqrt(var) << std::endl
                       << "\tMinimum           : " << min << std::endl
                       << "\tMaximum           : " << max << std::endl;
+            std::cout.copyfmt(oldstate);
         };
     };
     HuginGraph::ImageGraph graph(pano);

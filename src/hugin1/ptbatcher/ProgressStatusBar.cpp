@@ -27,15 +27,11 @@
 
 #include "ProgressStatusBar.h"
 
-// Event table
-BEGIN_EVENT_TABLE(ProgressStatusBar, wxStatusBar)
-EVT_SIZE(ProgressStatusBar::OnSize)
-END_EVENT_TABLE()
-
 ProgressStatusBar::ProgressStatusBar(wxWindow *parent, wxWindowID id, long style, const wxString &name) : wxStatusBar(parent, id, style, name)
 {
     m_progress = new wxGauge(this, -1, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL);
     SetProgress(-1);
+    Bind(wxEVT_SIZE, &ProgressStatusBar::OnSize, this);
 }
 
 ProgressStatusBar::~ProgressStatusBar()

@@ -25,7 +25,7 @@ ELSEIF(APPLE)
   set( MACOSX_BUNDLE_GUI_IDENTIFIER net.sourceforge.hugin.PTBatcherGUI)
   set( MACOSX_BUNDLE_INFO_STRING "PTBatcherGUI ${MACOSX_BUNDLE_VERSION}" )
   set( MACOSX_BUNDLE_BUNDLE_NAME "PTBatcherGUI" )
-  set( MACOSX_BUNDLE_COPYRIGHT "Copyright 2024 Pablo d'Angelo" )
+  set( MACOSX_BUNDLE_COPYRIGHT "Copyright 2025 Pablo d'Angelo" )
 
   IF(MAC_SELF_CONTAINED_BUNDLE)
 
@@ -81,6 +81,7 @@ ELSEIF(APPLE)
                                 ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.ico
                                 ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.jpg
                                 ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.png
+                                ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.svg
                                 ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.txt
                                 ${CMAKE_SOURCE_DIR}/src/hugin1/hugin/xrc/*.pl )
 

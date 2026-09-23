@@ -43,6 +43,8 @@
 /** return filter for image files, needed by file open dialog 
   it contains all image format vigra can read and some other format */
 WXIMPEX wxString GetFileDialogImageFilters();
+/** return a filter for the main image files (JPG/TIFF/PNG) only */
+WXIMPEX wxString GetMainImageFilters();
 /** return filter for image and raw files, needed by file open dialog */
 WXIMPEX wxString GetFileDialogImageAndRawFilters();
 /** return true, if given extension is in list of known raw extension (comparision is case insensitive */

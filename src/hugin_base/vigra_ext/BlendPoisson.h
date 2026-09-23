@@ -397,7 +397,7 @@ void SOR(Image& target, const Image& gradient, const SeamMask& seams, const floa
             };
         };
 
-        if (oldError > 0 && log(oldError / error) / log(10.0) < errorThreshold)
+        if (oldError > 0 && oldError / error < std::pow(10, errorThreshold))
         {
             break;
         }
@@ -820,7 +820,7 @@ void Multigrid(Image& out, const Image& gradient, const vigra::ImagePyramid<Seam
     };
     // pre-smoothing
     const float omega = 1.6f; // relaxation parameter: 0 < omega < 2
-    detail::SOR(out, gradient, seamMaskPyramid[maskIndex], omega, errorThreshold, maxIter, doWrap);
+    detail::SOR(out, gradient, seamMaskPyramid[maskIndex], omega, 0.05 * errorThreshold, maxIter, doWrap);
     detail::CalcResidualError(err, out, gradient, seamMaskPyramid[maskIndex], doWrap);    // Fehler berechnen
     detail::RestrictErrorToNextLevel(err, err2);
     Multigrid(out2, err2, seamMaskPyramid, minLen, errorThreshold, maxIter, doWrap);
@@ -831,8 +831,8 @@ void Multigrid(Image& out, const Image& gradient, const vigra::ImagePyramid<Seam
         vigra::srcImage(seamMaskPyramid[maskIndex], MaskGreaterAccessor<typename SeamMask::PixelType>(2)),
         vigra::destImage(out),
         vigra::functor::Arg1() - vigra::functor::Arg2());
-    // post smoothing
-    detail::SOR(out, gradient, seamMaskPyramid[maskIndex], omega, errorThreshold, maxIter, doWrap);
+    // post smoothing, using Gauss-Seidel, omega=1
+    detail::SOR(out, gradient, seamMaskPyramid[maskIndex], 1.0f, 0.02 * errorThreshold, maxIter, doWrap);
     return;
 }
 

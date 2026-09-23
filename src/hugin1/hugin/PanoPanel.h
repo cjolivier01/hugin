@@ -46,7 +46,7 @@ public:
 
     PanoPanel();
 
-    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxT("panel"));
+    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = "panel");
 
     void Init(HuginBase::Panorama * pano);
 
@@ -72,7 +72,7 @@ public:
     virtual void panoramaImagesChanged(HuginBase::Panorama &pano, const HuginBase::UIntSet & imgNr) {};
 
     /** stitching using hugin_stitch_project */
-    void DoStitch(const wxString& userDefinedSetting = wxEmptyString);
+    void DoStitch(const wxString& userDefinedSetting = wxEmptyString, const bool readSetting = true);
     /** stitching with PTBatcherGUI */
     void DoSendToBatch(const wxString& userDefinedSetting = wxEmptyString);
     /** stitching with user defined file */
@@ -82,6 +82,7 @@ public:
     void DoStitchOrSendBatch(const wxString& userDefinedSetting = wxEmptyString);
 
     void SetGuiLevel(GuiLevel newGuiLevel);
+    wxButton* GetStitchButton() const { return m_StitchButton; };
 
  private:
 
@@ -218,7 +219,6 @@ public:
 
     wxScrolledWindow *m_pano_ctrls;
 
-    DECLARE_EVENT_TABLE()
     DECLARE_DYNAMIC_CLASS(PanoPanel)
 };
 

@@ -129,8 +129,6 @@ private:
     wxString m_progressMsg;
     // popup window
     wxGraphTools::GraphPopupWindow* m_popup = nullptr;
-
-    DECLARE_EVENT_TABLE()
 };
 
 

@@ -34,56 +34,20 @@
 // utility functions
 wxString Components2Str(const HuginGraph::ImageGraph::Components & comp);
 
-/// Store window size and position in configfile/registry
-void StoreFramePosition(wxTopLevelWindow * frame, const wxString & basename);
-/// Restore window size and position from configfile/registry
-void RestoreFramePosition(wxTopLevelWindow * frame, const wxString & basename);
-
-/** Resources Definition
- *
- */
-
-#ifdef _INCLUDE_UI_RESOURCES
-  void InitXmlResource();
-#endif
-
-#if defined _WIN32 && defined Hugin_shared
-DECLARE_LOCAL_EVENT_TYPE( EVT_IMAGE_READY, )
-#else
-DECLARE_EVENT_TYPE( EVT_IMAGE_READY, )
-#endif
-
 /** Event for when a requested image finished loading.
  *  Glue for HuginBase::ImageCache. We want to load images in a separate thread,
  *  but to write safe UI code we handle the redraw when processing a wxEvent.
  */
-class ImageReadyEvent
-    : public wxEvent
+class ImageReadyEvent : public wxEvent
 {
-    public:
-        HuginBase::ImageCache::RequestPtr request;
-        HuginBase::ImageCache::EntryPtr entry;
-        
-        
-        ImageReadyEvent(HuginBase::ImageCache::RequestPtr request,
-                        HuginBase::ImageCache::EntryPtr entry)
-            : wxEvent (0, EVT_IMAGE_READY)
-            , request(request)
-            , entry(entry)
-        {
-        };
-        virtual wxEvent * Clone() const
-        {
-            return new ImageReadyEvent(request, entry);
-        }
+public:
+    HuginBase::ImageCache::RequestPtr request;
+    HuginBase::ImageCache::EntryPtr entry;
+
+    ImageReadyEvent(HuginBase::ImageCache::RequestPtr request, HuginBase::ImageCache::EntryPtr entry);
+    virtual wxEvent* Clone() const;
 };
-
-typedef void (wxEvtHandler::*ImageReadyEventFunction)(ImageReadyEvent&);
-
-#define EVT_IMAGE_READY2(id, fn) \
-    DECLARE_EVENT_TABLE_ENTRY( EVT_IMAGE_READY, id, -1, \
-        (wxObjectEventFunction) (wxEventFunction) \
-        wxStaticCastEvent( ImageReadyEventFunction, & fn ), (wxObject *) NULL ),
+wxDECLARE_EVENT(EVT_IMAGE_READY, ImageReadyEvent);
 
 /** The application class for hugin.
  *
@@ -169,11 +133,7 @@ public:
 #endif
 
 #if wxUSE_ON_FATAL_EXCEPTION
-#if wxCHECK_VERSION(3,1,0)
     virtual void OnFatalException() wxOVERRIDE;
-#else
-    virtual void OnFatalException();
-#endif
 #endif
 
 private:
@@ -206,8 +166,6 @@ private:
     bool m_macOpenFileOnStart;
     wxString m_macFileNameToOpenOnStart;
 #endif
-
-    DECLARE_EVENT_TABLE()
 };
 
 DECLARE_APP(huginApp)

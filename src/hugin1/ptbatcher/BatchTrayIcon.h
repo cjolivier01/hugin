@@ -32,6 +32,8 @@
 #include <wx/taskbar.h>
 class BatchTaskBarIcon : public wxTaskBarIcon
 {
+public:
+    BatchTaskBarIcon(wxTaskBarIconType iconType = wxTBI_DEFAULT_TYPE);
 protected:
     /** handler if double clicked on taskbar icon, opens window */
     void OnLeftButtonDClick(wxTaskBarIconEvent&);
@@ -51,8 +53,6 @@ protected:
     void OnAddProjectToAssistant(wxCommandEvent& e);
     /** creates the popup menu */
     virtual wxMenu* CreatePopupMenu();
-
-    DECLARE_EVENT_TABLE()
 };
 
 #if defined __WXMSW__ && wxUSE_TASKBARICON_BALLOONS
@@ -80,7 +80,6 @@ public:
     void showBalloon(unsigned int iTimeout);
 private:
     wxTimer* m_timer;
-    DECLARE_EVENT_TABLE();
 };
 #endif
 

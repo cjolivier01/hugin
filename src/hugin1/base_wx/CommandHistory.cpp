@@ -109,7 +109,7 @@ namespace PanoCommand
             commands[nextCmd]->undo();
 
             // smart undo: keep undoing simple visibility toggles according to user preference
-            bool t = (wxConfigBase::Get()->Read(wxT("smartUndo"), HUGIN_SMART_UNDO) != 0);
+            bool t = (wxConfigBase::Get()->Read("smartUndo", HUGIN_SMART_UNDO) != 0);
             if (t)
             {
                 while ((commands[nextCmd]->getName() == "change active images") && (nextCmd > 0))
@@ -134,7 +134,7 @@ namespace PanoCommand
             nextCmd++;
             commands[nextCmd - 1]->execute();
             // smart redo: keep redoing simple visibility toggles according to user preference
-            bool t = (wxConfigBase::Get()->Read(wxT("smartUndo"), HUGIN_SMART_UNDO) != 0);
+            bool t = (wxConfigBase::Get()->Read("smartUndo", HUGIN_SMART_UNDO) != 0);
             if (t)
             {
                 while ((nextCmd < commands.size()) && (commands[nextCmd]->getName() == "change active images"))

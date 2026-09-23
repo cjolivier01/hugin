@@ -35,21 +35,21 @@
 #include <wx/fileconf.h>
 
 /** description of default cp generator, for fall back procedure */
-wxString default_cpgenerator_desc(wxT("Hugin's Cpfind"));
+wxString default_cpgenerator_desc("Hugin's Cpfind");
 /** program name of default cp generator, for fall back procedure */
 #ifdef _WIN32
-wxString default_cpgenerator_prog(wxT("cpfind.exe"));
+wxString default_cpgenerator_prog("cpfind.exe");
 #else
-wxString default_cpgenerator_prog(wxT("cpfind"));
+wxString default_cpgenerator_prog("cpfind");
 #endif
 /** arguments for default cp generator, for fall back procedure */
-wxString default_cpgenerator_args(wxT("-o %o %s"));
+wxString default_cpgenerator_args("-o %o %s");
 
 void CPDetectorConfig::Read(wxConfigBase *config,wxString loadFromFile)
 {
     settings.Clear();
-    int count=config->Read(wxT("/AutoPano/AutoPanoCount"),0l);
-    default_generator=config->Read(wxT("/AutoPano/Default"),0l);
+    int count=config->Read("/AutoPano/AutoPanoCount",0l);
+    default_generator=config->Read("/AutoPano/Default",0l);
     if(count>0)
     {
         for(int i=0;i<count;i++)
@@ -74,7 +74,7 @@ void CPDetectorConfig::ReadFromFile(wxString filename)
 {
     if(wxFile::Exists(filename))
     {
-        wxFileConfig fconfig(wxT("hugin"),wxEmptyString,filename);
+        wxFileConfig fconfig("hugin",wxEmptyString,filename);
         Read(&fconfig);
     }
     else
@@ -85,7 +85,7 @@ void CPDetectorConfig::ReadFromFile(wxString filename)
 
 void CPDetectorConfig::ReadIndex(wxConfigBase *config, int i)
 {
-    wxString path=wxString::Format(wxT("/AutoPano/AutoPano_%d"),i);
+    wxString path=wxString::Format("/AutoPano/AutoPano_%d",i);
     if(config->HasGroup(path))
     {
         CPDetectorSetting* gen=new CPDetectorSetting;
@@ -103,8 +103,8 @@ void CPDetectorConfig::ReadIndex(wxConfigBase *config, int i)
 void CPDetectorConfig::Write(wxConfigBase *config)
 {
     int count=settings.Count();
-    config->Write(wxT("/AutoPano/AutoPanoCount"),count);
-    config->Write(wxT("/AutoPano/Default"),(int)default_generator);
+    config->Write("/AutoPano/AutoPanoCount",count);
+    config->Write("/AutoPano/Default",(int)default_generator);
     if(count>0)
     {
         for(int i=0;i<count;i++)
@@ -114,14 +114,14 @@ void CPDetectorConfig::Write(wxConfigBase *config)
 
 void CPDetectorConfig::WriteToFile(wxString filename)
 {
-    wxFileConfig fconfig(wxT("hugin"),wxEmptyString,filename);
+    wxFileConfig fconfig("hugin",wxEmptyString,filename);
     Write(&fconfig);
     fconfig.Flush();
 };
 
 void CPDetectorConfig::WriteIndex(wxConfigBase *config, int i)
 {
-    wxString path=wxString::Format(wxT("/AutoPano/AutoPano_%d"),i);
+    wxString path=wxString::Format("/AutoPano/AutoPano_%d",i);
     settings[i].Write(config,path);
 };
 
@@ -139,7 +139,7 @@ void CPDetectorConfig::FillControl(wxControlWithItems *control,bool select_defau
     {
         wxString s=settings[i].GetCPDetectorDesc();
         if(show_default && i==default_generator)
-            s=s+wxT(" (")+_("Default")+wxT(")");
+            s=s+" ("+_("Default")+")";
         control->Append(s);
     };
     if(select_default)
@@ -213,53 +213,53 @@ bool CPDetectorSetting::Read(wxConfigBase *config, wxString path)
     {
         return false;
     }
-    type=(CPDetectorType)config->Read(path+wxT("/Type"),CPDetector_AutoPanoSift);
-    desc=config->Read(path+wxT("/Description"),default_cpgenerator_desc);
-    prog=config->Read(path+wxT("/Program"),default_cpgenerator_prog);
-    args=config->Read(path+wxT("/Arguments"),default_cpgenerator_args);
+    type=(CPDetectorType)config->Read(path+"/Type",CPDetector_AutoPanoSift);
+    desc=config->Read(path+"/Description",default_cpgenerator_desc);
+    prog=config->Read(path+"/Program",default_cpgenerator_prog);
+    args=config->Read(path+"/Arguments",default_cpgenerator_args);
     if(IsCleanupPossible())
     {
-        args_cleanup=config->Read(path+wxT("/ArgumentsCleanup"),wxEmptyString);
+        args_cleanup=config->Read(path+"/ArgumentsCleanup",wxEmptyString);
     }
     else
     {
         args_cleanup=wxEmptyString;
     };
-    prog_matcher=config->Read(path+wxT("/ProgramMatcher"),wxEmptyString);
-    args_matcher=config->Read(path+wxT("/ArgumentsMatcher"),wxEmptyString);
+    prog_matcher=config->Read(path+"/ProgramMatcher",wxEmptyString);
+    args_matcher=config->Read(path+"/ArgumentsMatcher",wxEmptyString);
     if(ContainsStacks())
     {
-        prog_stack=config->Read(path+wxT("/ProgramStack"),wxEmptyString);
-        args_stack=config->Read(path+wxT("/ArgumentsStack"),wxEmptyString);
+        prog_stack=config->Read(path+"/ProgramStack",wxEmptyString);
+        args_stack=config->Read(path+"/ArgumentsStack",wxEmptyString);
     }
     else
     {
         prog_stack=wxEmptyString;
         args_stack=wxEmptyString;
     };
-    config->Read(path+wxT("/Option"),&option,true);
+    config->Read(path+"/Option",&option,true);
     CheckValues();
     return true;
 };
 
 void CPDetectorSetting::Write(wxConfigBase *config, wxString path)
 {
-    config->Write(path+wxT("/Type"),int(type));
-    config->Write(path+wxT("/Description"),desc);
-    config->Write(path+wxT("/Program"),prog);
-    config->Write(path+wxT("/Arguments"),args);
-    config->Write(path+wxT("/ProgramMatcher"),prog_matcher);
-    config->Write(path+wxT("/ArgumentsMatcher"),args_matcher);
+    config->Write(path+"/Type",int(type));
+    config->Write(path+"/Description",desc);
+    config->Write(path+"/Program",prog);
+    config->Write(path+"/Arguments",args);
+    config->Write(path+"/ProgramMatcher",prog_matcher);
+    config->Write(path+"/ArgumentsMatcher",args_matcher);
     if(IsCleanupPossible())
     {
-        config->Write(path+wxT("/ArgumentsCleanup"),args_cleanup);
+        config->Write(path+"/ArgumentsCleanup",args_cleanup);
     };
     if(ContainsStacks())
     {
-        config->Write(path+wxT("/ProgramStack"),prog_stack);
-        config->Write(path+wxT("/ArgumentsStack"),args_stack);
+        config->Write(path+"/ProgramStack",prog_stack);
+        config->Write(path+"/ArgumentsStack",args_stack);
     };
-    config->Write(path+wxT("/Option"),option);
+    config->Write(path+"/Option",option);
 };
 
 
