@@ -29,20 +29,19 @@
 #define _HUGIN_UTILS_FILESYSTEM_H
 #include "hugin_config.h"
 #ifdef HAVE_STD_FILESYSTEM
-    #if defined _MSC_VER && _MSC_VER >= 1920
-      #define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
-      #include <experimental/filesystem>
-    #else
-      #include <filesystem>
-    #endif
+    // keep this in sync with the HAVE_STD_FILESYSTEM check in the top level CMakeLists.txt
+    #include <filesystem>
     #if defined _MSC_VER && _MSC_VER <= 1900
         // MSVC 2015 has implemented in std::tr2::sys
         namespace fs = std::tr2::sys;
         #define OVERWRITE_EXISTING std::tr2::sys::copy_options::overwrite_existing
-    #else
+    #elif defined _MSC_VER && _MSC_VER <= 1916
         // MSVC 2017 is using experimental namespace
         namespace fs = std::experimental::filesystem;
         #define OVERWRITE_EXISTING std::experimental::filesystem::copy_options::overwrite_existing
+    #else
+        namespace fs = std::filesystem;
+        #define OVERWRITE_EXISTING std::filesystem::copy_options::overwrite_existing
     #endif
 #else
     // use Boost::Filesystem as fallback

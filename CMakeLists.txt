@@ -301,8 +301,8 @@ ELSE(PANO13_FOUND)
 ENDIF(PANO13_FOUND)
 INCLUDE_DIRECTORIES(${PANO_INCLUDE_DIR})
 
-# Check CXX11 compiler
-SET(CMAKE_CXX_STANDARD 11)
+# Check CXX17 compiler
+SET(CMAKE_CXX_STANDARD 17)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 # necessary threads lib
 SET(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -314,21 +314,21 @@ IF(WIN32)
 ENDIF(WIN32)
 
 # check if we have C++17 <filesystem> header
+# keep the logic below in sync with src/hugin_base/hugin_utils/filesystem.h
 INCLUDE(CheckCXXSourceCompiles)
 check_cxx_source_compiles(
   "
-    #if defined _MSC_VER && _MSC_VER >= 1920
-      #define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
-      #include <experimental/filesystem>
-    #else
-      #include <filesystem>
-    #endif
+    #include <filesystem>
     #include <string>
 
     #if defined _MSC_VER && _MSC_VER <= 1900
+    // MSVC 2015 has implemented it in std::tr2::sys
     namespace fs = std::tr2::sys;
-    #else
+    #elif defined _MSC_VER && _MSC_VER <= 1916
+    // MSVC 2017 is using the experimental namespace
     namespace fs = std::experimental::filesystem;
+    #else
+    namespace fs = std::filesystem;
     #endif
 
     int main()
@@ -336,6 +336,7 @@ check_cxx_source_compiles(
       fs::path filepath;
       filepath=fs::absolute(filepath);
       std::string s=filepath.filename().string();
+      (void)fs::copy_options::overwrite_existing;
       return 0;
     };
   "

@@ -6,7 +6,8 @@ Overview
 
 Prerequisites
 - Bazel 6.0+ (Bazelisk works fine).
-- CMake and required system dependencies (wxWidgets, libpano13, vigra, exiv2, tiff, jpeg, png, zlib, fftw, boost, lcms2, OpenGL, glew/epoxy, sqlite3, OpenEXR, etc.) installed on your system and findable by CMake.
+- A C++17 compiler. Boost is no longer required when the toolchain provides `<filesystem>`; it is only used as a fallback on older compilers.
+- CMake and required system dependencies (wxWidgets, libpano13, vigra, exiv2, tiff, jpeg, png, zlib, fftw, lcms2, OpenGL, glew/epoxy, sqlite3, OpenEXR, etc.) installed on your system and findable by CMake.
 
 Build
 - From the repository root (this directory):
